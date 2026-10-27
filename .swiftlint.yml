@@ -1,0 +1,50 @@
+included:
+  - Estran
+  - EstranWidgets
+  - EstranTests
+  - EstranUITests
+  - Packages/EstranCore/Sources
+  - Packages/EstranCore/Tests
+
+excluded:
+  - .build
+  - Packages/EstranCore/.build
+
+disabled_rules:
+  - todo
+  - trailing_comma
+
+opt_in_rules:
+  - empty_count
+  - explicit_init
+  - first_where
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - modifier_order
+  - overridden_super_call
+  - redundant_nil_coalescing
+  - sorted_first_last
+  - toggle_bool
+  - unneeded_parentheses_in_closure_argument
+  - yoda_condition
+
+line_length:
+  warning: 120
+  error: 160
+  ignores_comments: true
+  ignores_urls: true
+
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
+  excluded:
+    - id
+
+type_name:
+  min_length: 3
+  max_length: 50
+
+file_length:
+  warning: 400
+  error: 600

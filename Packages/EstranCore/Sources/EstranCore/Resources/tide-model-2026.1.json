@@ -1,0 +1,1699 @@
+{
+  "schemaVersion": 6,
+  "source": "REFMAR / Shom",
+  "license": "Licence Ouverte 2.0",
+  "licenseURL": "https://github.com/etalab/licence-ouverte/blob/master/LO.md",
+  "sourceDatasets": [
+    "https://www.data.gouv.fr/datasets/reseaux-de-reference-des-observations-maregraphiques-refmar-maregraphes-ronim",
+    "https://www.data.gouv.fr/datasets/reseaux-de-reference-des-observations-maregraphiques-refmar-maregraphes-partenaires"
+  ],
+  "sourceLastUpdate": "2026-02-24",
+  "retrievedAt": "2026-10-27T20:18:29Z",
+  "official": false,
+  "method": "least-squares harmonic analysis",
+  "epoch": "2000-01-01T00:00:00Z",
+  "datum": "zero_hydrographique",
+  "units": "m",
+  "nodalCorrections": false,
+  "meanSpringRangeMethod": "2 * (M2 + S2) from the fitted constants",
+  "constituents": [
+    "M2",
+    "S2",
+    "N2",
+    "K2",
+    "K1",
+    "O1",
+    "P1",
+    "Q1",
+    "M4",
+    "MS4",
+    "MN4",
+    "M6",
+    "2N2",
+    "MU2",
+    "NU2",
+    "L2",
+    "T2",
+    "J1",
+    "OO1",
+    "2Q1",
+    "RHO1",
+    "M1",
+    "S1",
+    "SA",
+    "SSA"
+  ],
+  "droppedConstituents": [],
+  "generator": "scripts/tides/refresh",
+  "coefficient": {
+    "stationId": "3",
+    "divisor": 6.1,
+    "validated": false,
+    "validation": "382 published 2025 high waters at Arcachon-Eyrac paired with the Brest model: bias +1.75 points, 37 % within +/-1, 57 % within +/-2, max 7 (target +/-1 for 90 %).",
+    "gateMarginPoints": 2,
+    "nodalDrift": "M2 nodal factor 0.963 (2025) -> 0.997 (2029); the fit averages 0.985 over 2022-2026, i.e. +/-1.5 % around the fit mean, absorbed by u_h = 0.60 m and the 2-point gate margin."
+  },
+  "stations": [
+    {
+      "id": "190",
+      "name": "ARCACHON_EYRAC",
+      "role": "bassinReference",
+      "coordinate": {
+        "latitude": 44.66500092,
+        "longitude": -1.16355002
+      },
+      "timezoneIdentifier": "Europe/Paris",
+      "meanSeaLevel": 2.5465,
+      "meanSpringRange": 3.439,
+      "constituents": [
+        {
+          "symbol": "M2",
+          "amplitude": 1.28938,
+          "phaseDegrees": 343.1198
+        },
+        {
+          "symbol": "S2",
+          "amplitude": 0.43012,
+          "phaseDegrees": 158.3003
+        },
+        {
+          "symbol": "N2",
+          "amplitude": 0.25183,
+          "phaseDegrees": 96.4359
+        },
+        {
+          "symbol": "K2",
+          "amplitude": 0.15581,
+          "phaseDegrees": 321.2918
+        },
+        {
+          "symbol": "K1",
+          "amplitude": 0.06122,
+          "phaseDegrees": 80.251
+        },
+        {
+          "symbol": "O1",
+          "amplitude": 0.07935,
+          "phaseDegrees": 208.8774
+        },
+        {
+          "symbol": "P1",
+          "amplitude": 0.0204,
+          "phaseDegrees": 89.5727
+        },
+        {
+          "symbol": "Q1",
+          "amplitude": 0.02726,
+          "phaseDegrees": 293.5464
+        },
+        {
+          "symbol": "M4",
+          "amplitude": 0.04246,
+          "phaseDegrees": 137.34
+        },
+        {
+          "symbol": "MS4",
+          "amplitude": 0.02597,
+          "phaseDegrees": 355.0827
+        },
+        {
+          "symbol": "MN4",
+          "amplitude": 0.01154,
+          "phaseDegrees": 239.9685
+        },
+        {
+          "symbol": "M6",
+          "amplitude": 0.05971,
+          "phaseDegrees": 330.8301
+        },
+        {
+          "symbol": "2N2",
+          "amplitude": 0.03762,
+          "phaseDegrees": 212.7594
+        },
+        {
+          "symbol": "MU2",
+          "amplitude": 0.04918,
+          "phaseDegrees": 261.281
+        },
+        {
+          "symbol": "NU2",
+          "amplitude": 0.05103,
+          "phaseDegrees": 55.0848
+        },
+        {
+          "symbol": "L2",
+          "amplitude": 0.06128,
+          "phaseDegrees": 27.8318
+        },
+        {
+          "symbol": "T2",
+          "amplitude": 0.02333,
+          "phaseDegrees": 144.6983
+        },
+        {
+          "symbol": "J1",
+          "amplitude": 0.00382,
+          "phaseDegrees": 53.0935
+        },
+        {
+          "symbol": "OO1",
+          "amplitude": 0.00364,
+          "phaseDegrees": 156.6047
+        },
+        {
+          "symbol": "2Q1",
+          "amplitude": 0.00507,
+          "phaseDegrees": 24.3489
+        },
+        {
+          "symbol": "RHO1",
+          "amplitude": 0.00462,
+          "phaseDegrees": 275.3289
+        },
+        {
+          "symbol": "M1",
+          "amplitude": 0.00531,
+          "phaseDegrees": 275.3606
+        },
+        {
+          "symbol": "S1",
+          "amplitude": 0.00847,
+          "phaseDegrees": 217.3339
+        },
+        {
+          "symbol": "SA",
+          "amplitude": 0.09076,
+          "phaseDegrees": 335.2741
+        },
+        {
+          "symbol": "SSA",
+          "amplitude": 0.0351,
+          "phaseDegrees": 235.327
+        }
+      ],
+      "validUntil": "2029-06-30T23:59:59Z",
+      "nodalCorrections": false,
+      "attribution": "Source : REFMAR / Shom — Licence Ouverte 2.0 (lov2). Modèle harmonique local, non officiel.",
+      "fitWindows": [
+        {
+          "start": "2022-01-01",
+          "end": "2024-12-31"
+        },
+        {
+          "start": "2026-01-01",
+          "end": "2026-06-30"
+        }
+      ],
+      "excludedWindows": [],
+      "uncertainty": {
+        "timeMinutes": 70,
+        "heightMeters": 0.7
+      },
+      "uncertaintyBasis": "u_t: leave-one-year-out max |dt| 53.33 min (2024) + 10 min allowance (D2) = 63.33 min; SHOM 2025 low-water max 57.8 min + 12 min allowance (Z19); u_h: leave-one-year-out max under-prediction 0.6059 m (2022) + 0.05 m minimum allowance (D2); declared 0.70 m (margin 0.0941 m)",
+      "qc": [
+        {
+          "window": "2022-01-01..2024-12-31",
+          "total": 26277,
+          "expected": 26304,
+          "kept": 26276,
+          "rejected": {
+            "range": 1
+          },
+          "coverage": 0.9989,
+          "maxGapHours": 28.0,
+          "datumStepMeters": 0.0702,
+          "gaps": [
+            {
+              "start": "2024-10-08T06:00:00Z",
+              "end": "2024-10-09T10:00:00Z",
+              "hours": 28.0,
+              "allowlisted": true
+            }
+          ],
+          "failures": []
+        },
+        {
+          "window": "2026-01-01..2026-06-30",
+          "total": 4343,
+          "expected": 4343,
+          "kept": 4343,
+          "rejected": {},
+          "coverage": 1.0,
+          "maxGapHours": 1.0,
+          "datumStepMeters": 0.0702,
+          "gaps": [],
+          "failures": []
+        }
+      ],
+      "accuracy": {
+        "testWindow": {
+          "start": "2025-01-01",
+          "end": "2025-12-31"
+        },
+        "samples": 8760,
+        "rmseMeters": 0.16054,
+        "biasMeters": -0.00624,
+        "p95HeightErrorMeters": 0.3146,
+        "maxUnderPredictionMeters": 0.5032,
+        "minOverPredictionMeters": -0.9436,
+        "maxAbsoluteErrorMeters": 0.9436,
+        "extrema": {
+          "observed": 1399,
+          "matched": 1399,
+          "unmatched": 0,
+          "low": {
+            "count": 700,
+            "medianMinutes": 11.62,
+            "p95Minutes": 32.17,
+            "maxMinutes": 50.0
+          },
+          "high": {
+            "count": 699,
+            "medianMinutes": 10.0,
+            "p95Minutes": 31.67,
+            "maxMinutes": 52.14
+          },
+          "maxHeightErrorMeters": 0.9417,
+          "p95HeightErrorMeters": 0.3332,
+          "worst": {
+            "kind": "high",
+            "observed": "2025-10-29T21:22:51Z",
+            "predicted": "2025-10-29T22:14:59Z",
+            "deltaMinutes": 52.14
+          }
+        },
+        "leaveOneYearOut": [
+          {
+            "year": 2022,
+            "samples": 8760,
+            "rmseMeters": 0.16829,
+            "biasMeters": 0.0602,
+            "p95HeightErrorMeters": 0.3294,
+            "maxUnderPredictionMeters": 0.6059,
+            "minOverPredictionMeters": -0.5403,
+            "maxAbsoluteErrorMeters": 0.6059,
+            "extrema": {
+              "observed": 1370,
+              "matched": 1370,
+              "unmatched": 0,
+              "low": {
+                "count": 688,
+                "medianMinutes": 12.5,
+                "p95Minutes": 31.35,
+                "maxMinutes": 50.0
+              },
+              "high": {
+                "count": 682,
+                "medianMinutes": 11.15,
+                "p95Minutes": 32.61,
+                "maxMinutes": 50.0
+              },
+              "maxHeightErrorMeters": 0.5777,
+              "p95HeightErrorMeters": 0.3889,
+              "worst": {
+                "kind": "low",
+                "observed": "2022-05-08T14:45:00Z",
+                "predicted": "2022-05-08T15:34:59Z",
+                "deltaMinutes": 50.0
+              }
+            },
+            "maxMinutes": 50.0
+          },
+          {
+            "year": 2023,
+            "samples": 8760,
+            "rmseMeters": 0.20732,
+            "biasMeters": -0.01238,
+            "p95HeightErrorMeters": 0.4227,
+            "maxUnderPredictionMeters": 0.5577,
+            "minOverPredictionMeters": -1.2534,
+            "maxAbsoluteErrorMeters": 1.2534,
+            "extrema": {
+              "observed": 1396,
+              "matched": 1396,
+              "unmatched": 0,
+              "low": {
+                "count": 697,
+                "medianMinutes": 11.25,
+                "p95Minutes": 30.88,
+                "maxMinutes": 45.0
+              },
+              "high": {
+                "count": 699,
+                "medianMinutes": 10.71,
+                "p95Minutes": 35.0,
+                "maxMinutes": 52.5
+              },
+              "maxHeightErrorMeters": 1.2306,
+              "p95HeightErrorMeters": 0.4575,
+              "worst": {
+                "kind": "high",
+                "observed": "2023-03-02T13:42:30Z",
+                "predicted": "2023-03-02T12:50:00Z",
+                "deltaMinutes": 52.5
+              }
+            },
+            "maxMinutes": 52.5
+          },
+          {
+            "year": 2024,
+            "samples": 8756,
+            "rmseMeters": 0.17991,
+            "biasMeters": -0.00487,
+            "p95HeightErrorMeters": 0.3619,
+            "maxUnderPredictionMeters": 0.491,
+            "minOverPredictionMeters": -0.922,
+            "maxAbsoluteErrorMeters": 0.922,
+            "extrema": {
+              "observed": 1393,
+              "matched": 1393,
+              "unmatched": 0,
+              "low": {
+                "count": 700,
+                "medianMinutes": 12.21,
+                "p95Minutes": 29.52,
+                "maxMinutes": 51.0
+              },
+              "high": {
+                "count": 693,
+                "medianMinutes": 9.67,
+                "p95Minutes": 30.0,
+                "maxMinutes": 53.33
+              },
+              "maxHeightErrorMeters": 0.808,
+              "p95HeightErrorMeters": 0.3945,
+              "worst": {
+                "kind": "high",
+                "observed": "2024-10-26T00:08:20Z",
+                "predicted": "2024-10-25T23:15:00Z",
+                "deltaMinutes": 53.33
+              }
+            },
+            "maxMinutes": 53.33
+          },
+          {
+            "year": 2025,
+            "samples": 8760,
+            "rmseMeters": 0.16054,
+            "biasMeters": -0.00624,
+            "p95HeightErrorMeters": 0.3146,
+            "maxUnderPredictionMeters": 0.5032,
+            "minOverPredictionMeters": -0.9436,
+            "maxAbsoluteErrorMeters": 0.9436,
+            "extrema": {
+              "observed": 1399,
+              "matched": 1399,
+              "unmatched": 0,
+              "low": {
+                "count": 700,
+                "medianMinutes": 11.62,
+                "p95Minutes": 32.17,
+                "maxMinutes": 50.0
+              },
+              "high": {
+                "count": 699,
+                "medianMinutes": 10.0,
+                "p95Minutes": 31.67,
+                "maxMinutes": 52.14
+              },
+              "maxHeightErrorMeters": 0.9417,
+              "p95HeightErrorMeters": 0.3332,
+              "worst": {
+                "kind": "high",
+                "observed": "2025-10-29T21:22:51Z",
+                "predicted": "2025-10-29T22:14:59Z",
+                "deltaMinutes": 52.14
+              }
+            },
+            "maxMinutes": 52.14
+          },
+          {
+            "year": 2026,
+            "samples": 4343,
+            "rmseMeters": 0.20863,
+            "biasMeters": -0.07016,
+            "p95HeightErrorMeters": 0.4811,
+            "maxUnderPredictionMeters": 0.4741,
+            "minOverPredictionMeters": -1.2891,
+            "maxAbsoluteErrorMeters": 1.2891,
+            "extrema": {
+              "observed": 692,
+              "matched": 692,
+              "unmatched": 0,
+              "low": {
+                "count": 346,
+                "medianMinutes": 10.79,
+                "p95Minutes": 31.19,
+                "maxMinutes": 53.28
+              },
+              "high": {
+                "count": 346,
+                "medianMinutes": 10.0,
+                "p95Minutes": 30.6,
+                "maxMinutes": 52.14
+              },
+              "maxHeightErrorMeters": 1.0387,
+              "p95HeightErrorMeters": 0.5145,
+              "worst": {
+                "kind": "low",
+                "observed": "2026-04-10T15:21:43Z",
+                "predicted": "2026-04-10T16:14:59Z",
+                "deltaMinutes": 53.28
+              }
+            },
+            "maxMinutes": 53.28
+          }
+        ],
+        "seriesRmse": {
+          "medianMeters": 0.17991,
+          "maxMeters": 0.20863,
+          "rule": "median <= 0.20 and max <= 0.22 (Z30)",
+          "passed": true
+        },
+        "forwardTest": {
+          "fitWindows": [
+            {
+              "start": "2022-01-01",
+              "end": "2024-12-31"
+            }
+          ],
+          "testWindow": {
+            "start": "2026-01-01",
+            "end": "2026-06-30"
+          },
+          "samples": 4343,
+          "rmseMeters": 0.21771,
+          "biasMeters": -0.07745,
+          "p95HeightErrorMeters": 0.5016,
+          "maxUnderPredictionMeters": 0.4703,
+          "minOverPredictionMeters": -1.2967,
+          "maxAbsoluteErrorMeters": 1.2967,
+          "extrema": {
+            "observed": 692,
+            "matched": 692,
+            "unmatched": 0,
+            "low": {
+              "count": 346,
+              "medianMinutes": 11.72,
+              "p95Minutes": 31.86,
+              "maxMinutes": 43.33
+            },
+            "high": {
+              "count": 346,
+              "medianMinutes": 10.0,
+              "p95Minutes": 30.0,
+              "maxMinutes": 67.14
+            },
+            "maxHeightErrorMeters": 1.0744,
+            "p95HeightErrorMeters": 0.5413,
+            "worst": {
+              "kind": "high",
+              "observed": "2026-03-11T21:02:51Z",
+              "predicted": "2026-03-11T22:09:59Z",
+              "deltaMinutes": 67.14
+            }
+          },
+          "withinD2": false,
+          "interpretation": "Anomalous-year stress test (Z26): January 2026 mean pressure 1007.9 hPa vs 1027.6 hPa in January 2022 at Arcachon (~+0.20 m of sea level from atmospheric loading). A harmonic model does not predict this; the bias is weather, not model drift.",
+          "pressureAnomaly": {
+            "january2022Hectopascals": 1027.6,
+            "january2025Hectopascals": 1016.8,
+            "january2026Hectopascals": 1007.9,
+            "equivalentSeaLevelMeters": 0.2,
+            "source": "architect measurement, review v6 (Z26)"
+          },
+          "oneYearAhead": {
+            "testWindow": {
+              "start": "2025-01-01",
+              "end": "2025-12-31"
+            },
+            "samples": 8760,
+            "rmseMeters": 0.16561,
+            "biasMeters": -0.01632,
+            "p95HeightErrorMeters": 0.323,
+            "maxUnderPredictionMeters": 0.5241,
+            "minOverPredictionMeters": -0.9919,
+            "maxAbsoluteErrorMeters": 0.9919,
+            "extrema": {
+              "observed": 1399,
+              "matched": 1399,
+              "unmatched": 0,
+              "low": {
+                "count": 700,
+                "medianMinutes": 11.46,
+                "p95Minutes": 32.17,
+                "maxMinutes": 50.0
+              },
+              "high": {
+                "count": 699,
+                "medianMinutes": 10.0,
+                "p95Minutes": 30.0,
+                "maxMinutes": 52.14
+              },
+              "maxHeightErrorMeters": 0.9881,
+              "p95HeightErrorMeters": 0.3413,
+              "worst": {
+                "kind": "high",
+                "observed": "2025-10-29T21:22:51Z",
+                "predicted": "2025-10-29T22:14:59Z",
+                "deltaMinutes": 52.14
+              }
+            },
+            "withinD2": true
+          }
+        }
+      }
+    },
+    {
+      "id": "15",
+      "name": "PORT-BLOC",
+      "role": "oceanReference",
+      "coordinate": {
+        "latitude": 45.56848,
+        "longitude": -1.061555
+      },
+      "timezoneIdentifier": "Europe/Paris",
+      "meanSeaLevel": 3.3753,
+      "meanSpringRange": 3.9227,
+      "constituents": [
+        {
+          "symbol": "M2",
+          "amplitude": 1.46699,
+          "phaseDegrees": 335.3379
+        },
+        {
+          "symbol": "S2",
+          "amplitude": 0.49436,
+          "phaseDegrees": 145.0009
+        },
+        {
+          "symbol": "N2",
+          "amplitude": 0.29348,
+          "phaseDegrees": 85.2262
+        },
+        {
+          "symbol": "K2",
+          "amplitude": 0.17635,
+          "phaseDegrees": 309.6608
+        },
+        {
+          "symbol": "K1",
+          "amplitude": 0.06474,
+          "phaseDegrees": 72.9784
+        },
+        {
+          "symbol": "O1",
+          "amplitude": 0.08002,
+          "phaseDegrees": 202.183
+        },
+        {
+          "symbol": "P1",
+          "amplitude": 0.02003,
+          "phaseDegrees": 81.3478
+        },
+        {
+          "symbol": "Q1",
+          "amplitude": 0.02752,
+          "phaseDegrees": 284.1643
+        },
+        {
+          "symbol": "M4",
+          "amplitude": 0.07518,
+          "phaseDegrees": 91.8095
+        },
+        {
+          "symbol": "MS4",
+          "amplitude": 0.02395,
+          "phaseDegrees": 330.1023
+        },
+        {
+          "symbol": "MN4",
+          "amplitude": 0.03265,
+          "phaseDegrees": 172.0858
+        },
+        {
+          "symbol": "M6",
+          "amplitude": 0.01243,
+          "phaseDegrees": 289.5183
+        },
+        {
+          "symbol": "2N2",
+          "amplitude": 0.04713,
+          "phaseDegrees": 199.8186
+        },
+        {
+          "symbol": "MU2",
+          "amplitude": 0.01514,
+          "phaseDegrees": 207.8981
+        },
+        {
+          "symbol": "NU2",
+          "amplitude": 0.062,
+          "phaseDegrees": 53.1372
+        },
+        {
+          "symbol": "L2",
+          "amplitude": 0.06195,
+          "phaseDegrees": 37.5622
+        },
+        {
+          "symbol": "T2",
+          "amplitude": 0.03421,
+          "phaseDegrees": 132.0798
+        },
+        {
+          "symbol": "J1",
+          "amplitude": 0.00209,
+          "phaseDegrees": 4.6652
+        },
+        {
+          "symbol": "OO1",
+          "amplitude": 0.00325,
+          "phaseDegrees": 147.714
+        },
+        {
+          "symbol": "2Q1",
+          "amplitude": 0.00624,
+          "phaseDegrees": 5.9833
+        },
+        {
+          "symbol": "RHO1",
+          "amplitude": 0.00557,
+          "phaseDegrees": 260.9252
+        },
+        {
+          "symbol": "M1",
+          "amplitude": 0.00354,
+          "phaseDegrees": 268.5222
+        },
+        {
+          "symbol": "S1",
+          "amplitude": 0.0106,
+          "phaseDegrees": 226.5564
+        },
+        {
+          "symbol": "SA",
+          "amplitude": 0.10906,
+          "phaseDegrees": 322.9506
+        },
+        {
+          "symbol": "SSA",
+          "amplitude": 0.05345,
+          "phaseDegrees": 261.6393
+        }
+      ],
+      "validUntil": "2029-06-15T23:59:59Z",
+      "nodalCorrections": false,
+      "attribution": "Source : REFMAR / Shom — Licence Ouverte 2.0 (lov2). Modèle harmonique local, non officiel.",
+      "fitWindows": [
+        {
+          "start": "2022-01-01",
+          "end": "2023-12-31"
+        },
+        {
+          "start": "2026-01-01",
+          "end": "2026-06-15"
+        }
+      ],
+      "excludedWindows": [
+        "2024-01-01..2024-12-31 (silt/plumbing anomaly)"
+      ],
+      "uncertainty": {
+        "timeMinutes": 75,
+        "heightMeters": 0.6
+      },
+      "uncertaintyBasis": "u_t: leave-one-year-out max |dt| 64.76 min (2023) + 10 min allowance (D2) = 74.76 min; u_h: leave-one-year-out max under-prediction 0.5113 m (2022) + 0.05 m minimum allowance (D2); declared 0.60 m (margin 0.0887 m)",
+      "qc": [
+        {
+          "window": "2022-01-01..2023-12-31",
+          "total": 17470,
+          "expected": 17520,
+          "kept": 17470,
+          "rejected": {},
+          "coverage": 0.9971,
+          "maxGapHours": 7.0,
+          "datumStepMeters": 0.0389,
+          "gaps": [
+            {
+              "start": "2022-07-12T18:00:00Z",
+              "end": "2022-07-12T23:00:00Z",
+              "hours": 5.0,
+              "allowlisted": true
+            },
+            {
+              "start": "2022-07-14T19:00:00Z",
+              "end": "2022-07-15T02:00:00Z",
+              "hours": 7.0,
+              "allowlisted": true
+            },
+            {
+              "start": "2022-07-16T22:00:00Z",
+              "end": "2022-07-17T03:00:00Z",
+              "hours": 5.0,
+              "allowlisted": true
+            },
+            {
+              "start": "2022-07-19T00:00:00Z",
+              "end": "2022-07-19T04:00:00Z",
+              "hours": 4.0,
+              "allowlisted": true
+            },
+            {
+              "start": "2023-06-23T23:00:00Z",
+              "end": "2023-06-24T03:00:00Z",
+              "hours": 4.0,
+              "allowlisted": true
+            },
+            {
+              "start": "2023-07-03T20:00:00Z",
+              "end": "2023-07-04T00:00:00Z",
+              "hours": 4.0,
+              "allowlisted": true
+            },
+            {
+              "start": "2023-07-05T21:00:00Z",
+              "end": "2023-07-06T02:00:00Z",
+              "hours": 5.0,
+              "allowlisted": true
+            },
+            {
+              "start": "2023-07-07T23:00:00Z",
+              "end": "2023-07-08T04:00:00Z",
+              "hours": 5.0,
+              "allowlisted": true
+            },
+            {
+              "start": "2023-07-10T00:00:00Z",
+              "end": "2023-07-10T05:00:00Z",
+              "hours": 5.0,
+              "allowlisted": true
+            },
+            {
+              "start": "2023-07-13T17:00:00Z",
+              "end": "2023-07-13T21:00:00Z",
+              "hours": 4.0,
+              "allowlisted": true
+            },
+            {
+              "start": "2023-07-19T21:00:00Z",
+              "end": "2023-07-20T01:00:00Z",
+              "hours": 4.0,
+              "allowlisted": true
+            },
+            {
+              "start": "2023-08-15T20:00:00Z",
+              "end": "2023-08-15T23:00:00Z",
+              "hours": 3.0,
+              "allowlisted": true
+            },
+            {
+              "start": "2023-08-19T22:00:00Z",
+              "end": "2023-08-20T02:00:00Z",
+              "hours": 4.0,
+              "allowlisted": true
+            },
+            {
+              "start": "2023-08-21T22:00:00Z",
+              "end": "2023-08-22T03:00:00Z",
+              "hours": 5.0,
+              "allowlisted": true
+            }
+          ],
+          "failures": []
+        },
+        {
+          "window": "2026-01-01..2026-06-15",
+          "total": 3972,
+          "expected": 3972,
+          "kept": 3972,
+          "rejected": {},
+          "coverage": 1.0,
+          "maxGapHours": 1.0,
+          "datumStepMeters": 0.0389,
+          "gaps": [],
+          "failures": []
+        }
+      ],
+      "accuracy": {
+        "testWindow": {
+          "start": "2025-01-01",
+          "end": "2025-12-31"
+        },
+        "samples": 8753,
+        "rmseMeters": 0.14669,
+        "biasMeters": -0.01439,
+        "p95HeightErrorMeters": 0.2983,
+        "maxUnderPredictionMeters": 0.3926,
+        "minOverPredictionMeters": -0.7802,
+        "maxAbsoluteErrorMeters": 0.7802,
+        "extrema": {
+          "observed": 1385,
+          "matched": 1385,
+          "unmatched": 0,
+          "low": {
+            "count": 694,
+            "medianMinutes": 7.83,
+            "p95Minutes": 25.0,
+            "maxMinutes": 45.08
+          },
+          "high": {
+            "count": 691,
+            "medianMinutes": 7.69,
+            "p95Minutes": 25.62,
+            "maxMinutes": 44.17
+          },
+          "maxHeightErrorMeters": 0.913,
+          "p95HeightErrorMeters": 0.2921,
+          "worst": {
+            "kind": "low",
+            "observed": "2025-01-25T19:55:05Z",
+            "predicted": "2025-01-25T19:10:00Z",
+            "deltaMinutes": 45.08
+          }
+        },
+        "leaveOneYearOut": [
+          {
+            "year": 2022,
+            "samples": 8743,
+            "rmseMeters": 0.14631,
+            "biasMeters": 0.07247,
+            "p95HeightErrorMeters": 0.2878,
+            "maxUnderPredictionMeters": 0.5113,
+            "minOverPredictionMeters": -0.543,
+            "maxAbsoluteErrorMeters": 0.543,
+            "extrema": {
+              "observed": 1352,
+              "matched": 1352,
+              "unmatched": 0,
+              "low": {
+                "count": 673,
+                "medianMinutes": 8.0,
+                "p95Minutes": 22.94,
+                "maxMinutes": 36.18
+              },
+              "high": {
+                "count": 679,
+                "medianMinutes": 8.53,
+                "p95Minutes": 28.0,
+                "maxMinutes": 58.2
+              },
+              "maxHeightErrorMeters": 0.511,
+              "p95HeightErrorMeters": 0.3014,
+              "worst": {
+                "kind": "high",
+                "observed": "2022-12-30T23:18:12Z",
+                "predicted": "2022-12-30T22:20:00Z",
+                "deltaMinutes": 58.2
+              }
+            },
+            "maxMinutes": 58.2
+          },
+          {
+            "year": 2023,
+            "samples": 8727,
+            "rmseMeters": 0.18262,
+            "biasMeters": -0.01779,
+            "p95HeightErrorMeters": 0.3769,
+            "maxUnderPredictionMeters": 0.4637,
+            "minOverPredictionMeters": -1.2122,
+            "maxAbsoluteErrorMeters": 1.2122,
+            "extrema": {
+              "observed": 1373,
+              "matched": 1373,
+              "unmatched": 0,
+              "low": {
+                "count": 679,
+                "medianMinutes": 8.02,
+                "p95Minutes": 24.08,
+                "maxMinutes": 63.21
+              },
+              "high": {
+                "count": 694,
+                "medianMinutes": 8.85,
+                "p95Minutes": 25.0,
+                "maxMinutes": 64.76
+              },
+              "maxHeightErrorMeters": 1.2438,
+              "p95HeightErrorMeters": 0.3844,
+              "worst": {
+                "kind": "high",
+                "observed": "2023-08-24T07:50:14Z",
+                "predicted": "2023-08-24T08:54:59Z",
+                "deltaMinutes": 64.76
+              }
+            },
+            "maxMinutes": 64.76
+          },
+          {
+            "year": 2025,
+            "samples": 8753,
+            "rmseMeters": 0.14669,
+            "biasMeters": -0.01439,
+            "p95HeightErrorMeters": 0.2983,
+            "maxUnderPredictionMeters": 0.3926,
+            "minOverPredictionMeters": -0.7802,
+            "maxAbsoluteErrorMeters": 0.7802,
+            "extrema": {
+              "observed": 1385,
+              "matched": 1385,
+              "unmatched": 0,
+              "low": {
+                "count": 694,
+                "medianMinutes": 7.83,
+                "p95Minutes": 25.0,
+                "maxMinutes": 45.08
+              },
+              "high": {
+                "count": 691,
+                "medianMinutes": 7.69,
+                "p95Minutes": 25.62,
+                "maxMinutes": 44.17
+              },
+              "maxHeightErrorMeters": 0.913,
+              "p95HeightErrorMeters": 0.2921,
+              "worst": {
+                "kind": "low",
+                "observed": "2025-01-25T19:55:05Z",
+                "predicted": "2025-01-25T19:10:00Z",
+                "deltaMinutes": 45.08
+              }
+            },
+            "maxMinutes": 45.08
+          },
+          {
+            "year": 2026,
+            "samples": 3972,
+            "rmseMeters": 0.20794,
+            "biasMeters": -0.08342,
+            "p95HeightErrorMeters": 0.4809,
+            "maxUnderPredictionMeters": 0.4701,
+            "minOverPredictionMeters": -1.1809,
+            "maxAbsoluteErrorMeters": 1.1809,
+            "extrema": {
+              "observed": 630,
+              "matched": 630,
+              "unmatched": 0,
+              "low": {
+                "count": 314,
+                "medianMinutes": 7.86,
+                "p95Minutes": 27.96,
+                "maxMinutes": 54.97
+              },
+              "high": {
+                "count": 316,
+                "medianMinutes": 9.55,
+                "p95Minutes": 28.66,
+                "maxMinutes": 58.17
+              },
+              "maxHeightErrorMeters": 1.1903,
+              "p95HeightErrorMeters": 0.4849,
+              "worst": {
+                "kind": "high",
+                "observed": "2026-01-27T22:31:50Z",
+                "predicted": "2026-01-27T23:29:59Z",
+                "deltaMinutes": 58.17
+              }
+            },
+            "maxMinutes": 58.17
+          }
+        ],
+        "seriesRmse": {
+          "medianMeters": 0.16465,
+          "maxMeters": 0.20794,
+          "rule": "median <= 0.20 and max <= 0.22 (Z30)",
+          "passed": true
+        },
+        "forwardTest": {
+          "fitWindows": [
+            {
+              "start": "2022-01-01",
+              "end": "2023-12-31"
+            }
+          ],
+          "testWindow": {
+            "start": "2026-01-01",
+            "end": "2026-06-15"
+          },
+          "samples": 3972,
+          "rmseMeters": 0.2318,
+          "biasMeters": -0.10929,
+          "p95HeightErrorMeters": 0.5372,
+          "maxUnderPredictionMeters": 0.439,
+          "minOverPredictionMeters": -1.2043,
+          "maxAbsoluteErrorMeters": 1.2043,
+          "extrema": {
+            "observed": 630,
+            "matched": 630,
+            "unmatched": 0,
+            "low": {
+              "count": 314,
+              "medianMinutes": 8.18,
+              "p95Minutes": 30.52,
+              "maxMinutes": 51.37
+            },
+            "high": {
+              "count": 316,
+              "medianMinutes": 10.09,
+              "p95Minutes": 31.5,
+              "maxMinutes": 63.17
+            },
+            "maxHeightErrorMeters": 1.2189,
+            "p95HeightErrorMeters": 0.543,
+            "worst": {
+              "kind": "high",
+              "observed": "2026-01-27T22:31:50Z",
+              "predicted": "2026-01-27T23:34:59Z",
+              "deltaMinutes": 63.17
+            }
+          },
+          "withinD2": false,
+          "interpretation": "Anomalous-year stress test (Z26): January 2026 mean pressure 1007.9 hPa vs 1027.6 hPa in January 2022 at Arcachon (~+0.20 m of sea level from atmospheric loading). A harmonic model does not predict this; the bias is weather, not model drift.",
+          "pressureAnomaly": {
+            "january2022Hectopascals": 1027.6,
+            "january2025Hectopascals": 1016.8,
+            "january2026Hectopascals": 1007.9,
+            "equivalentSeaLevelMeters": 0.2,
+            "source": "architect measurement, review v6 (Z26)"
+          },
+          "oneYearAhead": {
+            "testWindow": {
+              "start": "2025-01-01",
+              "end": "2025-12-31"
+            },
+            "samples": 8753,
+            "rmseMeters": 0.16083,
+            "biasMeters": -0.03179,
+            "p95HeightErrorMeters": 0.3259,
+            "maxUnderPredictionMeters": 0.4048,
+            "minOverPredictionMeters": -0.8594,
+            "maxAbsoluteErrorMeters": 0.8594,
+            "extrema": {
+              "observed": 1385,
+              "matched": 1385,
+              "unmatched": 0,
+              "low": {
+                "count": 694,
+                "medianMinutes": 7.65,
+                "p95Minutes": 26.28,
+                "maxMinutes": 45.08
+              },
+              "high": {
+                "count": 691,
+                "medianMinutes": 8.02,
+                "p95Minutes": 25.82,
+                "maxMinutes": 42.73
+              },
+              "maxHeightErrorMeters": 0.9944,
+              "p95HeightErrorMeters": 0.3104,
+              "worst": {
+                "kind": "low",
+                "observed": "2025-01-25T19:55:05Z",
+                "predicted": "2025-01-25T19:10:00Z",
+                "deltaMinutes": 45.08
+              }
+            },
+            "withinD2": true
+          }
+        }
+      }
+    },
+    {
+      "id": "3",
+      "name": "BREST",
+      "role": "coefficientReference",
+      "coordinate": {
+        "latitude": 48.38290024,
+        "longitude": -4.49503994
+      },
+      "timezoneIdentifier": "Europe/Paris",
+      "meanSeaLevel": 4.2692,
+      "meanSpringRange": 5.4813,
+      "constituents": [
+        {
+          "symbol": "M2",
+          "amplitude": 1.98689,
+          "phaseDegrees": 332.6131
+        },
+        {
+          "symbol": "S2",
+          "amplitude": 0.75377,
+          "phaseDegrees": 147.9826
+        },
+        {
+          "symbol": "N2",
+          "amplitude": 0.40332,
+          "phaseDegrees": 82.6417
+        },
+        {
+          "symbol": "K2",
+          "amplitude": 0.27131,
+          "phaseDegrees": 311.4719
+        },
+        {
+          "symbol": "K1",
+          "amplitude": 0.07074,
+          "phaseDegrees": 68.8739
+        },
+        {
+          "symbol": "O1",
+          "amplitude": 0.07583,
+          "phaseDegrees": 198.6308
+        },
+        {
+          "symbol": "P1",
+          "amplitude": 0.02188,
+          "phaseDegrees": 74.0742
+        },
+        {
+          "symbol": "Q1",
+          "amplitude": 0.02629,
+          "phaseDegrees": 280.5086
+        },
+        {
+          "symbol": "M4",
+          "amplitude": 0.05644,
+          "phaseDegrees": 192.4717
+        },
+        {
+          "symbol": "MS4",
+          "amplitude": 0.03611,
+          "phaseDegrees": 40.4045
+        },
+        {
+          "symbol": "MN4",
+          "amplitude": 0.02158,
+          "phaseDegrees": 274.817
+        },
+        {
+          "symbol": "M6",
+          "amplitude": 0.0283,
+          "phaseDegrees": 311.8056
+        },
+        {
+          "symbol": "2N2",
+          "amplitude": 0.05972,
+          "phaseDegrees": 192.0426
+        },
+        {
+          "symbol": "MU2",
+          "amplitude": 0.08394,
+          "phaseDegrees": 191.1873
+        },
+        {
+          "symbol": "NU2",
+          "amplitude": 0.07391,
+          "phaseDegrees": 43.5657
+        },
+        {
+          "symbol": "L2",
+          "amplitude": 0.06229,
+          "phaseDegrees": 19.5764
+        },
+        {
+          "symbol": "T2",
+          "amplitude": 0.0425,
+          "phaseDegrees": 135.5197
+        },
+        {
+          "symbol": "J1",
+          "amplitude": 0.00289,
+          "phaseDegrees": 354.332
+        },
+        {
+          "symbol": "OO1",
+          "amplitude": 0.00285,
+          "phaseDegrees": 114.165
+        },
+        {
+          "symbol": "2Q1",
+          "amplitude": 0.00619,
+          "phaseDegrees": 357.8867
+        },
+        {
+          "symbol": "RHO1",
+          "amplitude": 0.00457,
+          "phaseDegrees": 262.605
+        },
+        {
+          "symbol": "M1",
+          "amplitude": 0.00421,
+          "phaseDegrees": 215.5247
+        },
+        {
+          "symbol": "S1",
+          "amplitude": 0.00816,
+          "phaseDegrees": 196.5962
+        },
+        {
+          "symbol": "SA",
+          "amplitude": 0.07975,
+          "phaseDegrees": 325.7999
+        },
+        {
+          "symbol": "SSA",
+          "amplitude": 0.03549,
+          "phaseDegrees": 247.9668
+        }
+      ],
+      "validUntil": "2029-06-30T23:59:59Z",
+      "nodalCorrections": false,
+      "attribution": "Source : REFMAR / Shom — Licence Ouverte 2.0 (lov2). Modèle harmonique local, non officiel.",
+      "fitWindows": [
+        {
+          "start": "2022-01-01",
+          "end": "2024-12-31"
+        },
+        {
+          "start": "2026-01-01",
+          "end": "2026-06-30"
+        }
+      ],
+      "excludedWindows": [],
+      "uncertainty": {
+        "timeMinutes": 45,
+        "heightMeters": 0.6
+      },
+      "uncertaintyBasis": "coefficient reference only; no spot ships on station 3",
+      "qc": [
+        {
+          "window": "2022-01-01..2024-12-31",
+          "total": 25778,
+          "expected": 26304,
+          "kept": 25362,
+          "rejected": {
+            "rate": 416
+          },
+          "coverage": 0.9642,
+          "maxGapHours": 489.0,
+          "datumStepMeters": 0.0604,
+          "gaps": [
+            {
+              "start": "2022-10-20T08:00:00Z",
+              "end": "2022-10-20T13:00:00Z",
+              "hours": 5.0,
+              "allowlisted": true
+            },
+            {
+              "start": "2024-06-19T21:00:00Z",
+              "end": "2024-06-21T08:00:00Z",
+              "hours": 35.0,
+              "allowlisted": true
+            },
+            {
+              "start": "2024-11-27T08:00:00Z",
+              "end": "2024-12-17T17:00:00Z",
+              "hours": 489.0,
+              "allowlisted": true
+            }
+          ],
+          "failures": []
+        },
+        {
+          "window": "2026-01-01..2026-06-30",
+          "total": 4343,
+          "expected": 4343,
+          "kept": 4287,
+          "rejected": {
+            "rate": 56
+          },
+          "coverage": 0.9871,
+          "maxGapHours": 1.0,
+          "datumStepMeters": 0.0604,
+          "gaps": [],
+          "failures": []
+        }
+      ],
+      "accuracy": {
+        "testWindow": {
+          "start": "2025-01-01",
+          "end": "2025-12-31"
+        },
+        "samples": 8760,
+        "rmseMeters": 0.14746,
+        "biasMeters": -0.01471,
+        "p95HeightErrorMeters": 0.2907,
+        "maxUnderPredictionMeters": 0.4776,
+        "minOverPredictionMeters": -0.7505,
+        "maxAbsoluteErrorMeters": 0.7505,
+        "extrema": {
+          "observed": 1398,
+          "matched": 1398,
+          "unmatched": 0,
+          "low": {
+            "count": 700,
+            "medianMinutes": 6.99,
+            "p95Minutes": 17.86,
+            "maxMinutes": 30.5
+          },
+          "high": {
+            "count": 698,
+            "medianMinutes": 7.29,
+            "p95Minutes": 17.32,
+            "maxMinutes": 37.68
+          },
+          "maxHeightErrorMeters": 0.6936,
+          "p95HeightErrorMeters": 0.2817,
+          "worst": {
+            "kind": "high",
+            "observed": "2025-11-28T21:27:19Z",
+            "predicted": "2025-11-28T22:04:59Z",
+            "deltaMinutes": 37.68
+          }
+        },
+        "leaveOneYearOut": [
+          {
+            "year": 2022,
+            "samples": 8634,
+            "rmseMeters": 0.15993,
+            "biasMeters": 0.06146,
+            "p95HeightErrorMeters": 0.3227,
+            "maxUnderPredictionMeters": 0.5005,
+            "minOverPredictionMeters": -0.6193,
+            "maxAbsoluteErrorMeters": 0.6193,
+            "extrema": {
+              "observed": 1361,
+              "matched": 1361,
+              "unmatched": 0,
+              "low": {
+                "count": 683,
+                "medianMinutes": 7.69,
+                "p95Minutes": 19.98,
+                "maxMinutes": 35.29
+              },
+              "high": {
+                "count": 678,
+                "medianMinutes": 7.46,
+                "p95Minutes": 21.24,
+                "maxMinutes": 33.9
+              },
+              "maxHeightErrorMeters": 0.4809,
+              "p95HeightErrorMeters": 0.3239,
+              "worst": {
+                "kind": "low",
+                "observed": "2022-08-21T18:05:17Z",
+                "predicted": "2022-08-21T17:30:00Z",
+                "deltaMinutes": 35.29
+              }
+            },
+            "maxMinutes": 35.29
+          },
+          {
+            "year": 2023,
+            "samples": 8630,
+            "rmseMeters": 0.17248,
+            "biasMeters": -0.00453,
+            "p95HeightErrorMeters": 0.3391,
+            "maxUnderPredictionMeters": 0.5292,
+            "minOverPredictionMeters": -1.2874,
+            "maxAbsoluteErrorMeters": 1.2874,
+            "extrema": {
+              "observed": 1398,
+              "matched": 1398,
+              "unmatched": 0,
+              "low": {
+                "count": 702,
+                "medianMinutes": 6.64,
+                "p95Minutes": 18.26,
+                "maxMinutes": 33.4
+              },
+              "high": {
+                "count": 696,
+                "medianMinutes": 7.01,
+                "p95Minutes": 19.71,
+                "maxMinutes": 35.0
+              },
+              "maxHeightErrorMeters": 1.1973,
+              "p95HeightErrorMeters": 0.3459,
+              "worst": {
+                "kind": "high",
+                "observed": "2023-03-30T23:00:00Z",
+                "predicted": "2023-03-30T23:34:59Z",
+                "deltaMinutes": 35.0
+              }
+            },
+            "maxMinutes": 35.0
+          },
+          {
+            "year": 2024,
+            "samples": 8098,
+            "rmseMeters": 0.16212,
+            "biasMeters": -0.02426,
+            "p95HeightErrorMeters": 0.3378,
+            "maxUnderPredictionMeters": 0.4774,
+            "minOverPredictionMeters": -0.7729,
+            "maxAbsoluteErrorMeters": 0.7729,
+            "extrema": {
+              "observed": 1322,
+              "matched": 1322,
+              "unmatched": 0,
+              "low": {
+                "count": 663,
+                "medianMinutes": 6.67,
+                "p95Minutes": 17.58,
+                "maxMinutes": 34.3
+              },
+              "high": {
+                "count": 659,
+                "medianMinutes": 6.67,
+                "p95Minutes": 18.1,
+                "maxMinutes": 42.5
+              },
+              "maxHeightErrorMeters": 0.6546,
+              "p95HeightErrorMeters": 0.3378,
+              "worst": {
+                "kind": "high",
+                "observed": "2024-10-11T21:42:30Z",
+                "predicted": "2024-10-11T22:24:59Z",
+                "deltaMinutes": 42.5
+              }
+            },
+            "maxMinutes": 42.5
+          },
+          {
+            "year": 2025,
+            "samples": 8760,
+            "rmseMeters": 0.14746,
+            "biasMeters": -0.01471,
+            "p95HeightErrorMeters": 0.2907,
+            "maxUnderPredictionMeters": 0.4776,
+            "minOverPredictionMeters": -0.7505,
+            "maxAbsoluteErrorMeters": 0.7505,
+            "extrema": {
+              "observed": 1398,
+              "matched": 1398,
+              "unmatched": 0,
+              "low": {
+                "count": 700,
+                "medianMinutes": 6.99,
+                "p95Minutes": 17.86,
+                "maxMinutes": 30.5
+              },
+              "high": {
+                "count": 698,
+                "medianMinutes": 7.29,
+                "p95Minutes": 17.32,
+                "maxMinutes": 37.68
+              },
+              "maxHeightErrorMeters": 0.6936,
+              "p95HeightErrorMeters": 0.2817,
+              "worst": {
+                "kind": "high",
+                "observed": "2025-11-28T21:27:19Z",
+                "predicted": "2025-11-28T22:04:59Z",
+                "deltaMinutes": 37.68
+              }
+            },
+            "maxMinutes": 37.68
+          },
+          {
+            "year": 2026,
+            "samples": 4287,
+            "rmseMeters": 0.18912,
+            "biasMeters": -0.0379,
+            "p95HeightErrorMeters": 0.4204,
+            "maxUnderPredictionMeters": 0.4537,
+            "minOverPredictionMeters": -0.8362,
+            "maxAbsoluteErrorMeters": 0.8362,
+            "extrema": {
+              "observed": 693,
+              "matched": 693,
+              "unmatched": 0,
+              "low": {
+                "count": 347,
+                "medianMinutes": 6.67,
+                "p95Minutes": 16.88,
+                "maxMinutes": 29.77
+              },
+              "high": {
+                "count": 346,
+                "medianMinutes": 7.2,
+                "p95Minutes": 20.44,
+                "maxMinutes": 45.53
+              },
+              "maxHeightErrorMeters": 0.7679,
+              "p95HeightErrorMeters": 0.4218,
+              "worst": {
+                "kind": "high",
+                "observed": "2026-02-12T11:39:28Z",
+                "predicted": "2026-02-12T12:24:59Z",
+                "deltaMinutes": 45.53
+              }
+            },
+            "maxMinutes": 45.53
+          }
+        ],
+        "seriesRmse": {
+          "medianMeters": 0.16212,
+          "maxMeters": 0.18912,
+          "rule": "median <= 0.20 and max <= 0.22 (Z30)",
+          "passed": true
+        },
+        "forwardTest": {
+          "fitWindows": [
+            {
+              "start": "2022-01-01",
+              "end": "2024-12-31"
+            }
+          ],
+          "testWindow": {
+            "start": "2026-01-01",
+            "end": "2026-06-30"
+          },
+          "samples": 4343,
+          "rmseMeters": 0.20104,
+          "biasMeters": -0.05122,
+          "p95HeightErrorMeters": 0.4519,
+          "maxUnderPredictionMeters": 0.4518,
+          "minOverPredictionMeters": -0.8787,
+          "maxAbsoluteErrorMeters": 0.8787,
+          "extrema": {
+            "observed": 693,
+            "matched": 693,
+            "unmatched": 0,
+            "low": {
+              "count": 347,
+              "medianMinutes": 7.42,
+              "p95Minutes": 18.8,
+              "maxMinutes": 34.64
+            },
+            "high": {
+              "count": 346,
+              "medianMinutes": 7.63,
+              "p95Minutes": 20.0,
+              "maxMinutes": 45.53
+            },
+            "maxHeightErrorMeters": 0.8133,
+            "p95HeightErrorMeters": 0.4572,
+            "worst": {
+              "kind": "high",
+              "observed": "2026-02-12T11:39:28Z",
+              "predicted": "2026-02-12T12:24:59Z",
+              "deltaMinutes": 45.53
+            }
+          },
+          "withinD2": null,
+          "interpretation": "Anomalous-year stress test (Z26): January 2026 mean pressure 1007.9 hPa vs 1027.6 hPa in January 2022 at Arcachon (~+0.20 m of sea level from atmospheric loading). A harmonic model does not predict this; the bias is weather, not model drift.",
+          "pressureAnomaly": {
+            "january2022Hectopascals": 1027.6,
+            "january2025Hectopascals": 1016.8,
+            "january2026Hectopascals": 1007.9,
+            "equivalentSeaLevelMeters": 0.2,
+            "source": "architect measurement, review v6 (Z26)"
+          },
+          "oneYearAhead": {
+            "testWindow": {
+              "start": "2025-01-01",
+              "end": "2025-12-31"
+            },
+            "samples": 8760,
+            "rmseMeters": 0.15499,
+            "biasMeters": -0.02198,
+            "p95HeightErrorMeters": 0.3022,
+            "maxUnderPredictionMeters": 0.4627,
+            "minOverPredictionMeters": -0.7988,
+            "maxAbsoluteErrorMeters": 0.7988,
+            "extrema": {
+              "observed": 1398,
+              "matched": 1398,
+              "unmatched": 0,
+              "low": {
+                "count": 700,
+                "medianMinutes": 6.67,
+                "p95Minutes": 18.03,
+                "maxMinutes": 32.61
+              },
+              "high": {
+                "count": 698,
+                "medianMinutes": 7.4,
+                "p95Minutes": 17.79,
+                "maxMinutes": 36.15
+              },
+              "maxHeightErrorMeters": 0.7418,
+              "p95HeightErrorMeters": 0.2945,
+              "worst": {
+                "kind": "high",
+                "observed": "2025-08-03T10:13:50Z",
+                "predicted": "2025-08-03T10:49:59Z",
+                "deltaMinutes": 36.15
+              }
+            },
+            "withinD2": null
+          }
+        }
+      }
+    }
+  ],
+  "spots": [
+    {
+      "id": "pointe-de-grave",
+      "stationId": "15",
+      "correction": {
+        "lagMinutes": 0,
+        "amplitudeFactor": 1.0
+      },
+      "correctionStatus": "none",
+      "validation": "gauged",
+      "uncertainty": {
+        "timeMinutes": 75,
+        "heightMeters": 0.6,
+        "basis": "u_t: leave-one-year-out max |dt| 64.76 min (2023) + 10 min allowance (D2) = 74.76 min; u_h: leave-one-year-out max under-prediction 0.5113 m (2022) + 0.05 m minimum allowance (D2); declared 0.60 m (margin 0.0887 m)"
+      },
+      "swimmingRange": {
+        "lowBelow": 4.03,
+        "strongAt": 4.63,
+        "calibration": {
+          "year": 2025,
+          "coefficientDaysAtOrAbove100": 37,
+          "thresholdMeters": 4.335,
+          "marginMeters": 0.3
+        }
+      }
+    },
+    {
+      "id": "arcachon-eyrac",
+      "stationId": "190",
+      "correction": {
+        "lagMinutes": 0,
+        "amplitudeFactor": 1.0
+      },
+      "correctionStatus": "none",
+      "validation": "gauged",
+      "uncertainty": {
+        "timeMinutes": 70,
+        "heightMeters": 0.7,
+        "basis": "u_t: leave-one-year-out max |dt| 53.33 min (2024) + 10 min allowance (D2) = 63.33 min; SHOM 2025 low-water max 57.8 min + 12 min allowance (Z19); u_h: leave-one-year-out max under-prediction 0.6059 m (2022) + 0.05 m minimum allowance (D2); declared 0.70 m (margin 0.0941 m)"
+      },
+      "swimmingRange": {
+        "lowBelow": 3.58,
+        "strongAt": 4.18,
+        "calibration": {
+          "year": 2025,
+          "coefficientDaysAtOrAbove100": 37,
+          "thresholdMeters": 3.88,
+          "marginMeters": 0.3
+        }
+      }
+    }
+  ]
+}

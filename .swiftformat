@@ -1,0 +1,9 @@
+--swiftversion 6.0
+--indent 4
+--maxwidth 120
+--wraparguments before-first
+--wrapparameters before-first
+--closingparen same-line
+--commas inline
+--trimwhitespace always
+--exclude Packages/EstranCore/.build

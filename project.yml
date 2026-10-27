@@ -1,0 +1,122 @@
+name: Estran
+
+options:
+  bundleIdPrefix: com.forgedigitale
+  developmentLanguage: fr
+  deploymentTarget:
+    iOS: "27.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+packages:
+  EstranCore:
+    path: Packages/EstranCore
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    IPHONEOS_DEPLOYMENT_TARGET: "27.0"
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CLANG_ENABLE_MODULES: YES
+    SWIFT_EMIT_LOC_STRINGS: YES
+
+targets:
+  Estran:
+    type: application
+    platform: iOS
+    sources:
+      - path: Estran
+        excludes:
+          - "Info.plist"
+          - "Estran.entitlements"
+      - path: EstranWidgets/LiveActivity/GoActivityAttributes.swift
+    dependencies:
+      - package: EstranCore
+        product: EstranCore
+      - target: EstranWidgets
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.forgedigitale.estran
+        PRODUCT_NAME: Estran
+        INFOPLIST_FILE: Estran/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: Estran/Estran.entitlements
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: NO
+        ENABLE_PREVIEWS: YES
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks"
+
+  EstranWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: EstranWidgets
+        excludes:
+          - "Info.plist"
+          - "EstranWidgets.entitlements"
+      - path: Estran/Theme/OceanPalette.swift
+      - path: Estran/Theme/OceanTypography.swift
+      - path: Estran/Theme/OceanSpacing.swift
+    dependencies:
+      - package: EstranCore
+        product: EstranCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.forgedigitale.estran.widgets
+        PRODUCT_NAME: EstranWidgets
+        INFOPLIST_FILE: EstranWidgets/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: EstranWidgets/EstranWidgets.entitlements
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
+        TARGETED_DEVICE_FAMILY: "1"
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"
+
+  EstranTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: EstranTests
+    dependencies:
+      - package: EstranCore
+        product: EstranCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.forgedigitale.estran.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+  EstranUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: EstranUITests
+    dependencies:
+      - target: Estran
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.forgedigitale.estran.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Estran
+
+schemes:
+  Estran:
+    build:
+      targets:
+        Estran: all
+        EstranWidgets: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: true
+      targets:
+        - EstranTests
+        - EstranUITests
+    archive:
+      config: Release

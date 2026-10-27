@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - dev
+      - main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-package:
+    name: EstranCore (Linux, Swift 6)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.0"
+      - name: Build package
+        run: swift build --package-path Packages/EstranCore
+      - name: Test package
+        run: swift test --package-path Packages/EstranCore
+
+  lint:
+    name: SwiftLint and SwiftFormat
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install linters
+        run: brew install swiftlint swiftformat
+      - name: SwiftLint
+        run: swiftlint lint --strict --config .swiftlint.yml
+      - name: SwiftFormat
+        run: swiftformat --lint --exclude Packages/EstranCore/.build .
+
+  macos-build-test:
+    name: Xcode build and test
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        run: xcodegen generate
+      - name: Build
+        run: |
+          xcodebuild \
+            -project Estran.xcodeproj \
+            -scheme Estran \
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            build
+      - name: Test
+        run: |
+          xcodebuild \
+            -project Estran.xcodeproj \
+            -scheme Estran \
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            test
+
+  macos-archive:
+    name: Unsigned archive compile check
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        run: xcodegen generate
+      - name: Archive without signing
+        run: |
+          xcodebuild \
+            -project Estran.xcodeproj \
+            -scheme Estran \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Estran.xcarchive" \
+            archive \
+            CODE_SIGNING_ALLOWED=NO

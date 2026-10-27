@@ -1,0 +1,1652 @@
+#!/usr/bin/env python3
+"""Build the embedded Estran tide model from REFMAR observations.
+
+Zero-budget pipeline, Licence Ouverte 2.0:
+
+    REFMAR observations -> QC -> least-squares harmonic fit -> dataset + report
+
+The output is ``tide-model-<year>.<revision>.json`` under
+``Packages/EstranCore/Sources/EstranCore/Resources/``. It is decoded by
+``TideModel.load(from:)``; the Swift loader is the contract, this script is one
+implementation of it.
+
+Data source (verified 2026-10-27):
+
+    GET https://services.data.shom.fr/maregraphie/observation/json/{station}
+        ?sources={1|3|4}&dtStart=YYYY-MM-DD&dtEnd=YYYY-MM-DD
+
+    * 4 = validated hourly  -> harmonic fit
+    * 3 = validated 10 min  -> extrema cross-check
+    * 1 = raw 1 min         -> QC only (not used by the fit)
+
+    The 31-day limit per request is **silent**: a longer range returns HTTP 200
+    truncated to ~31 days. Every window is therefore <= 31 days and the last
+    timestamp is checked against the requested end.
+
+Usage:
+
+    scripts/tides/refresh                  # full run, writes the dataset
+    scripts/tides/refresh --dry-run        # fetch + fit + report, no write
+    scripts/tides/refresh --station 190    # one station (debugging)
+    scripts/tides/refresh --no-cache       # ignore the local cache
+
+No dependency beyond the Python standard library.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import math
+import os
+import re
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
+
+# --------------------------------------------------------------------------- #
+# Configuration
+# --------------------------------------------------------------------------- #
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+SWIFT_SPEEDS = os.path.join(
+    REPO_ROOT, "Packages/EstranCore/Sources/EstranCore/Models/TideStation.swift")
+OUTPUT_DIR = os.path.join(REPO_ROOT, "Packages/EstranCore/Sources/EstranCore/Resources")
+CACHE_DIR = os.path.join(REPO_ROOT, "scripts/tides/.cache")
+
+API_BASE = "https://services.data.shom.fr/maregraphie"
+OBS_URL = API_BASE + "/observation/json/{station}"
+GAUGE_URL = API_BASE + "/dl/tidegauges"
+DETAIL_URL = API_BASE + "/service/completetidegauge/{station}"
+
+EPOCH = datetime(2000, 1, 1, tzinfo=timezone.utc)
+UTC = timezone.utc
+
+#: Required constituent set (docs/data-sourcing/SHOM_DATA_SOURCING.md §4.2).
+CONSTITUENTS = [
+    "M2", "S2", "N2", "K2", "K1", "O1", "P1", "Q1", "M4", "MS4", "MN4", "M6",
+    "2N2", "MU2", "NU2", "L2", "T2", "J1", "OO1", "2Q1", "RHO1", "M1", "S1",
+    "SA", "SSA",
+]
+
+ATTRIBUTION = (
+    "Source : REFMAR / Shom — Licence Ouverte 2.0 (lov2). "
+    "Modèle harmonique local, non officiel."
+)
+LICENSE_URL = "https://github.com/etalab/licence-ouverte/blob/master/LO.md"
+SOURCE_DATASETS = [
+    "https://www.data.gouv.fr/datasets/reseaux-de-reference-des-observations-maregraphiques-refmar-maregraphes-ronim",
+    "https://www.data.gouv.fr/datasets/reseaux-de-reference-des-observations-maregraphiques-refmar-maregraphes-partenaires",
+]
+
+#: Per-station pipeline configuration (docs §4.5, §6.5).
+#:
+#: The envelope is **declared here and verified by the run** (Z21/Z22): a
+#: declared `u_t`/`u_h` smaller than the measured bound aborts the generation.
+#: The basis strings are generated from the measurements, never hand-written
+#: (Z24).
+STATIONS = {
+    "190": {
+        "name": "ARCACHON_EYRAC",
+        "role": "bassinReference",
+        "timezone": "Europe/Paris",
+        # Rolled forward with the validated 2026 half-year: 2025 stays held out,
+        # and the model is current at launch instead of three years stale.
+        "fit": [("2022-01-01", "2024-12-31"), ("2026-01-01", "2026-06-30")],
+        "test": ("2025-01-01", "2025-12-31"),
+        "excluded": [],
+        "uncertainty": {"timeMinutes": 70, "heightMeters": 0.70},
+        # Z19 external constraint: SHOM 2025 low-water max 57.8 min, + 12 min.
+        "externalTimeCheckMinutes": 57.8,
+        "externalTimeAllowanceMinutes": 12.0,
+        "externalTimeSource": "SHOM 2025 low-water max",
+        "allowedGaps": [
+            {
+                "start": "2024-10-08",
+                "end": "2024-10-09",
+                "reason": (
+                    "REFMAR outage: no observation 2024-10-08 06:00 -> "
+                    "2024-10-09 10:00, confirmed on validated sources 3 and 4"),
+            },
+        ],
+    },
+    "15": {
+        "name": "PORT-BLOC",
+        "role": "oceanReference",
+        "timezone": "Europe/Paris",
+        # 2024 is excluded (silt / plumbing anomaly, §3.3). The fit is extended
+        # with the healthy 2026 half-year so the horizon does not expire two
+        # months after the release; 2025 stays held out.
+        "fit": [("2022-01-01", "2023-12-31"), ("2026-01-01", "2026-06-15")],
+        "test": ("2025-01-01", "2025-12-31"),
+        "excluded": ["2024-01-01..2024-12-31 (silt/plumbing anomaly)"],
+        # Z22: max |dt| 44.22 min + 10 min allowance.
+        "uncertainty": {"timeMinutes": 75, "heightMeters": 0.60},
+        # Short validated-series outages in the 2022-2023 fit windows. Source 1
+        # (raw 1-minute) is continuous across them, but the fit only uses the
+        # validated series; source 3 has a shorter outage of its own. The gaps
+        # are dated here so they are reported, not silent.
+        "allowedGaps": [
+            {"start": "2022-07-12", "end": "2022-07-12", "reason": "validated source 4 outage 2022-07-12 (5 h); source 3 shorter, source 1 continuous but raw"},
+            {"start": "2022-07-14", "end": "2022-07-15", "reason": "validated source 4 outage 2022-07-14 (7 h); source 3 shorter, source 1 continuous but raw"},
+            {"start": "2022-07-16", "end": "2022-07-17", "reason": "validated source 4 outage 2022-07-16 (5 h); source 3 shorter, source 1 continuous but raw"},
+            {"start": "2022-07-19", "end": "2022-07-19", "reason": "validated source 4 outage 2022-07-19 (4 h); source 3 shorter, source 1 continuous but raw"},
+            {"start": "2023-06-23", "end": "2023-06-24", "reason": "validated source 4 outage 2023-06-23 (4 h); source 3 shorter, source 1 continuous but raw"},
+            {"start": "2023-07-03", "end": "2023-07-04", "reason": "validated source 4 outage 2023-07-03 (4 h); source 3 shorter, source 1 continuous but raw"},
+            {"start": "2023-07-05", "end": "2023-07-06", "reason": "validated source 4 outage 2023-07-05 (5 h); source 3 shorter, source 1 continuous but raw"},
+            {"start": "2023-07-07", "end": "2023-07-08", "reason": "validated source 4 outage 2023-07-07 (5 h); source 3 shorter, source 1 continuous but raw"},
+            {"start": "2023-07-10", "end": "2023-07-10", "reason": "validated source 4 outage 2023-07-10 (5 h); source 3 shorter, source 1 continuous but raw"},
+            {"start": "2023-07-13", "end": "2023-07-13", "reason": "validated source 4 outage 2023-07-13 (4 h); source 3 shorter, source 1 continuous but raw"},
+            {"start": "2023-07-19", "end": "2023-07-20", "reason": "validated source 4 outage 2023-07-19 (4 h); source 3 shorter, source 1 continuous but raw"},
+            {"start": "2023-08-15", "end": "2023-08-15", "reason": "validated source 4 outage 2023-08-15 (3 h); source 3 shorter, source 1 continuous but raw"},
+            {"start": "2023-08-19", "end": "2023-08-20", "reason": "validated source 4 outage 2023-08-19 (4 h); source 3 shorter, source 1 continuous but raw"},
+            {"start": "2023-08-21", "end": "2023-08-22", "reason": "validated source 4 outage 2023-08-21 (5 h); source 3 shorter, source 1 continuous but raw"},
+            {"start": "2025-06-27", "end": "2025-06-28", "reason": "validated source 4 outage 2025-06-27 (4 h), held-out year; source 3 shorter, source 1 continuous but raw"},
+            {"start": "2025-06-29", "end": "2025-06-30", "reason": "validated source 4 outage 2025-06-29 (5 h), held-out year; source 3 shorter, source 1 continuous but raw"},
+        ],
+    },
+    "3": {
+        "name": "BREST",
+        "role": "coefficientReference",
+        "timezone": "Europe/Paris",
+        "fit": [("2022-01-01", "2024-12-31"), ("2026-01-01", "2026-06-30")],
+        "test": ("2025-01-01", "2025-12-31"),
+        "excluded": [],
+        "uncertainty": {"timeMinutes": 45, "heightMeters": 0.60},
+        # Source outages in the 2022-2024 fit, confirmed on validated source 3.
+        "allowedGaps": [
+            {"start": "2022-10-20", "end": "2022-10-20", "reason": "validated source 4 outage 2022-10-20 (5 h); source 3 also gapped (3 h)"},
+            {"start": "2024-06-19", "end": "2024-06-21", "reason": "validated source 4 outage 2024-06-19 21:00 -> 2024-06-21 08:00 (35 h); source 3 also gapped (32.7 h)"},
+            {"start": "2024-11-27", "end": "2024-12-17", "reason": "validated source 4 outage 2024-11-27 08:00 -> 2024-12-17 17:00 (489 h); source 3 also gapped (475.8 h)"},
+        ],
+    },
+}
+
+SPOTS = [
+    {"id": "pointe-de-grave", "stationId": "15"},
+    {"id": "arcachon-eyrac", "stationId": "190"},
+]
+
+#: Z21/Z22: `u_h` is a **one-sided** bound on `pred - obs`. The D2 consistency
+#: rule requires `max under-prediction <= u_h - 0.05 m`.
+HEIGHT_ALLOWANCE_METERS = 0.05
+#: Z22: D2 consistency rule — max |dt| plus this allowance.
+TIME_ALLOWANCE_MINUTES = 10.0
+#: Z23: the national coefficient divides the Brest range by 6.10, not by the
+#: fitted mean spring range (5.4807 at Brest, which reads +11 % high).
+COEFFICIENT_DIVISOR = 6.10
+
+# QC thresholds (docs §4.4) — calibrated on the 2022-2025 series.
+QC_RANGE_MARGIN = 0.5          # m beyond npbma/nphma
+QC_MAX_RATE = 1.5              # m/h
+QC_SPIKE_METERS = 1.0          # vs 3-point median
+QC_FLATLINE_RUN = 6            # consecutive identical hourly values
+QC_MAX_GAP_HOURS = 1.5         # source 4
+QC_DATUM_DRIFT = 0.10          # m, sustained step between half-year blocks
+QC_MIN_COVERAGE = 0.90         # fraction of hours in the fit window
+
+MAX_DAYS_PER_REQUEST = 31
+
+#: Last published source-4 timestamp per station, filled from the REFMAR index.
+#: The final window of a range is clamped to it: asking for hours the station
+#: has not published yet is not truncation, it is the end of the archive.
+LAST_AVAILABLE: dict = {}
+
+
+# --------------------------------------------------------------------------- #
+# Small helpers
+# --------------------------------------------------------------------------- #
+
+def die(message: str) -> "None":
+    print("error: " + message, file=sys.stderr)
+    raise SystemExit(1)
+
+
+def log(message: str) -> None:
+    print(message, flush=True)
+
+
+def parse_day(value: str) -> datetime:
+    return datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=UTC)
+
+
+def parse_timestamp(value: str) -> datetime:
+    """REFMAR timestamps are ``YYYY/MM/DD HH:MM:SS`` in UTC, not ISO-8601."""
+    return datetime.strptime(value, "%Y/%m/%d %H:%M:%S").replace(tzinfo=UTC)
+
+
+def parse_iso(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(UTC)
+
+
+def iso(value: datetime) -> str:
+    return value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def percentile(values, fraction: float) -> float:
+    if not values:
+        return float("nan")
+    ordered = sorted(values)
+    if len(ordered) == 1:
+        return ordered[0]
+    position = fraction * (len(ordered) - 1)
+    low = int(math.floor(position))
+    high = min(low + 1, len(ordered) - 1)
+    weight = position - low
+    return ordered[low] * (1 - weight) + ordered[high] * weight
+
+
+def median(values) -> float:
+    return percentile(values, 0.5)
+
+
+# --------------------------------------------------------------------------- #
+# HTTP with cache and the 31-day chunking guard
+# --------------------------------------------------------------------------- #
+
+def http_get(url: str, cache_key: str, use_cache: bool) -> bytes:
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    path = os.path.join(CACHE_DIR, hashlib.sha256(cache_key.encode()).hexdigest() + ".json")
+    if use_cache and os.path.exists(path):
+        with open(path, "rb") as handle:
+            return handle.read()
+    request = urllib.request.Request(url, headers={"User-Agent": "estran-tides/1.0"})
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response:
+            payload = response.read()
+    except urllib.error.HTTPError as error:
+        die(f"HTTP {error.code} for {url}")
+    except urllib.error.URLError as error:
+        die(f"network error for {url}: {error.reason}")
+    with open(path, "wb") as handle:
+        handle.write(payload)
+    return payload
+
+
+def fetch_gauge_index(use_cache: bool) -> dict:
+    payload = http_get(GAUGE_URL, "gauge-index", use_cache)
+    return {str(entry["id"]): entry for entry in json.loads(payload)}
+
+
+def fetch_gauge_detail(station: str, use_cache: bool) -> dict:
+    payload = http_get(
+        DETAIL_URL.format(station=station), f"detail-{station}", use_cache)
+    return json.loads(payload)
+
+
+def fetch_observations(station: str, source: int, start: datetime, end: datetime,
+                       use_cache: bool) -> list:
+    """Fetch one <=31-day window.
+
+    REFMAR's ``dtEnd`` is **inclusive of the closing midnight** and exclusive of
+    that day: ``dtStart=2025-01-01&dtEnd=2025-02-01`` returns 745 hourly rows,
+    ``2025/01/01 00:00`` through ``2025/02/01 00:00``. The caller therefore
+    passes an exclusive ``end`` and gets the half-open interval
+    ``[start, end)``. The response must reach the closing midnight, otherwise
+    the request was silently truncated (review Z20).
+    """
+    if end <= start:
+        die(f"invalid window {start}..{end}")
+    if (end - start).days > MAX_DAYS_PER_REQUEST:
+        die(f"window {start}..{end} exceeds the silent {MAX_DAYS_PER_REQUEST}-day limit")
+
+    # REFMAR's `dtEnd` is a day boundary: it returns rows up to the closing
+    # midnight of that day. A window that ends mid-day (the last published
+    # hour) must therefore ask for the following day.
+    if end.hour == 0 and end.minute == 0 and end.second == 0:
+        dt_end = end
+    else:
+        dt_end = end + timedelta(days=1)
+    dt_end = dt_end.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    query = urllib.parse.urlencode({
+        "sources": source,
+        "dtStart": start.strftime("%Y-%m-%d"),
+        "dtEnd": dt_end.strftime("%Y-%m-%d"),
+    })
+    url = OBS_URL.format(station=station) + "?" + query
+    cache_key = f"obs-{station}-{source}-{start:%Y-%m-%d}-{dt_end:%Y-%m-%d}"
+    payload = http_get(url, cache_key, use_cache)
+    body = json.loads(payload)
+    rows = body.get("data", body) if isinstance(body, dict) else body
+    if not rows:
+        return []
+
+    points = [(parse_timestamp(row["timestamp"]), float(row["value"])) for row in rows]
+    points.sort()
+
+    # The 10-minute series can repeat a timestamp at a window edge; keep the
+    # last value instead of counting it twice.
+    deduplicated = {}
+    for timestamp, value in points:
+        deduplicated[timestamp] = value
+    points = sorted(deduplicated.items())
+
+    # Truncation guard: the last sample of the half-open hourly window must be
+    # `end - 1 h`, and the series must start at the requested first hour. The
+    # previous `end - 1 h` tolerance hid the 23-hour chunker loss (review Z20).
+    if points[-1][0] < end - timedelta(hours=1):
+        # A tail that is a documented source outage is not truncation; an
+        # unexplained one still aborts (review Z20).
+        if not gap_is_allowlisted(station, points[-1][0], end):
+            die(
+                f"truncated response for station {station} source {source} "
+                f"{start:%Y-%m-%d}..{end:%Y-%m-%d}: last point {points[-1][0]:%Y-%m-%d %H:%M}, "
+                f"expected {end - timedelta(hours=1):%Y-%m-%d %H:%M}")
+    if points[0][0] > start:
+        if not gap_is_allowlisted(station, start, points[0][0]):
+            die(
+                f"late response for station {station} source {source} "
+                f"{start:%Y-%m-%d}..{end:%Y-%m-%d}: first point {points[0][0]:%Y-%m-%d %H:%M}")
+
+    window = [(timestamp, value) for timestamp, value in points if start <= timestamp < end]
+    return window
+
+
+def fetch_range(station: str, source: int, start: str, end: str,
+                use_cache: bool) -> tuple:
+    """Fetch a range as consecutive <=31-day windows and de-duplicate.
+
+    Returns ``(points, expected_hours)`` where ``expected_hours`` is the exact
+    number of hours in the half-open range ``[start, end + 1 day)``. Each window
+    is a full 31-day span: the previous ``+ 1 day`` cursor skipped the 23 hours
+    after every closing midnight (review Z20).
+    """
+    cursor = parse_day(start)
+    stop = parse_day(end) + timedelta(days=1)
+    last_available = LAST_AVAILABLE.get(station)
+    if last_available is not None:
+        stop = min(stop, last_available + timedelta(hours=1))
+    points: dict = {}
+    expected = 0
+    while cursor < stop:
+        span_end = min(cursor + timedelta(days=MAX_DAYS_PER_REQUEST), stop)
+        expected += int((span_end - cursor).total_seconds() / 3600)
+        for timestamp, value in fetch_observations(
+                station, source, cursor, span_end, use_cache):
+            points[timestamp] = value
+        cursor = span_end
+    return sorted(points.items()), expected
+
+
+
+# --------------------------------------------------------------------------- #
+# QC
+# --------------------------------------------------------------------------- #
+
+@dataclass
+class QCReport:
+    station: str
+    window: str
+    total: int = 0
+    expected: int = 0
+    rejected: dict = field(default_factory=dict)
+    kept: int = 0
+    coverage: float = 0.0
+    max_gap_hours: float = 0.0
+    datum_drift: float = 0.0
+    failures: list = field(default_factory=list)
+    gaps: list = field(default_factory=list)
+
+    def reject(self, check: str, count: int) -> None:
+        if count:
+            self.rejected[check] = self.rejected.get(check, 0) + count
+
+    def as_dict(self) -> dict:
+        return {
+            "window": self.window,
+            "total": self.total,
+            "expected": self.expected,
+            "kept": self.kept,
+            "rejected": self.rejected,
+            "coverage": round(self.coverage, 4),
+            "maxGapHours": round(self.max_gap_hours, 2),
+            "datumStepMeters": round(self.datum_drift, 4),
+            "gaps": self.gaps,
+            "failures": self.failures,
+        }
+
+
+def gap_is_allowlisted(station: str, start: datetime, end: datetime) -> bool:
+    """`true` when a source outage is documented with dates and a reason."""
+    for entry in STATIONS.get(station, {}).get("allowedGaps", []):
+        if entry["start"] <= start.strftime("%Y-%m-%d") and \
+                end.strftime("%Y-%m-%d") <= entry["end"]:
+            return True
+    return False
+
+
+def gap_details(points: list, station: str, threshold: float = QC_MAX_GAP_HOURS) -> list:
+    """Gaps longer than `threshold`, with their dates and allowlist status."""
+    details = []
+    for index in range(1, len(points)):
+        hours = (points[index][0] - points[index - 1][0]).total_seconds() / 3600
+        if hours <= threshold:
+            continue
+        start, end = points[index - 1][0], points[index][0]
+        details.append({
+            "start": iso(start),
+            "end": iso(end),
+            "hours": round(hours, 2),
+            "allowlisted": gap_is_allowlisted(station, start, end),
+        })
+    return details
+
+
+def assert_gaps(points: list, station: str, label: str) -> None:
+    """A gap > 1.5 h is fatal unless the station allowlists it (review Z20)."""
+    details = gap_details(points, station)
+    unexplained = [gap for gap in details if not gap["allowlisted"]]
+    for gap in details:
+        state = "allowlisted" if gap["allowlisted"] else "UNEXPLAINED"
+        log(f"[{station}] {label}: gap {gap['hours']} h "
+            f"{gap['start']}..{gap['end']} ({state})")
+    if unexplained:
+        die(
+            f"station {station} {label}: {len(unexplained)} unexplained gap(s) > "
+            f"{QC_MAX_GAP_HOURS} h; add a dated allowlist entry with a source reason")
+
+
+def apply_qc(points: list, station: str, window: str, bounds: tuple,
+             expected_hours: int) -> tuple:
+    """Range / rate / spike / flatline / gap / coverage QC (docs §4.4)."""
+    report = QCReport(
+        station=station, window=window, total=len(points), expected=expected_hours)
+    low, high = bounds
+
+    # 0. Source gaps are measured on the **raw** series: a sample removed by the
+    # rate or spike filter is not a source outage. A raw gap > 1.5 h aborts the
+    # run unless the station documents it (review Z20).
+    report.gaps = gap_details(points, station)
+    raw_gaps = [
+        (points[index][0] - points[index - 1][0]).total_seconds() / 3600
+        for index in range(1, len(points))
+    ]
+    report.max_gap_hours = max(raw_gaps) if raw_gaps else 0.0
+    for gap in report.gaps:
+        if not gap["allowlisted"]:
+            report.failures.append(
+                f"gap of {gap['hours']:.1f} h > {QC_MAX_GAP_HOURS} h "
+                f"({gap['start']}..{gap['end']}, unexplained)")
+
+    # 1. Range.
+    ranged = []
+    dropped = 0
+    for timestamp, value in points:
+        if low <= value <= high:
+            ranged.append((timestamp, value))
+        else:
+            dropped += 1
+    report.reject("range", dropped)
+
+    # 2. Rate of change on the hourly series.
+    rated = []
+    for index, (timestamp, value) in enumerate(ranged):
+        if index == 0:
+            rated.append((timestamp, value))
+            continue
+        previous_time, previous_value = ranged[index - 1]
+        hours = (timestamp - previous_time).total_seconds() / 3600
+        if hours <= 0:
+            continue
+        if abs(value - previous_value) / hours <= QC_MAX_RATE:
+            rated.append((timestamp, value))
+        else:
+            dropped += 1
+    report.reject("rate", len(ranged) - len(rated))
+
+    # 3. Spike against the 3-point median.
+    spiked = []
+    for index, (timestamp, value) in enumerate(rated):
+        if index == 0 or index == len(rated) - 1:
+            spiked.append((timestamp, value))
+            continue
+        neighbourhood = [rated[index - 1][1], value, rated[index + 1][1]]
+        if abs(value - median(neighbourhood)) > QC_SPIKE_METERS:
+            dropped += 1
+        else:
+            spiked.append((timestamp, value))
+    report.reject("spike", len(rated) - len(spiked))
+
+    # 4. Flatline: >= 6 consecutive identical values.
+    flat = []
+    run_start = 0
+    for index in range(1, len(spiked) + 1):
+        if index < len(spiked) and spiked[index][1] == spiked[run_start][1]:
+            continue
+        run_length = index - run_start
+        if run_length >= QC_FLATLINE_RUN:
+            dropped += run_length
+        else:
+            flat.extend(spiked[run_start:index])
+        run_start = index
+    report.reject("flatline", len(spiked) - len(flat))
+
+    # 5. Coverage. Gaps were measured on the raw series above; QC removals only
+    # reduce the sample count, they are never interpolated.
+    report.kept = len(flat)
+    report.coverage = len(flat) / expected_hours if expected_hours else 0.0
+    if report.coverage < QC_MIN_COVERAGE:
+        report.failures.append(
+            f"coverage {report.coverage:.1%} < {QC_MIN_COVERAGE:.0%}")
+
+    return flat, report
+
+
+# --------------------------------------------------------------------------- #
+# Harmonic fit
+# --------------------------------------------------------------------------- #
+
+def load_speeds() -> dict:
+    """Read the constituent table from Swift so the two cannot drift."""
+    with open(SWIFT_SPEEDS, encoding="utf-8") as handle:
+        source = handle.read()
+    match = re.search(r"static let table: \[String: Double\] = \[(.*?)\n    \]",
+                      source, re.S)
+    if not match:
+        die("cannot locate ConstituentSpeeds.table in TideStation.swift")
+    table = {}
+    for symbol, raw in re.findall(r'"([A-Z0-9]+)":\s*([0-9_.]+)', match.group(1)):
+        table[symbol] = float(raw.replace("_", ""))
+    missing = [symbol for symbol in CONSTITUENTS if symbol not in table]
+    if missing:
+        die(f"ConstituentSpeeds is missing {missing}")
+    return table
+
+
+def cholesky_solve(matrix: list, rhs: list) -> list:
+    size = len(matrix)
+    lower = [[0.0] * size for _ in range(size)]
+    for row in range(size):
+        for column in range(row + 1):
+            total = matrix[row][column] - sum(
+                lower[row][k] * lower[column][k] for k in range(column))
+            if row == column:
+                if total <= 0:
+                    die("normal equations are not positive definite")
+                lower[row][column] = math.sqrt(total)
+            else:
+                lower[row][column] = total / lower[column][column]
+    intermediate = [0.0] * size
+    for row in range(size):
+        intermediate[row] = (
+            rhs[row] - sum(lower[row][k] * intermediate[k] for k in range(row))
+        ) / lower[row][row]
+    solution = [0.0] * size
+    for row in reversed(range(size)):
+        solution[row] = (
+            intermediate[row]
+            - sum(lower[k][row] * solution[k] for k in range(row + 1, size))
+        ) / lower[row][row]
+    return solution
+
+
+def fit_constituents(points: list, speeds: dict, compute_residuals: bool = True) -> dict:
+    """Least squares for h(t) = Z0 + Σ H_i cos(ω_i t − g_i), t in hours since epoch."""
+    symbols = list(CONSTITUENTS)
+    omega = [math.radians(speeds[symbol]) for symbol in symbols]
+    size = 1 + 2 * len(symbols)
+
+    gram = [[0.0] * size for _ in range(size)]
+    rhs = [0.0] * size
+
+    for timestamp, value in points:
+        hours = (timestamp - EPOCH).total_seconds() / 3600
+        basis = [1.0]
+        for angle in omega:
+            phase = angle * hours
+            basis.append(math.cos(phase))
+            basis.append(math.sin(phase))
+        for row in range(size):
+            basis_row = basis[row]
+            rhs[row] += basis_row * value
+            gram_row = gram[row]
+            for column in range(row, size):
+                gram_row[column] += basis_row * basis[column]
+
+    for row in range(size):
+        for column in range(row):
+            gram[row][column] = gram[column][row]
+    # Tiny ridge for near-collinear long-period terms.
+    for index in range(size):
+        gram[index][index] += 1e-9
+
+    solution = cholesky_solve(gram, rhs)
+
+    constants = {}
+    for index, symbol in enumerate(symbols):
+        cosine = solution[1 + 2 * index]
+        sine = solution[2 + 2 * index]
+        amplitude = math.hypot(cosine, sine)
+        phase = math.degrees(math.atan2(sine, cosine)) % 360.0
+        constants[symbol] = {"amplitude": amplitude, "phaseDegrees": phase}
+
+    return {
+        "meanSeaLevel": solution[0],
+        "constants": constants,
+        "residuals": residuals(points, solution[0], constants, speeds)
+        if compute_residuals else [],
+    }
+
+
+def residuals(points: list, mean: float, constants: dict, speeds: dict) -> list:
+    symbols = list(constants)
+    omegas = [math.radians(speeds[symbol]) for symbol in symbols]
+    amplitudes = [constants[symbol]["amplitude"] for symbol in symbols]
+    phases = [math.radians(constants[symbol]["phaseDegrees"]) for symbol in symbols]
+    output = []
+    for timestamp, value in points:
+        hours = (timestamp - EPOCH).total_seconds() / 3600
+        predicted = mean
+        for omega, amplitude, phase in zip(omegas, amplitudes, phases):
+            predicted += amplitude * math.cos(omega * hours - phase)
+        output.append((timestamp, value - predicted))
+    return output
+
+
+def predict(constants: dict, mean: float, speeds: dict, timestamp: datetime) -> float:
+    hours = (timestamp - EPOCH).total_seconds() / 3600
+    height = mean
+    for symbol, entry in constants.items():
+        omega = math.radians(speeds[symbol])
+        height += entry["amplitude"] * math.cos(
+            omega * hours - math.radians(entry["phaseDegrees"]))
+    return height
+
+
+# --------------------------------------------------------------------------- #
+# Extrema
+# --------------------------------------------------------------------------- #
+
+def observed_extrema(points: list, tolerance_minutes: float = 6.0,
+                     prominence: float = 0.30) -> list:
+    """Local extrema of a 10-minute series, refined by a parabola.
+
+    The validated 10-minute series still carries centimetre-scale wiggles, so
+    extrema are detected on a 1-hour centred moving average and only kept when
+    they stand at least ``prominence`` metres above the surrounding 3-hour
+    minimum (or below the maximum). Without that filter a year of data yields
+    ~2 500 "extrema" instead of the ~1 400 real tides.
+    """
+    if len(points) < 13:
+        return []
+
+    # Centred 7-point (1 h) moving average; None marks a gap.
+    smoothed = []
+    half = 3
+    for index in range(len(points)):
+        window = points[max(0, index - half): index + half + 1]
+        if len(window) < 7:
+            smoothed.append(None)
+            continue
+        span = (window[-1][0] - window[0][0]).total_seconds() / 3600
+        if span > 1.5:
+            smoothed.append(None)
+            continue
+        smoothed.append(sum(value for _, value in window) / len(window))
+
+    events = []
+    for index in range(3, len(points) - 3):
+        current = smoothed[index]
+        if current is None or smoothed[index - 1] is None or smoothed[index + 1] is None:
+            continue
+        previous, following = smoothed[index - 1], smoothed[index + 1]
+        is_high = current > previous and current > following
+        is_low = current < previous and current < following
+        if not (is_high or is_low):
+            continue
+
+        # Prominence against the 3-hour neighbourhood.
+        neighbourhood = [
+            value for value in smoothed[max(0, index - 18): index + 19]
+            if value is not None
+        ]
+        if len(neighbourhood) < 12:
+            continue
+        if is_high and current - min(neighbourhood) < prominence:
+            continue
+        if is_low and max(neighbourhood) - current < prominence:
+            continue
+
+        # Plateau centre: a broad tidal high can produce several local maxima
+        # on the 1 h smoothed series (2023-11-05 at station 15 was flat from
+        # 08:00 to 10:00). Keep the most extreme point within ±2 h, otherwise
+        # the first wiggle is reported as an 80-minute timing error.
+        search = range(max(3, index - 12), min(len(smoothed) - 3, index + 13))
+        candidates = [(i, smoothed[i]) for i in search if smoothed[i] is not None]
+        if not candidates:
+            continue
+        centre = max(candidates, key=lambda item: item[1])[0] if is_high \
+            else min(candidates, key=lambda item: item[1])[0]
+        # The 1 h smoothing shifts an asymmetric peak; refine on the raw
+        # 10-minute series within ±1 h of the smoothed centre.
+        raw_window = list(enumerate(points[max(0, centre - 6): centre + 7],
+                                    start=max(0, centre - 6)))
+        if len(raw_window) < 3:
+            continue
+        raw_index = (max if is_high else min)(
+            raw_window, key=lambda item: item[1][1])[0]
+        if raw_index <= 0 or raw_index >= len(points) - 1:
+            continue
+        previous, current, following = (
+            points[raw_index - 1][1], points[raw_index][1], points[raw_index + 1][1])
+        step = (points[raw_index + 1][0] - points[raw_index - 1][0]).total_seconds() / 2
+        if step <= 0 or step > tolerance_minutes * 60 * 2:
+            continue
+        denominator = previous - 2 * current + following
+        offset = 0.0 if denominator == 0 else 0.5 * (previous - following) / denominator
+        offset = max(-0.5, min(0.5, offset))
+        events.append({
+            "time": points[raw_index][0] + timedelta(seconds=offset * step * 2),
+            "height": current,
+            "kind": "high" if is_high else "low",
+        })
+
+    # Drop duplicates that the smoothing window can create around flat peaks.
+    deduplicated = []
+    for event in events:
+        if deduplicated and event["kind"] == deduplicated[-1]["kind"] and \
+                abs((event["time"] - deduplicated[-1]["time"]).total_seconds()) < 3600:
+            continue
+        deduplicated.append(event)
+    return deduplicated
+
+
+def predicted_extrema(constants: dict, mean: float, speeds: dict,
+                      start: datetime, end: datetime, step_minutes: int = 5) -> list:
+    step = timedelta(minutes=step_minutes)
+    samples = []
+    cursor = start
+    while cursor <= end:
+        samples.append((cursor, predict(constants, mean, speeds, cursor)))
+        cursor += step
+    events = []
+    for index in range(1, len(samples) - 1):
+        previous, current, following = samples[index - 1], samples[index], samples[index + 1]
+        is_high = current[1] > previous[1] and current[1] > following[1]
+        is_low = current[1] < previous[1] and current[1] < following[1]
+        if not (is_high or is_low):
+            continue
+        low, high = previous[0], following[0]
+        for _ in range(60):
+            third = (high - low) / 3
+            left = low + third
+            right = high - third
+            left_value = predict(constants, mean, speeds, left)
+            right_value = predict(constants, mean, speeds, right)
+            if (left_value > right_value) == is_high:
+                low = left
+            else:
+                high = right
+        refined = low + (high - low) / 2
+        events.append({
+            "time": refined,
+            "height": predict(constants, mean, speeds, refined),
+            "kind": "high" if is_high else "low",
+        })
+    return events
+
+
+def compare_extrema(observed: list, predicted: list, max_delta_minutes: float = 90.0) -> dict:
+    errors = {"low": [], "high": []}
+    height_errors = []
+    matched = 0
+    worst = None
+    for event in observed:
+        candidates = [other for other in predicted if other["kind"] == event["kind"]]
+        if not candidates:
+            continue
+        nearest = min(candidates, key=lambda other: abs(
+            (other["time"] - event["time"]).total_seconds()))
+        delta = abs((nearest["time"] - event["time"]).total_seconds()) / 60
+        if delta > max_delta_minutes:
+            continue
+        matched += 1
+        errors[event["kind"]].append(delta)
+        height_errors.append(abs(nearest["height"] - event["height"]))
+        if worst is None or delta > worst["deltaMinutes"]:
+            worst = {
+                "kind": event["kind"],
+                "observed": iso(event["time"]),
+                "predicted": iso(nearest["time"]),
+                "deltaMinutes": round(delta, 2),
+            }
+
+    def summary(values):
+        return {
+            "count": len(values),
+            "medianMinutes": round(median(values), 2) if values else None,
+            "p95Minutes": round(percentile(values, 0.95), 2) if values else None,
+            "maxMinutes": round(max(values), 2) if values else None,
+        }
+
+    return {
+        "observed": len(observed),
+        "matched": matched,
+        "unmatched": len(observed) - matched,
+        "low": summary(errors["low"]),
+        "high": summary(errors["high"]),
+        "maxHeightErrorMeters": round(max(height_errors), 4) if height_errors else None,
+        "p95HeightErrorMeters": round(percentile(height_errors, 0.95), 4) if height_errors else None,
+        "worst": worst,
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Station pipeline
+# --------------------------------------------------------------------------- #
+
+def height_stats(points: list, constants: dict, mean: float, speeds: dict) -> dict:
+    """Signed height statistics against observations.
+
+    `maxUnderPredictionMeters` is `max(pred - obs)`: the prediction was **too
+    high**, which is the only direction that can fail the boating gate open.
+    `minOverPredictionMeters` is the most negative residual (prediction too low,
+    the safe direction). `maxAbsoluteErrorMeters` is information only and is
+    never subtracted from a height (review Z21).
+    """
+    signed = [
+        predict(constants, mean, speeds, timestamp) - observed
+        for timestamp, observed in points
+    ]
+    if not signed:
+        return {
+            "samples": 0,
+            "rmseMeters": None,
+            "biasMeters": None,
+            "p95HeightErrorMeters": None,
+            "maxUnderPredictionMeters": None,
+            "minOverPredictionMeters": None,
+            "maxAbsoluteErrorMeters": None,
+        }
+    absolute = [abs(error) for error in signed]
+    return {
+        "samples": len(signed),
+        "rmseMeters": round(math.sqrt(sum(error * error for error in signed) / len(signed)), 5),
+        "biasMeters": round(sum(signed) / len(signed), 5),
+        "p95HeightErrorMeters": round(percentile(absolute, 0.95), 4),
+        "maxUnderPredictionMeters": round(max(max(signed), 0.0), 4),
+        "minOverPredictionMeters": round(min(min(signed), 0.0), 4),
+        "maxAbsoluteErrorMeters": round(max(absolute), 4),
+    }
+
+
+def extrema_metrics(station_id: str, constants: dict, mean: float, speeds: dict,
+                    start: str, end: str, use_cache: bool) -> dict:
+    """Extrema of the model against the validated 10-minute series (source 3)."""
+    points, _ = fetch_range(station_id, 3, start, end, use_cache)
+    assert_gaps(points, station_id, f"extrema {start}..{end}")
+    observed = observed_extrema(points)
+    predicted = predicted_extrema(
+        constants, mean, speeds,
+        parse_day(start), parse_day(end) + timedelta(days=1))
+    return compare_extrema(observed, predicted)
+
+
+def within_d2(stats: dict, extrema: dict, u_t: float, u_h: float) -> bool:
+    """D2 consistency rule (review Z22), applied to a forward window."""
+    if stats["rmseMeters"] is None:
+        return False
+    max_time = max(
+        extrema["low"]["maxMinutes"] or 0.0,
+        extrema["high"]["maxMinutes"] or 0.0)
+    return (
+        stats["rmseMeters"] <= 0.20
+        and abs(stats["biasMeters"]) <= 0.05
+        and stats["p95HeightErrorMeters"] <= 0.40
+        and stats["maxUnderPredictionMeters"] <= u_h - 0.05
+        and (extrema["low"]["medianMinutes"] or 0.0) <= 12
+        and (extrema["low"]["p95Minutes"] or 0.0) <= 35
+        and (extrema["high"]["medianMinutes"] or 0.0) <= 12
+        and (extrema["high"]["p95Minutes"] or 0.0) <= 35
+        and max_time <= u_t - 10
+    )
+
+
+def station_daily_ranges(station: dict, speeds: dict, year: int) -> dict:
+    """Predicted daily tidal range for every day of `year`, in metres."""
+    constants = {
+        constituent["symbol"]: {
+            "amplitude": constituent["amplitude"],
+            "phaseDegrees": constituent["phaseDegrees"],
+        }
+        for constituent in station["constituents"]
+    }
+    mean = station["meanSeaLevel"]
+    start = datetime(year, 1, 1, tzinfo=UTC)
+    end = datetime(year + 1, 1, 1, tzinfo=UTC)
+    ranges = {}
+    day = start
+    while day < end:
+        values = []
+        cursor = day
+        while cursor < day + timedelta(days=1):
+            values.append(predict(constants, mean, speeds, cursor))
+            cursor += timedelta(minutes=10)
+        ranges[day.date()] = max(values) - min(values)
+        day += timedelta(days=1)
+    return ranges
+
+
+def calibrate_swimming_ranges(stations: list, speeds: dict, year: int = 2025,
+                              margin: float = 0.30) -> dict:
+    """Per-spot swimming thresholds from the **local predicted range**.
+
+    `T` is the local daily range reached on the same number of days as the
+    national coefficient reaches 100 at Brest. The grey band is `T ± margin`;
+    `lowBelow = T - margin`, `strongAt = T + margin`. The generator refuses an
+    empty or inverted band (review v11 / product decision).
+    """
+    by_id = {station["id"]: station for station in stations}
+    if "3" not in by_id:
+        die("swimming calibration needs the coefficient station 3")
+    brest = station_daily_ranges(by_id["3"], speeds, year)
+    national = {
+        day: min(120, max(20, round(value / COEFFICIENT_DIVISOR * 100)))
+        for day, value in brest.items()
+    }
+    coefficient_days = [day for day, coefficient in national.items() if coefficient >= 100]
+    if not coefficient_days:
+        die("swimming calibration: no day reaches coefficient 100")
+    count = len(coefficient_days)
+
+    ranges = {}
+    for spot in SPOTS:
+        station = by_id.get(spot["stationId"])
+        if station is None:
+            die(f"swimming calibration: spot {spot['id']} station is missing")
+        daily = station_daily_ranges(station, speeds, year)
+        ordered = sorted(daily.values(), reverse=True)
+        if count > len(ordered):
+            die(f"swimming calibration: {count} coefficient days > {len(ordered)} days")
+        threshold = ordered[count - 1]
+        low_below = round(threshold - margin, 2)
+        strong_at = round(threshold + margin, 2)
+        if low_below <= 0 or low_below >= strong_at:
+            die(f"swimming calibration: invalid band for {spot['id']} "
+                f"({low_below}..{strong_at}, T {threshold:.3f})")
+        ranges[spot["id"]] = {
+            "lowBelow": low_below,
+            "strongAt": strong_at,
+            "calibration": {
+                "year": year,
+                "coefficientDaysAtOrAbove100": count,
+                "thresholdMeters": round(threshold, 3),
+                "marginMeters": margin,
+            },
+        }
+        log(f"[swim] {spot['id']}: T {threshold:.3f} m over {count} days, "
+            f"lowBelow {low_below} m, strongAt {strong_at} m")
+
+    return ranges
+
+
+def run_station(station_id: str, config: dict, speeds: dict, use_cache: bool,
+                index: dict, only: bool = False) -> dict:
+    log(f"[{station_id}] {config['name']}")
+
+    detail = fetch_gauge_detail(station_id, use_cache)
+    bounds = (
+        float(detail["npbma"]) - QC_RANGE_MARGIN,
+        float(detail["nphma"]) + QC_RANGE_MARGIN,
+    )
+    log(f"[{station_id}] reference vertical {detail.get('verticalRef')} "
+        f"npbma {detail['npbma']} nphma {detail['nphma']}")
+
+    fit_points = []
+    kept_by_window = []
+    qc_reports = []
+    for start, end in config["fit"]:
+        raw, expected = fetch_range(station_id, 4, start, end, use_cache)
+        kept, report = apply_qc(raw, station_id, f"{start}..{end}", bounds, expected)
+        log(f"[{station_id}] fit {start}..{end}: {len(raw)}/{expected} raw -> "
+            f"{len(kept)} kept ({report.coverage:.1%}), "
+            f"max gap {report.max_gap_hours:.1f} h")
+        fit_points.extend(kept)
+        kept_by_window.append(((start, end), kept))
+        qc_reports.append(report)
+
+    failures = [failure for report in qc_reports for failure in report.failures]
+    if failures:
+        for failure in failures:
+            log(f"[{station_id}]   QC: {failure}")
+        die(f"station {station_id}: {len(failures)} QC failure(s); fix the data or "
+            "document an allowlisted outage")
+
+    if not fit_points:
+        die(f"station {station_id}: no data survived QC")
+
+    log(f"[{station_id}] fitting {len(CONSTITUENTS)} constituents on "
+        f"{len(fit_points)} points…")
+    fit = fit_constituents(fit_points, speeds)
+    constants = fit["constants"]
+    mean = fit["meanSeaLevel"]
+
+    # Datum continuity: a datum jump is a *sustained* step, not seasonality.
+    # Monthly medians swing by ±0.15 m with the seasonal cycle, so the check
+    # compares consecutive half-year blocks; the threshold is the calibrated
+    # QC_DATUM_DRIFT (docs §4.4 allows calibrating it on 2022-2025).
+    half_year = {}
+    for timestamp, residual in fit["residuals"]:
+        key = (timestamp.year, 0 if timestamp.month <= 6 else 1)
+        half_year.setdefault(key, []).append(residual)
+    block_medians = [median(values) for _, values in sorted(half_year.items())]
+    steps = [abs(block_medians[index] - block_medians[index - 1])
+             for index in range(1, len(block_medians))]
+    drift = max(steps) if steps else 0.0
+    for report in qc_reports:
+        report.datum_drift = drift
+        if drift > QC_DATUM_DRIFT:
+            report.failures.append(
+                f"datum step {drift:.3f} m > {QC_DATUM_DRIFT:.2f} m between half-year blocks")
+    log(f"[{station_id}] datum step {drift:.3f} m across {len(block_medians)} half-year blocks")
+    if drift > QC_DATUM_DRIFT:
+        die(f"station {station_id}: datum step {drift:.3f} m exceeds the calibrated "
+            f"{QC_DATUM_DRIFT:.2f} m threshold")
+
+    # Held-out accuracy on the test year.
+    test_start, test_end = config["test"]
+    test_points, test_expected = fetch_range(station_id, 4, test_start, test_end, use_cache)
+    assert_gaps(test_points, station_id, f"test {test_start}..{test_end}")
+    log(f"[{station_id}] test {test_start}..{test_end}: "
+        f"{len(test_points)}/{test_expected} samples ({len(test_points) / test_expected:.1%})")
+    stats = height_stats(test_points, constants, mean, speeds)
+    log(f"[{station_id}] RMSE {stats['rmseMeters']} m, bias {stats['biasMeters']:+} m, "
+        f"p95 |dh| {stats['p95HeightErrorMeters']} m, "
+        f"max under-prediction {stats['maxUnderPredictionMeters']} m, "
+        f"min over-prediction {stats['minOverPredictionMeters']} m")
+
+    extrema = extrema_metrics(
+        station_id, constants, mean, speeds, test_start, test_end, use_cache)
+    log(f"[{station_id}] extrema: low median {extrema['low']['medianMinutes']} min / "
+        f"p95 {extrema['low']['p95Minutes']} / max {extrema['low']['maxMinutes']}; "
+        f"high median {extrema['high']['medianMinutes']} / "
+        f"p95 {extrema['high']['p95Minutes']} / max {extrema['high']['maxMinutes']}")
+
+    shipping = any(spot["stationId"] == station_id for spot in SPOTS)
+
+    # Z27: leave-one-year-out. A single neutral year (2025) does not bound the
+    # series: an anticyclonic winter makes the model run too high, the unsafe
+    # direction for BoatingRule. For every year in the record, fit on the other
+    # years and measure max(pred - obs) on the held-out year.
+    yearly = {}
+    for _, kept in kept_by_window:
+        for timestamp, value in kept:
+            yearly.setdefault(timestamp.year, []).append((timestamp, value))
+    for timestamp, value in test_points:
+        yearly.setdefault(timestamp.year, []).append((timestamp, value))
+    yearly = {year: sorted(points) for year, points in yearly.items()}
+    loyo = []
+    for year in sorted(yearly):
+        held_out = yearly[year]
+        if len(held_out) < 2000:
+            continue
+        train = [
+            point for other_year, points in yearly.items() if other_year != year
+            for point in points
+        ]
+        year_fit = fit_constituents(train, speeds, compute_residuals=False)
+        year_stats = height_stats(
+            held_out, year_fit["constants"], year_fit["meanSeaLevel"], speeds)
+        # Z29: the time envelope gets the same treatment. A storm moves the
+        # observed extremum by an hour; a single year does not bound it.
+        year_extrema = extrema_metrics(
+            station_id, year_fit["constants"], year_fit["meanSeaLevel"], speeds,
+            held_out[0][0].strftime("%Y-%m-%d"),
+            held_out[-1][0].strftime("%Y-%m-%d"),
+            use_cache)
+        entry = {"year": year, **year_stats, "extrema": year_extrema}
+        entry["maxMinutes"] = round(max(
+            year_extrema["low"]["maxMinutes"] or 0.0,
+            year_extrema["high"]["maxMinutes"] or 0.0), 2)
+        loyo.append(entry)
+        log(f"[{station_id}] LOYO {year}: n={year_stats['samples']} "
+            f"max under-prediction {year_stats['maxUnderPredictionMeters']} m, "
+            f"max |dt| {entry['maxMinutes']} min "
+            f"({year_extrema.get('worst')}), "
+            f"RMSE {year_stats['rmseMeters']} m")
+    loyo_worst = max(
+        loyo, key=lambda entry: entry["maxUnderPredictionMeters"] or 0.0) if loyo else None
+    loyo_max_under = (loyo_worst or {}).get("maxUnderPredictionMeters") or 0.0
+    loyo_worst_time = max(
+        loyo, key=lambda entry: entry["maxMinutes"] or 0.0) if loyo else None
+    loyo_max_time = (loyo_worst_time or {}).get("maxMinutes") or 0.0
+
+    # Z30: RMSE is a series property. A stormy year at 0.21 m is weather, not a
+    # regression; judge the median and cap the worst year.
+    loyo_rmse = [entry["rmseMeters"] for entry in loyo if entry["rmseMeters"] is not None]
+    series_rmse_median = median(loyo_rmse) if loyo_rmse else None
+    series_rmse_max = max(loyo_rmse) if loyo_rmse else None
+    series_rmse_ok = bool(
+        series_rmse_median is not None
+        and series_rmse_median <= 0.20
+        and series_rmse_max <= 0.22)
+    if loyo_rmse:
+        log(f"[{station_id}] LOYO RMSE median {series_rmse_median:.4f} m, "
+            f"max {series_rmse_max:.4f} m, series rule "
+            f"{'pass' if series_rmse_ok else 'FAIL'}")
+    if shipping and not series_rmse_ok:
+        die(f"station {station_id}: LOYO RMSE series rule failed "
+            f"(median {series_rmse_median:.4f} > 0.20 or max "
+            f"{series_rmse_max:.4f} > 0.22)")
+
+    # D2 consistency rule (Z22/Z29): leave-one-year-out max |dt| + 10 min, or
+    # the stricter external cross-check when the station has one. The declared
+    # envelope must cover it. The rule applies to **shipping** stations only:
+    # station 3 feeds the coefficient, no spot ships on it.
+    # Z29: u_t is sized on the leave-one-year-out maximum |dt|, not on the
+    # neutral held-out year; the SHOM cross-check remains a second constraint.
+    required_time = loyo_max_time + TIME_ALLOWANCE_MINUTES
+    external = config.get("externalTimeCheckMinutes")
+    if external is not None:
+        required_time = max(
+            required_time, external + config["externalTimeAllowanceMinutes"])
+    declared_time = config["uncertainty"]["timeMinutes"]
+    declared_height = config["uncertainty"]["heightMeters"]
+    if shipping and declared_time < required_time:
+        die(f"station {station_id}: declared u_t {declared_time} min < required "
+            f"{required_time:.2f} min (LOYO max |dt| {loyo_max_time:.2f} in "
+            f"{loyo_worst_time['year'] if loyo_worst_time else 'n/a'} + "
+            f"{TIME_ALLOWANCE_MINUTES:.0f} min)")
+
+    # Z21/Z27: one-sided height bound, sized on the leave-one-year-out maximum,
+    # not on a single neutral year.
+    required_height = loyo_max_under + HEIGHT_ALLOWANCE_METERS
+    if shipping and declared_height < required_height:
+        die(f"station {station_id}: declared u_h {declared_height} m < required "
+            f"{required_height:.3f} m (LOYO max under-prediction "
+            f"{loyo_max_under} in {loyo_worst['year'] if loyo_worst else 'n/a'} "
+            f"+ {HEIGHT_ALLOWANCE_METERS} m)")
+
+    if not shipping:
+        basis = "coefficient reference only; no spot ships on station 3"
+    else:
+        basis = (
+            f"u_t: leave-one-year-out max |dt| {loyo_max_time:.2f} min "
+            f"({loyo_worst_time['year'] if loyo_worst_time else 'n/a'}) "
+            f"+ {TIME_ALLOWANCE_MINUTES:.0f} min allowance (D2) = "
+            f"{loyo_max_time + TIME_ALLOWANCE_MINUTES:.2f} min")
+        if external is not None:
+            basis += (
+                f"; {config['externalTimeSource']} {external:.1f} min + "
+                f"{config['externalTimeAllowanceMinutes']:.0f} min allowance (Z19)")
+        basis += (
+            f"; u_h: leave-one-year-out max under-prediction {loyo_max_under:.4f} m "
+            f"({loyo_worst['year'] if loyo_worst else 'n/a'}) "
+            f"+ {HEIGHT_ALLOWANCE_METERS:.2f} m minimum allowance (D2); "
+            f"declared {declared_height:.2f} m "
+            f"(margin {declared_height - loyo_max_under:.4f} m)")
+
+    # Z25: forward test. Fit on the pre-2025 windows only, predict the 2026
+    # half-year. Z26: this is an **anomalous-year stress test**, not a horizon
+    # measurement. January 2026 mean pressure at Arcachon was 1007.9 hPa against
+    # 1027.6 hPa in January 2022 (~+0.20 m of sea level from atmospheric
+    # loading). A harmonic model does not predict weather; the bias is the
+    # anomaly, and u_h carries the annual dispersion.
+    forward_fit_points = [
+        point for (start, _), kept in kept_by_window
+        if parse_day(start).year <= 2024
+        for point in kept
+    ]
+    forward_windows = [
+        (start, end) for start, end in config["fit"] if parse_day(start).year == 2026
+    ]
+    forward_test = None
+    if forward_fit_points and forward_windows:
+        forward_fit = fit_constituents(
+            forward_fit_points, speeds, compute_residuals=False)
+        forward_start, forward_end = forward_windows[0]
+        forward_points, forward_expected = fetch_range(
+            station_id, 4, forward_start, forward_end, use_cache)
+        assert_gaps(forward_points, station_id, f"forward {forward_start}..{forward_end}")
+        forward_stats = height_stats(
+            forward_points, forward_fit["constants"], forward_fit["meanSeaLevel"], speeds)
+        forward_extrema = extrema_metrics(
+            station_id, forward_fit["constants"], forward_fit["meanSeaLevel"], speeds,
+            forward_start, forward_end, use_cache)
+        forward_ok = within_d2(
+            forward_stats, forward_extrema, declared_time, declared_height) if shipping else None
+
+        # A true one-year extrapolation: the same pre-2025 fit, evaluated on the
+        # held-out 2025 year. This is the regime the app will actually run in
+        # right after launch (fit end 2026-06, launch 2026-10).
+        one_year_stats = height_stats(
+            test_points, forward_fit["constants"], forward_fit["meanSeaLevel"], speeds)
+        one_year_extrema = extrema_metrics(
+            station_id, forward_fit["constants"], forward_fit["meanSeaLevel"], speeds,
+            test_start, test_end, use_cache)
+        one_year_ok = within_d2(
+            one_year_stats, one_year_extrema, declared_time, declared_height) if shipping else None
+
+        # Z28: the horizon bounds astronomical decay (nodal drift), not the
+        # annual weather dispersion. A bad stress year does not shorten it; u_h
+        # covers that dispersion. The horizon is fit end + 3 years for all
+        # stations, and the annual regeneration is a maintenance ritual.
+        forward_test = {
+            "fitWindows": [
+                {"start": start, "end": end} for start, end in config["fit"]
+                if parse_day(start).year <= 2024
+            ],
+            "testWindow": {"start": forward_start, "end": forward_end},
+            **forward_stats,
+            "extrema": forward_extrema,
+            "withinD2": forward_ok,
+            "interpretation": (
+                "Anomalous-year stress test (Z26): January 2026 mean pressure "
+                "1007.9 hPa vs 1027.6 hPa in January 2022 at Arcachon (~+0.20 m "
+                "of sea level from atmospheric loading). A harmonic model does "
+                "not predict this; the bias is weather, not model drift."),
+            "pressureAnomaly": {
+                "january2022Hectopascals": 1027.6,
+                "january2025Hectopascals": 1016.8,
+                "january2026Hectopascals": 1007.9,
+                "equivalentSeaLevelMeters": 0.20,
+                "source": "architect measurement, review v6 (Z26)",
+            },
+            "oneYearAhead": {
+                "testWindow": {"start": test_start, "end": test_end},
+                **one_year_stats,
+                "extrema": one_year_extrema,
+                "withinD2": one_year_ok,
+            },
+        }
+        log(f"[{station_id}] forward {forward_start}..{forward_end}: "
+            f"RMSE {forward_stats['rmseMeters']} m, bias {forward_stats['biasMeters']:+} m, "
+            f"p95 |dh| {forward_stats['p95HeightErrorMeters']} m, "
+            f"max under-prediction {forward_stats['maxUnderPredictionMeters']} m, "
+            f"D2 {'n/a' if forward_ok is None else ('pass' if forward_ok else 'FAIL')}")
+        log(f"[{station_id}] one-year ahead {test_start}..{test_end}: "
+            f"RMSE {one_year_stats['rmseMeters']} m, bias {one_year_stats['biasMeters']:+} m, "
+            f"p95 |dh| {one_year_stats['p95HeightErrorMeters']} m, "
+            f"D2 {'n/a' if one_year_ok is None else ('pass' if one_year_ok else 'FAIL')}")
+    m2 = constants["M2"]["amplitude"]
+    s2 = constants["S2"]["amplitude"]
+    mean_spring_range = 2 * (m2 + s2)
+
+    fit_end = max(parse_day(end) for _, end in config["fit"])
+    valid_until = datetime(fit_end.year + 3, fit_end.month, fit_end.day,
+                           23, 59, 59, tzinfo=UTC)
+
+    station = {
+        "id": station_id,
+        "name": config["name"],
+        "role": config["role"],
+        "coordinate": {
+            "latitude": float(detail["latitude"]),
+            "longitude": float(detail["longitude"]),
+        },
+        "timezoneIdentifier": config["timezone"],
+        "meanSeaLevel": round(mean, 4),
+        "meanSpringRange": round(mean_spring_range, 4),
+        "constituents": [
+            {
+                "symbol": symbol,
+                "amplitude": round(constants[symbol]["amplitude"], 5),
+                "phaseDegrees": round(constants[symbol]["phaseDegrees"], 4),
+            }
+            for symbol in CONSTITUENTS
+        ],
+        "validUntil": iso(valid_until),
+        "nodalCorrections": False,
+        "attribution": ATTRIBUTION,
+        "fitWindows": [{"start": start, "end": end} for start, end in config["fit"]],
+        "excludedWindows": config["excluded"],
+        "uncertainty": dict(config["uncertainty"]),
+        "uncertaintyBasis": basis,
+        "qc": [report.as_dict() for report in qc_reports],
+        "accuracy": {
+            "testWindow": {"start": test_start, "end": test_end},
+            **stats,
+            "extrema": extrema,
+            "leaveOneYearOut": loyo,
+            "seriesRmse": {
+                "medianMeters": round(series_rmse_median, 5)
+                if series_rmse_median is not None else None,
+                "maxMeters": round(series_rmse_max, 5)
+                if series_rmse_max is not None else None,
+                "rule": "median <= 0.20 and max <= 0.22 (Z30)",
+                "passed": series_rmse_ok,
+            },
+            "forwardTest": forward_test,
+        },
+    }
+
+    return station
+
+
+
+# --------------------------------------------------------------------------- #
+# Dataset
+# --------------------------------------------------------------------------- #
+
+def build_dataset(stations: list, year: int, revision: int,
+                  swimming_ranges: dict) -> dict:
+    by_id = {station["id"]: station for station in stations}
+    spots = []
+    for spot in SPOTS:
+        station = by_id.get(spot["stationId"])
+        if station is None:
+            die(f"spot {spot['id']} references station {spot['stationId']}, "
+                "which is not part of this run")
+        swimming = swimming_ranges.get(spot["id"])
+        if swimming is None:
+            die(f"spot {spot['id']} has no swimming-range calibration")
+        spots.append({
+            "id": spot["id"],
+            "stationId": spot["stationId"],
+            "correction": {"lagMinutes": 0, "amplitudeFactor": 1.0},
+            "correctionStatus": "none",
+            "validation": "gauged",
+            "uncertainty": {
+                "timeMinutes": station["uncertainty"]["timeMinutes"],
+                "heightMeters": station["uncertainty"]["heightMeters"],
+                "basis": station["uncertaintyBasis"],
+            },
+            "swimmingRange": swimming,
+        })
+
+    coefficient_station = by_id.get("3")
+    coefficient = {
+        "stationId": "3" if coefficient_station else None,
+        "divisor": COEFFICIENT_DIVISOR,
+        # Z23: the Brest model is fitted but **not validated** against a
+        # published Annuaire sample. SwimmingRule requires this flag, so fixing
+        # the coefficient path cannot switch baignade on by accident.
+        "validated": False,
+        "validation": (
+            "382 published 2025 high waters at Arcachon-Eyrac paired with the "
+            "Brest model: bias +1.75 points, 37 % within +/-1, 57 % within "
+            "+/-2, max 7 (target +/-1 for 90 %)."),
+        "gateMarginPoints": 2,
+        "nodalDrift": (
+            "M2 nodal factor 0.963 (2025) -> 0.997 (2029); the fit averages "
+            "0.985 over 2022-2026, i.e. +/-1.5 % around the fit mean, "
+            "absorbed by u_h = 0.60 m and the 2-point gate margin."),
+    }
+
+    return {
+        "schemaVersion": 6,
+        "source": "REFMAR / Shom",
+        "license": "Licence Ouverte 2.0",
+        "licenseURL": LICENSE_URL,
+        "sourceDatasets": SOURCE_DATASETS,
+        "sourceLastUpdate": "2026-02-24",
+        "retrievedAt": iso(datetime.now(UTC)),
+        "official": False,
+        "method": "least-squares harmonic analysis",
+        "epoch": "2000-01-01T00:00:00Z",
+        "datum": "zero_hydrographique",
+        "units": "m",
+        "nodalCorrections": False,
+        "meanSpringRangeMethod": "2 * (M2 + S2) from the fitted constants",
+        "constituents": CONSTITUENTS,
+        "droppedConstituents": [],
+        "generator": "scripts/tides/refresh",
+        "coefficient": coefficient,
+        "stations": stations,
+        "spots": spots,
+    }
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--year", type=int, default=2026)
+    parser.add_argument("--revision", type=int, default=1)
+    parser.add_argument("--station", action="append", default=None,
+                        help="restrict to a station id (repeatable)")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="build and report, do not write the dataset")
+    parser.add_argument("--no-cache", action="store_true")
+    parser.add_argument("--out", default=None)
+    arguments = parser.parse_args()
+
+    use_cache = not arguments.no_cache
+    speeds = load_speeds()
+    log(f"loaded {len(speeds)} constituent speeds from Swift")
+
+    selected = arguments.station or list(STATIONS)
+    unknown = [station for station in selected if station not in STATIONS]
+    if unknown:
+        die(f"unknown station(s): {unknown}")
+
+    index = fetch_gauge_index(use_cache)
+    stations = []
+    for station_id in selected:
+        config = STATIONS[station_id]
+        entry = index.get(station_id)
+        if entry is None:
+            die(f"station {station_id} is not in the REFMAR index")
+        source4 = [stat for stat in entry.get("stats", []) if stat.get("source") == 4]
+        if source4:
+            LAST_AVAILABLE[station_id] = parse_iso(source4[-1]["last_date"])
+        log(f"[{station_id}] state {entry['state']}, "
+            f"source 4 through {source4[-1]['last_date'] if source4 else 'unknown'}")
+        stations.append(run_station(station_id, config, speeds, use_cache, index))
+
+    swimming_ranges = calibrate_swimming_ranges(stations, speeds)
+    dataset = build_dataset(
+        stations, arguments.year, arguments.revision, swimming_ranges)
+
+    if arguments.dry_run:
+        log("dry run: dataset not written")
+        print(json.dumps(dataset, ensure_ascii=False, indent=2)[:2000])
+        return
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    output = arguments.out or os.path.join(
+        OUTPUT_DIR, f"tide-model-{arguments.year}.{arguments.revision}.json")
+    with open(output, "w", encoding="utf-8") as handle:
+        json.dump(dataset, handle, ensure_ascii=False, indent=2)
+        handle.write("\n")
+    log(f"wrote {os.path.relpath(output, REPO_ROOT)}")
+
+    report = os.path.join(
+        REPO_ROOT, "docs/data-sourcing",
+        f"accuracy-{arguments.year}.{arguments.revision}.md")
+    with open(report, "w", encoding="utf-8") as handle:
+        handle.write(render_report(dataset, arguments.year, arguments.revision))
+    log(f"wrote {os.path.relpath(report, REPO_ROOT)}")
+
+
+def render_report(dataset: dict, year: int, revision: int) -> str:
+    lines = [
+        f"# Accuracy report — tide-model-{year}.{revision}",
+        "",
+        "Generated by `scripts/tides/refresh`. Held-out year is never in the fit.",
+        "",
+        "## Held-out year (2025)",
+        "",
+        "| Station | Fit | Test | n | RMSE (m) | Bias (m) | p95 \\|Δh\\| (m) | "
+        "max under-pred. (m) | min over-pred. (m) | Low Δt med/p95/max (min) | "
+        "High Δt med/p95/max (min) |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
+    ]
+    for station in dataset["stations"]:
+        accuracy = station["accuracy"]
+        fit = ", ".join(f"{window['start']}→{window['end']}" for window in station["fitWindows"])
+        test = f"{accuracy['testWindow']['start']}→{accuracy['testWindow']['end']}"
+        low = accuracy["extrema"]["low"]
+        high = accuracy["extrema"]["high"]
+        lines.append(
+            f"| **{station['id']}** {station['name']} | {fit} | {test} | "
+            f"{accuracy['samples']} | {accuracy['rmseMeters']} | {accuracy['biasMeters']} | "
+            f"{accuracy['p95HeightErrorMeters']} | "
+            f"**{accuracy['maxUnderPredictionMeters']}** | "
+            f"{accuracy['minOverPredictionMeters']} | "
+            f"{low['medianMinutes']} / {low['p95Minutes']} / {low['maxMinutes']} | "
+            f"{high['medianMinutes']} / {high['p95Minutes']} / {high['maxMinutes']} |")
+    lines += [
+        "",
+        "`max under-prediction` is `max(pred − obs)` over the held-out year: the "
+        "prediction was too **high**, the only direction that can fail the "
+        "boating gate open. `min over-prediction` is the most negative residual, "
+        "the safe direction.",
+        "",
+        "**RMSE is a series property (Z30).** The held-out year is one draw; a "
+        "stormy winter can push it above 0.20 m without a regression. The rule "
+        "is: LOYO median ≤ 0.20 m and no LOYO year above 0.22 m.",
+        "",
+    ]
+    for station in dataset["stations"]:
+        accuracy = station["accuracy"]
+        series = accuracy.get("seriesRmse") or {}
+        rmses = [
+            entry["rmseMeters"] for entry in accuracy.get("leaveOneYearOut", [])
+            if entry.get("rmseMeters") is not None
+        ]
+        if rmses and series:
+            lines.append(
+                f"- **{station['id']}**: 2025 {accuracy['rmseMeters']} m; LOYO "
+                f"range {min(rmses):.4f}–{max(rmses):.4f}, median "
+                f"{series['medianMeters']:.4f} — series rule "
+                f"{'pass' if series['passed'] else 'FAIL'}.")
+    lines += [
+        "",
+        "## Leave-one-year-out (Z27/Z29)",
+        "",
+        "A single neutral year does not bound the series: an anticyclonic winter "
+        "makes the model run too high. For each year, the model is refitted "
+        "without that year and evaluated on it. `u_h` must cover the worst "
+        "leave-one-year-out under-prediction + 0.05 m.",
+        "",
+        "| Station | Year | n | RMSE (m) | Bias (m) | p95 \\|Δh\\| (m) | "
+        "max under-pred. (m) | max \\|Δt\\| (min) |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for station in dataset["stations"]:
+        for entry in station["accuracy"].get("leaveOneYearOut", []):
+            lines.append(
+                f"| **{station['id']}** {station['name']} | {entry['year']} | "
+                f"{entry['samples']} | {entry['rmseMeters']} | {entry['biasMeters']} | "
+                f"{entry['p95HeightErrorMeters']} | **{entry['maxUnderPredictionMeters']}** | "
+                f"**{entry['maxMinutes']}** |")
+    lines += [
+        "",
+        "## Anomalous-year stress test (Z26)",
+        "",
+        "Fit on the pre-2025 windows only, predict the 2026 half-year. This is "
+        "**not** a horizon measurement: January 2026 mean pressure at Arcachon "
+        "was 1007.9 hPa against 1027.6 hPa in January 2022 (~+0.20 m of sea level "
+        "from atmospheric loading), and January 2025 was neutral at 1016.8 hPa. "
+        "A harmonic model does not predict weather; the bias below is the "
+        "anomaly, not model drift. The horizon bounds astronomical decay "
+        "(nodal, ±1.5 % over 2022→2029), not the annual dispersion that `u_h` "
+        "carries.",
+        "",
+        "| Station | Fit | Stress window | n | RMSE (m) | Bias (m) | "
+        "p95 \\|Δh\\| (m) | max under-pred. (m) | Low Δt max (min) | High Δt max (min) |",
+        "|---|---|---|---|---|---|---|---|---|---|",
+    ]
+    for station in dataset["stations"]:
+        forward = station["accuracy"].get("forwardTest")
+        if not forward:
+            lines.append(f"| **{station['id']}** {station['name']} | — | — | — | — | — | — | — | — | — |")
+            continue
+        fit = ", ".join(f"{window['start']}→{window['end']}" for window in forward["fitWindows"])
+        window = f"{forward['testWindow']['start']}→{forward['testWindow']['end']}"
+        lines.append(
+            f"| **{station['id']}** {station['name']} | {fit} | {window} | "
+            f"{forward['samples']} | {forward['rmseMeters']} | {forward['biasMeters']} | "
+            f"{forward['p95HeightErrorMeters']} | {forward['maxUnderPredictionMeters']} | "
+            f"{forward['extrema']['low']['maxMinutes']} | "
+            f"{forward['extrema']['high']['maxMinutes']} |")
+
+    lines += [
+        "",
+        "## QC",
+        "",
+        "| Station | Window | Kept | Coverage | Max gap (h) | Datum step (m) | Rejected |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for station in dataset["stations"]:
+        for report in station["qc"]:
+            rejected = ", ".join(f"{key} {value}" for key, value in report["rejected"].items()) or "—"
+            lines.append(
+                f"| {station['id']} | {report['window']} | {report['kept']}/{report['expected']} | "
+                f"{report['coverage']:.1%} | {report['maxGapHours']} | "
+                f"{report['datumStepMeters']} | {rejected} |")
+    lines += [
+        "",
+        "## Envelopes",
+        "",
+        "| Spot | u_t (min) | u_h (m) | Basis (generated) |",
+        "|---|---|---|---|",
+    ]
+    for spot in dataset["spots"]:
+        uncertainty = spot["uncertainty"]
+        basis = uncertainty["basis"].replace("|", "\\|")
+        lines.append(
+            f"| {spot['id']} | {uncertainty['timeMinutes']} | "
+            f"{uncertainty['heightMeters']} | {basis} |")
+    calibration_year = next(
+        (spot.get("swimmingRange", {}).get("calibration", {}).get("year")
+         for spot in dataset["spots"] if spot.get("swimmingRange")), None)
+    lines += [
+        "",
+        "## Swimming range calibration",
+        "",
+        f"Calibration year **{calibration_year}**: `T` is the local predicted "
+        "daily range reached on the same number of days as the national "
+        "coefficient reaches 100 at Brest. The number of qualifying days is "
+        "specific to that year, not a constant. The grey band is `T ± 0.30 m`; "
+        "no `low` is possible inside it.",
+        "",
+        "| Spot | Year | T (m) | lowBelow (m) | strongAt (m) | Coef ≥ 100 days |",
+        "|---|---|---|---|---|---|",
+    ]
+    for spot in dataset["spots"]:
+        swimming = spot.get("swimmingRange") or {}
+        calibration = swimming.get("calibration") or {}
+        lines.append(
+            f"| {spot['id']} | {calibration.get('year')} | "
+            f"{calibration.get('thresholdMeters')} | "
+            f"{swimming.get('lowBelow')} | {swimming.get('strongAt')} | "
+            f"{calibration.get('coefficientDaysAtOrAbove100')} |")
+    lines += [
+        "",
+        "## Notes",
+        "",
+        "- **Z20**: each request is a full 31-day span with an exclusive `dtEnd`; "
+        "a gap > 1.5 h aborts the run unless the station allowlists it with "
+        "dates and a source reason.",
+        "- **Z21**: `u_h` is one-sided (`max(pred − obs) + 0.05 m`), not "
+        "`max |Δh|`. `maxAbsoluteErrorMeters` is information only and is never "
+        "subtracted from a height.",
+        "- **Z22**: D2 is a consistency rule — median ≤ 12 min, p95 ≤ 35 min, "
+        "max |Δt| ≤ `u_t` − 10 min, |bias| ≤ 0.05 m, p95 |Δh| ≤ 0.40 m, "
+        "max under-prediction ≤ `u_h` − 0.05 m. RMSE is a series property "
+        "(Z30). The generator aborts if a declared envelope does not cover the "
+        "measurement.",
+        "- **Z23**: the national coefficient uses `range_Brest / 6.10 × 100`, "
+        "clamped 20…120. The Brest model is **not validated** against a "
+        "published Annuaire sample (`coefficient.validated = false`), so "
+        "baignade stays `.dataUnavailable`.",
+        "- **Z26**: the 2026-H1 stress test is an anomalous-pressure year, not a "
+        "horizon measurement. Its bias is weather, not model drift.",
+        "- **Z27**: `u_h` is sized on the leave-one-year-out maximum, not on the "
+        "neutral 2025 year; the `basis` names the worst year.",
+        "- **Z28**: `validUntil` is fit end + 3 years for all stations. The "
+        "horizon bounds astronomical decay (nodal drift), not annual weather "
+        "dispersion, which `u_h` carries. Regenerate the dataset once a year "
+        "(BUILD.md).",
+        "- **Z29**: `u_t` is sized on the leave-one-year-out max |Δt| + 10 min; "
+        "the `basis` names the worst year. Extrema are detected on a 1 h "
+        "smoothed series and plateau-centred on the raw 10-minute series. A "
+        "4 cm plateau is still reported at its highest sample: the 2023-08-24 "
+        "high at station 15 is such a plateau, and `u_t = 75` is kept because "
+        "the 2023 low-water max is 63.21 min.",
+        "- **Z30**: RMSE is a series property — LOYO median ≤ 0.20 m and no year "
+        "above 0.22 m. The held-out year is one draw, not a regression test.",
+        "- Extrema are compared against the validated 10-minute series "
+        "(source 3), matched within 90 min of the observed extremum.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+if __name__ == "__main__":
+    main()

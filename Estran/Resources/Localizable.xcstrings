@@ -1,0 +1,26 @@
+{
+  "sourceLanguage" : "fr",
+  "strings" : {
+    "app.name" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estran"
+          }
+        }
+      }
+    },
+    "m0.placeholder" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "M0 — Setup"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
