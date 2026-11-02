@@ -23,6 +23,13 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
     CLANG_ENABLE_MODULES: YES
     SWIFT_EMIT_LOC_STRINGS: YES
+    # iOS / iPhone only. The app is not a Mac app, not an iPad app and not a
+    # "Designed for iPad/iPhone" Mac binary: without this, xcodebuild offers a
+    # My Mac destination and CI can silently fall back to it when no simulator
+    # runtime is installed. TARGETED_DEVICE_FAMILY "1" keeps the iPhone-only
+    # layout; this flag keeps the product off the Mac entirely.
+    TARGETED_DEVICE_FAMILY: "1"
+    SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
 
 targets:
   Estran:
@@ -47,7 +54,6 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_ENTITLEMENTS: Estran/Estran.entitlements
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
-        TARGETED_DEVICE_FAMILY: "1"
         SUPPORTS_MACCATALYST: NO
         ENABLE_PREVIEWS: YES
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks"
@@ -75,7 +81,6 @@ targets:
         CODE_SIGN_ENTITLEMENTS: EstranWidgets/EstranWidgets.entitlements
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
-        TARGETED_DEVICE_FAMILY: "1"
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"
 
   EstranTests:
