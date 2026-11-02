@@ -52,13 +52,14 @@ jobs:
       - name: Pick a simulator
         id: sim
         run: |
-          DEVICE_ID="$(xcrun simctl list devices available | grep -m1 -E '^[[:space:]]+iPhone' | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')"
-          test -n "$DEVICE_ID"
-          echo "device_id=$DEVICE_ID" >> "$GITHUB_OUTPUT"
-          echo "Using simulator $DEVICE_ID"
+          LINE="$(xcrun simctl list devices available | grep -m1 -E '^[[:space:]]+iPhone')"
+          NAME="$(echo "$LINE" | sed -E 's/^[[:space:]]+//; s/ \([0-9A-F-]{36}\).*//')"
+          test -n "$NAME"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "Using simulator $NAME"
 
       - name: Boot the simulator
-        run: xcrun simctl bootstatus "${{ steps.sim.outputs.device_id }}" -b || true
+        run: xcrun simctl boot "${{ steps.sim.outputs.name }}" || true
 
       - name: Build
         run: |
@@ -67,7 +68,7 @@ jobs:
       - name: Test
         run: |
           set -x
-          xcodebuild -project Estran.xcodeproj -scheme Estran -configuration Debug -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.device_id }}" -test-timeouts-enabled YES -default-test-execution-time-allowance 300 test
+          xcodebuild -project Estran.xcodeproj -scheme Estran -configuration Debug -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }},OS=latest" -test-timeouts-enabled YES -default-test-execution-time-allowance 300 test
 
   macos-archive:
     name: Unsigned archive compile check
