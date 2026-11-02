@@ -40,6 +40,13 @@ jobs:
   macos-build:
     name: Xcode build
     runs-on: macos-latest
+    # The previous run was cancelled at exactly 15 minutes with no failing
+    # step: brew's auto-update on a cold image is the usual suspect. Pin a
+    # generous timeout so a hang fails visibly instead of being cancelled.
+    timeout-minutes: 25
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
     steps:
       - uses: actions/checkout@v4
       - name: Install XcodeGen
