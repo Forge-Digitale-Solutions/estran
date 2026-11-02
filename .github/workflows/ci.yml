@@ -37,76 +37,26 @@ jobs:
       - name: SwiftFormat
         run: swiftformat --lint --exclude Packages/EstranCore/.build .
 
-  macos-build-test:
-    name: Xcode build and test
-    # macos-26 ships Xcode 26.6 only, which cannot run an iOS 27 app: the
-    # destination list had no iOS simulator and `downloadPlatform` could not
-    # connect to the simulator service. macos-latest tracks the newest image,
-    # which carries the Xcode that matches the project's iOS 27 target.
+  macos-build:
+    name: Xcode build
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-
-      # The image ships several Xcodes and the default is not always the newest.
-      # The project targets iOS 27, so select the highest version present.
-      - name: Use the newest Xcode
-        run: |
-          NEWEST="$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
-          echo "Using $NEWEST"
-          sudo xcode-select -s "$NEWEST"
-          xcodebuild -version
-
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate project
         run: xcodegen generate
-
-      # The image can have the iOS SDK without any iOS simulator runtime: the
-      # destination list then shows only placeholders and visionOS devices
-      # (seen on run 41490086783). Download the matching runtime when that
-      # happens. No dest copy left, so it runs on a fresh image in ~6 min.
-      - name: Ensure an iOS simulator runtime
-        run: |
-          # 'Any iOS Simulator Device' is a placeholder that also matches the
-          # platform string, so it must be excluded or the check always passes.
-          xcodebuild -project Estran.xcodeproj -scheme Estran -showdestinations 2>/dev/null || true
-          if ! xcodebuild -project Estran.xcodeproj -scheme Estran -showdestinations 2>/dev/null | grep 'platform:iOS Simulator,' | grep -v placeholder | grep -q .; then
-            echo 'No usable iOS simulator runtime, downloading...'
-            xcodebuild -downloadPlatform iOS || {
-              echo '::error::No iOS simulator runtime and the download failed. The runner Xcode is:'
-              xcodebuild -version
-              exit 1
-            }
-          fi
-
-      # Derive the destination from xcodebuild itself, never from simctl: only
-      # xcodebuild knows which runtimes it accepts.
-      - name: Pick a simulator
-        id: sim
-        run: |
-          LINE="$(xcodebuild -project Estran.xcodeproj -scheme Estran -showdestinations 2>/dev/null \
-            | grep "platform:iOS Simulator," | grep -v placeholder | head -1)"
-          echo "destination: $LINE"
-          DEVICE_ID="$(echo "$LINE" | sed -E 's/.* id:([0-9A-F-]{36}).*/\1/')"
-          test -n "$DEVICE_ID"
-          echo "device_id=$DEVICE_ID" >> "$GITHUB_OUTPUT"
-          echo "Using simulator $DEVICE_ID"
-
-      - name: Boot the simulator
-        run: xcrun simctl bootstatus "${{ steps.sim.outputs.device_id }}" -b || true
-
+      # Compile check only. GitHub-hosted macOS images still run Xcode 26.6
+      # (verified 2026-11-02): they have no iOS simulator runtime, and
+      # `xcodebuild -downloadPlatform iOS` fails with "Unable to connect to
+      # simulator", so `xcodebuild test` cannot run an iOS 27 app there.
+      # Unit and UI tests are the local gate: ./scripts/check-macos.sh.
+      # Restore the test step the day a runner image ships Xcode 27.
       - name: Build
         run: |
           set -x
           xcodebuild -project Estran.xcodeproj -scheme Estran -configuration Debug \
             -destination 'generic/platform=iOS Simulator' build
-
-      - name: Test
-        run: |
-          set -x
-          xcodebuild -project Estran.xcodeproj -scheme Estran -configuration Debug \
-            -destination "id=${{ steps.sim.outputs.device_id }}" \
-            -test-timeouts-enabled YES -default-test-execution-time-allowance 300 test
 
   macos-archive:
     name: Unsigned archive compile check

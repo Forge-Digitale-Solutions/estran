@@ -31,6 +31,13 @@ Three build checkpoints only (see `ARCHITECTURE_PLAN.md` §16.1): M3 close, M5 c
 ./scripts/check-macos.sh --archive
 ```
 
+**CI scope.** GitHub Actions covers the Linux package, both linters, an unsigned
+archive and a macOS **build**. It does **not** run the unit/UI tests: the
+hosted images still ship Xcode 26.6 (checked 2026-11-02), with no iOS simulator
+runtime and a `downloadPlatform` that fails with « Unable to connect to
+simulator ». Tests are the local gate (`check-macos.sh`), and the CI job gets its
+test step back the day a runner image carries Xcode 27.
+
 `check-linux.sh` does **not** compile the SwiftUI app target: there is no Apple
 SDK on the Linux host. The app is syntax-parsed and the non-UI layer is
 type-checked; the macOS gates stay explicitly pending until `check-macos.sh`
