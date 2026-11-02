@@ -84,12 +84,17 @@ targets:
     sources:
       - path: EstranTests
     dependencies:
+      - target: Estran
       - package: EstranCore
         product: EstranCore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.forgedigitale.estran.tests
         GENERATE_INFOPLIST_FILE: YES
+        # App-hosted: the marine and weather adapters live in the app target, and
+        # their decoders are the part M2 must test (`worksplit.md` §6).
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Estran.app/Estran"
+        BUNDLE_LOADER: "$(TEST_HOST)"
 
   EstranUITests:
     type: bundle.ui-testing

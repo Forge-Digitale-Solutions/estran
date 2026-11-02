@@ -3,29 +3,110 @@ import Foundation
 
 /// Production conditions provider.
 ///
-/// The tide comes from the embedded REFMAR-derived model and is available
-/// today. The weather and swell sources land in **M2** (WeatherKit / Open-Meteo
-/// Marine). Until they exist, this provider **refuses** instead of inventing
-/// values: a fabricated favourable verdict is the one failure the product
-/// cannot afford (`worksplit.md` M2).
+/// Three sources, composed here and nowhere else:
+/// - **tide** — the embedded REFMAR-derived model, always available;
+/// - **air weather** — WeatherKit (`WeatherKitService`), which needs the App ID
+///   capability (`BUILD.md` §2);
+/// - **swell and sea temperature** — Open-Meteo Marine, only where the model
+///   describes the water (`MarinePolicy`).
+///
+/// **Fail closed, field by field.** A missing source throws; nothing is replaced
+/// by a neutral value and a favourable verdict is never fabricated
+/// (`worksplit.md` M2, `AGENTS.md` invariant 4). A forecast hour without swell is
+/// skipped, so the window scanner never sees a made-up calm sea.
 struct LiveConditionsProvider: ConditionsProviding {
     let isSampleData = false
 
     private let tideEngine: TideEngine?
+    private let weather: any WeatherSource
+    private let marine: MarineService
 
-    init() {
+    /// A marine sample is used for an hour when it is within this window; hourly
+    /// Open-Meteo samples are regular, so 90 min tolerates a DST step or a
+    /// missing hour on both sides.
+    private static let marineTolerance: TimeInterval = 90 * 60
+
+    init(
+        weather: any WeatherSource = WeatherKitService(),
+        marine: MarineService = MarineService())
+    {
         tideEngine = try? ShippedTideModel.load().engine()
+        self.weather = weather
+        self.marine = marine
     }
 
-    func conditions(for _: Spot, at _: Date) async throws -> Conditions {
-        guard tideEngine != nil else {
+    func conditions(for spot: Spot, at date: Date) async throws -> Conditions {
+        guard let tideEngine else {
             throw ConditionsProviderError.tideUnavailable
         }
-        // M2 owns the weather pipeline. No fallback values, no neutral defaults.
-        throw ConditionsProviderError.weatherUnavailable
+        let tide: TideState
+        do {
+            tide = try await tideEngine.state(for: spot.tideStation.id, at: date)
+        } catch {
+            throw ConditionsProviderError.tideUnavailable
+        }
+
+        let air = try await weather.weather(for: spot, at: date)
+        let swell = try await swell(for: spot, at: date)
+
+        return Conditions(spot: spot, at: date, tide: tide, weather: air, swell: swell)
     }
 
-    func forecast(for _: Spot, from _: Date, hours _: Int) async throws -> [Conditions] {
-        throw ConditionsProviderError.weatherUnavailable
+    func forecast(for spot: Spot, from date: Date, hours: Int) async throws -> [Conditions] {
+        guard let tideEngine else {
+            throw ConditionsProviderError.tideUnavailable
+        }
+        let air = try await weather.forecast(for: spot, from: date, hours: hours)
+        let swellSamples: [MarineSample] = switch MarinePolicy.source(for: spot) {
+        case .offshoreModel: try await marine.samples(for: spot)
+        case .unavailable: []
+        }
+
+        var samples: [Conditions] = []
+        samples.reserveCapacity(air.count)
+        for (index, weatherNow) in air.enumerated() {
+            let instant = date.addingTimeInterval(Double(index) * 3600)
+            guard let swell = Self.nearestSwell(in: swellSamples, to: instant), let tide = try? await tideEngine.state(
+                for: spot.tideStation.id,
+                at: instant)
+            else {
+                continue
+            }
+            samples.append(
+                Conditions(
+                    spot: spot,
+                    at: instant,
+                    tide: tide,
+                    weather: weatherNow,
+                    swell: swell))
+        }
+
+        guard !samples.isEmpty else {
+            throw MarinePolicy.source(for: spot) == .unavailable
+                ? ConditionsProviderError.marineUnavailable
+                : ConditionsProviderError.weatherUnavailable
+        }
+        return samples
+    }
+
+    private func swell(for spot: Spot, at date: Date) async throws -> Swell {
+        switch MarinePolicy.source(for: spot) {
+        case .unavailable:
+            throw ConditionsProviderError.marineUnavailable
+        case .offshoreModel:
+            let samples = try await marine.samples(for: spot)
+            guard let swell = Self.nearestSwell(in: samples, to: date) else {
+                throw ConditionsProviderError.marineUnavailable
+            }
+            return swell
+        }
+    }
+
+    /// The swell of the closest sample within the tolerance, or `nil`.
+    static func nearestSwell(in samples: [MarineSample], to date: Date) -> Swell? {
+        let nearest = samples
+            .filter { abs($0.time.timeIntervalSince(date)) <= marineTolerance }
+            .min { abs($0.time.timeIntervalSince(date)) < abs($1.time.timeIntervalSince(date)) }
+        return nearest?.swell
     }
 }

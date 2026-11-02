@@ -21,6 +21,7 @@ protocol ConditionsProviding: Sendable {
 enum ConditionsProviderError: Error, Equatable {
     case tideUnavailable
     case weatherUnavailable
+    case marineUnavailable
 
     /// Short French detail shown under the « Données indisponibles » verdict.
     var displayMessage: String {
@@ -29,6 +30,8 @@ enum ConditionsProviderError: Error, Equatable {
             "La marée n'est pas disponible pour ce spot."
         case .weatherUnavailable:
             "La météo n'est pas encore disponible pour ce spot."
+        case .marineUnavailable:
+            "La houle et la température de l'eau ne sont pas disponibles pour ce spot."
         }
     }
 }
