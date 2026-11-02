@@ -11,9 +11,15 @@ struct GoEntry: TimelineEntry {
     var isSwimming: Bool = false
     var swimmingAdvisory: SwimmingAdvisory?
     /// The verdict the answer stands for. The icon and the colour both read it,
-    /// so a `Non` can never be painted green (VoiceOver audit, F2). Defaults to
-    /// `true` so the M0 placeholder keeps compiling until M5 fills it.
+    /// so a `Non` can never be painted green (VoiceOver audit, F2).
     var isGo: Bool = true
+    /// Missing data: a visible state, never a plain `Non`.
+    var isUnavailable: Bool = false
+    /// The five answers, for the medium widget (frame 04).
+    var lines: [WidgetSnapshot.ActivityLine] = []
+    /// Tide, wind, swell, weather, already in French.
+    var metrics: [WidgetSnapshot.Metric] = []
+    var isSampleData: Bool = false
 }
 
 struct GoWidgetView: View {
@@ -24,9 +30,14 @@ struct GoWidgetView: View {
     @ScaledMetric(relativeTo: .largeTitle) private var badgeSize: CGFloat =
         OceanTypography.widgetGoBadgeBaseSize
 
+    @Environment(\.widgetFamily) private var family
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         Group {
-            if entry.isSwimming {
+            if family == .systemMedium, entry.lines.count > 1, !dynamicTypeSize.isAccessibilitySize {
+                mediumBody
+            } else if entry.isSwimming {
                 swimmingBody
             } else {
                 standardBody
@@ -36,6 +47,71 @@ struct GoWidgetView: View {
         .containerBackground(for: .widget) {
             OceanPalette.backgroundGradient
         }
+    }
+
+    /// Frame 04: the spot on the left, the five answers on the right.
+    ///
+    /// Only at normal text sizes: at AX sizes five rows cannot fit without
+    /// truncating, so the widget falls back to the single answer above.
+    private var mediumBody: some View {
+        HStack(alignment: .top, spacing: OceanSpacing.sm) {
+            VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
+                Label(entry.title, systemImage: "mappin.and.ellipse")
+                    .font(OceanTypography.caption)
+                    .foregroundStyle(OceanPalette.sand)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer(minLength: 0)
+
+                Text(entry.answer)
+                    .font(OceanTypography.rounded(size: badgeSize * 0.62))
+                    .foregroundStyle(verdictColor)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(entry.detail)
+                    .font(OceanTypography.smallLabel)
+                    .foregroundStyle(OceanPalette.white.opacity(0.8))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
+                ForEach(entry.lines) { line in
+                    HStack(spacing: OceanSpacing.xxs) {
+                        Text(line.activity.shortLabel)
+                            .foregroundStyle(OceanPalette.white.opacity(0.85))
+                        Spacer(minLength: 0)
+                        Text(line.answer)
+                            .foregroundStyle(color(for: line))
+                            .multilineTextAlignment(.trailing)
+                    }
+                    .font(OceanTypography.smallLabel)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+    }
+
+    /// Never `oui` for swimming, and never green for a `Non`.
+    private var verdictColor: Color {
+        if entry.isSwimming {
+            return OceanPalette.sand
+        }
+        if entry.isUnavailable {
+            return OceanPalette.unavailable
+        }
+        return entry.isGo ? OceanPalette.oui : OceanPalette.non
+    }
+
+    private func color(for line: WidgetSnapshot.ActivityLine) -> Color {
+        if line.activity == .swimming {
+            return line.swimmingLevel.map(OceanPalette.swimmingRisk) ?? OceanPalette.sand
+        }
+        if line.isUnavailable {
+            return OceanPalette.unavailable
+        }
+        return line.isGo ? OceanPalette.oui : OceanPalette.non
     }
 
     private var standardBody: some View {
@@ -48,7 +124,7 @@ struct GoWidgetView: View {
 
             Text(entry.answer)
                 .font(OceanTypography.rounded(size: badgeSize))
-                .foregroundStyle(entry.isGo ? OceanPalette.oui : OceanPalette.non)
+                .foregroundStyle(verdictColor)
 
             Text(entry.detail)
                 .font(OceanTypography.smallLabel)

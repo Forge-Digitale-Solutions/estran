@@ -1,6 +1,7 @@
 import EstranCore
 import Foundation
 import Observation
+import WidgetKit
 
 /// Loads one spot's conditions and forecast, and exposes them to every screen.
 ///
@@ -183,6 +184,29 @@ final class AppModel {
                 decision: candidateDecision,
                 current: candidateSlots.first { $0.window.contains(conditions.at) },
                 upcoming: candidateSlots.first { $0.window.start > conditions.at })
+        }
+
+        // M5: the widgets and the Live Activity read this snapshot. Written off
+        // the main actor; a failure only means the widget keeps the previous
+        // one, never a fabricated value.
+        let snapshot = WidgetSnapshotBuilder.make(
+            WidgetSnapshotBuilder.Input(
+                conditions: conditions,
+                overviews: overviews,
+                activity: activity,
+                decision: decision ?? engine.decide(activity: activity, conditions: conditions),
+                timeZone: selectedSpot.timezone,
+                isSampleData: usesSampleData))
+        Task.detached(priority: .utility) {
+            do {
+                try snapshot.save()
+                // The widget reads the file; WidgetKit still needs a nudge to
+                // rebuild its timeline from it.
+                WidgetCenter.shared.reloadAllTimelines()
+            } catch {
+                // No App Group container: the widget keeps its previous
+                // snapshot rather than showing a value we could not persist.
+            }
         }
     }
 

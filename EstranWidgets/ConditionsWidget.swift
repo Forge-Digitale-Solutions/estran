@@ -4,7 +4,6 @@ import WidgetKit
 struct ConditionsWidgetView: View {
     let entry: GoEntry
 
-    private let labels = ["Marée", "Vent", "Houle", "Météo"]
     private let columns = [
         GridItem(.flexible(), spacing: OceanSpacing.xs),
         GridItem(.flexible(), spacing: OceanSpacing.xs)
@@ -16,12 +15,29 @@ struct ConditionsWidgetView: View {
                 .font(OceanTypography.caption)
                 .foregroundStyle(OceanPalette.sand)
 
-            LazyVGrid(columns: columns, alignment: .leading, spacing: OceanSpacing.xs) {
-                ForEach(labels, id: \.self) { label in
-                    Text(label)
-                        .font(OceanTypography.smallLabel)
-                        .foregroundStyle(OceanPalette.white.opacity(0.8))
+            if entry.metrics.isEmpty {
+                Text("Ouvre l'app pour charger les conditions")
+                    .font(OceanTypography.smallLabel)
+                    .foregroundStyle(OceanPalette.white.opacity(0.7))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                LazyVGrid(columns: columns, alignment: .leading, spacing: OceanSpacing.xs) {
+                    ForEach(entry.metrics) { metric in
+                        VStack(alignment: .leading, spacing: 1) {
+                            Image(systemName: metric.symbol)
+                                .font(OceanTypography.smallLabel)
+                                .foregroundStyle(OceanPalette.sand)
+                                .accessibilityHidden(true)
+                            Text(metric.value)
+                                .font(OceanTypography.bodyEmphasized)
+                                .foregroundStyle(OceanPalette.white)
+                            Text(metric.caption)
+                                .font(OceanTypography.smallLabel)
+                                .foregroundStyle(OceanPalette.white.opacity(0.75))
+                        }
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityElement(children: .combine)
+                    }
                 }
             }
         }

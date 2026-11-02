@@ -62,7 +62,7 @@ python3 scripts/tides/refresh   # regenerate the tide dataset (free, cached)
 | M2 Weather (WeatherKit + Open-Meteo Marine) | **live sources operational** — WeatherKit adapter + Open-Meteo fallback, marine model at Pointe de Grave, wind-sea estimate (labelled) inside the Bassin; 17 app tests. WeatherKit capability still to enable in the portal |
 | M3 UI | **Frames 01/02/03 built and matched** — first build 2026-10-28 (Xcode 27.1, iOS 27 simulator); accessibility findings fixed; device VoiceOver open |
 | M4 Foundation Models / Siri / notifications | not started |
-| M5 Widgets / Live Activity | views written and compiling, data path not wired |
+| M5 Widgets / Live Activity | **widget data path wired** — the app writes an App Group snapshot, the widget renders it (small answer + medium five-row list, conditions widget with real values); **Live Activity still to wire** |
 
 **Next action: close M3, then M2.** `check-macos.sh` is green (build, tests,
 lint, archive), the app runs in the simulator, and the three mockup screens that

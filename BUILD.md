@@ -156,7 +156,10 @@ These are missing today and are **hard submission blockers**:
   </plist>
   ```
   (`CA92.1` = access to the app's own preferences. The App Group storage counts as the app's own data.)
-- [ ] **WeatherKit entitlement** in `Estran/Estran.entitlements` (`com.apple.developer.weatherkit`, boolean `true`) once the capability is enabled on the App ID in the portal. Until then the live provider stops at `.weatherUnavailable` and the app says « La météo n'est pas encore disponible pour ce spot » — that is the fail-closed path, not a crash.
+- [x] **WeatherKit entitlement** in `Estran/Estran.entitlements` (`com.apple.developer.weatherkit`, `true`) — added 2026-11-02.
+- [ ] **WeatherKit capability on the App ID** (`com.forgedigitale.estran`) in the portal, then sign with the team. Until then WeatherKit fails and the app falls back to Open-Meteo (logged), so it still answers; with neither source reachable it says « La météo n'est pas encore disponible pour ce spot » — the fail-closed path, not a crash.
+
+  Note: the **WeatherKit REST API** is the server-side sibling (JWT signed with a private key). The app uses the native `WeatherKit` framework, which needs the capability and no key at all.
 - [ ] **Privacy policy URL** — required even though the app collects nothing. A static French page is enough (GitHub Pages, 0 €). It must say: no account, no analytics, no data collection; attribution REFMAR/Shom — Licence Ouverte 2.0; weather from Apple WeatherKit and Open-Meteo.
 - [ ] **App Privacy answers** in App Store Connect: *Data Not Collected*.
 - [ ] **Version and build number** bumped (`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in `project.yml`).

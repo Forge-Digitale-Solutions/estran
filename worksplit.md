@@ -443,6 +443,41 @@ it must: nothing measures it in the Bassin.
 build pass, **17 app unit tests**, 2 UI tests, 165 package tests; SwiftLint
 **0/104**; SwiftFormat **0/105**.
 
+### 8.11 M5 — widget data path (2026-11-02)
+
+The widget extension has no store, no engine and no network: the app writes a
+formatted snapshot, the extension renders it.
+
+| Piece | Where | Notes |
+|---|---|---|
+| `WidgetSnapshot` | `Packages/EstranCore/…/Persistence/WidgetSnapshot.swift` | spot, selected activity, verdict, five `ActivityLine`s (with the swimming level and warning), four `Metric`s, `isSampleData`; App Group file, seconds-since-1970 dates, 2 h stale window |
+| `WidgetSnapshotBuilder` | `Estran/Data/WidgetSnapshotBuilder.swift` | formats the French strings once (windows, reasons without the trailing period, « estimée » for the lagoon sea, « — » for a missing tide) |
+| Write | `AppModel.refreshDecision()` | after every refresh, off the main actor; a write failure leaves the previous snapshot, never a fabricated one |
+| Read | `GoTimelineProvider` | `.placeholder` when no snapshot, `.after(15 min)` when stale, `.after(30 min)` otherwise |
+| Small widget | `GoWidget` | the selected activity's answer, colour driven by `isGo`, `Non` never green |
+| Medium widget (frame 04) | `GoWidget` | spot + big answer on the left, the five answers on the right; falls back to the single answer at AX sizes so nothing truncates |
+| Conditions widget | `ConditionsWidget` | tide, wind, swell, weather with real values; « Ouvre l'app… » when empty |
+| Entitlement | `Estran/Estran.entitlements` | `com.apple.developer.weatherkit` added; the capability must also be enabled on the App ID (`BUILD.md` §1.3) |
+| Tests | `EstranCoreTests/WidgetSnapshotTests.swift` (7), `EstranTests/WidgetSnapshotStorageTests.swift` (2) | round-trip, missing/absent container, staleness, swimming never a `Oui`, unavailable line is not a verdict, App Group reachable from the app process |
+
+**Verified**: launching the app writes `Widget/widget-snapshot.json` in the App
+Group; read back —
+
+```
+spot: Arcachon-Eyrac | activité: shoreFishing | go: False | réponse: Coefficient trop faible
+  shoreFishing : Coefficient trop faible     | boating : 15 h 30 à 17 h 30 (go)
+  surfing      : Mer trop plate              | walking : 15 h 30 à 19 h 30 (go)
+  swimming     : Courants de marée estimés : faibles (never Oui/Non)
+tuiles: 3,8 m/baisse · 7 km/h O · 0,7 m/11 s · 22°/éclaircies
+```
+
+The widget rendering itself needs the widget added to a Home Screen (manual, or
+a UI test target for the extension); the data path and the view code are built
+and linted, the visual check is the one item left on M5's widget half.
+
+**v12 verification run (2026-11-02):** build pass, 19 app unit tests, 2 UI tests,
+172 package tests; SwiftLint **0/110**, SwiftFormat **0/111**.
+
 ## 9. Open external dependencies
 
 | Dependency | Needed for | State |
