@@ -117,13 +117,22 @@ public struct WidgetSnapshot: Codable, Hashable, Sendable {
 
     public static let fileName = "widget-snapshot.json"
 
-    /// The shared container, or `nil` outside an entitled context (unit tests).
+    /// The shared container, or `nil` outside an entitled context (unit tests,
+    /// Linux CI).
     public static func containerURL(
         fileManager: FileManager = .default) -> URL?
     {
-        fileManager
-            .containerURL(forSecurityApplicationGroupIdentifier: EstranAppGroup.identifier)?
-            .appendingPathComponent("Widget", isDirectory: true)
+        #if canImport(Darwin)
+            // App Group containers are an Apple-platform API: on Linux the core
+            // package must still build, and a `nil` container is exactly what the
+            // caller expects when the group is not provisioned.
+            return fileManager
+                .containerURL(forSecurityApplicationGroupIdentifier: EstranAppGroup.identifier)?
+                .appendingPathComponent("Widget", isDirectory: true)
+        #else
+            _ = fileManager
+            return nil
+        #endif
     }
 
     public func save(in containerURL: URL? = WidgetSnapshot.containerURL()) throws {

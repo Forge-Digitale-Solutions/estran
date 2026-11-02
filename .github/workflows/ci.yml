@@ -46,13 +46,38 @@ jobs:
         run: brew install xcodegen
       - name: Generate project
         run: xcodegen generate
+      # The installed runtime decides which iPhones exist; a hard-coded model
+      # name (iPhone 16) breaks on every Xcode update, and xcodebuild then falls
+      # back to "My Mac" and fails. Pick the first available iPhone instead.
+      - name: Pick a simulator
+        id: sim
+        run: |
+          DEVICE_ID="$(xcrun simctl list devices available --json | python3 -c '
+import json, sys
+
+devices = json.load(sys.stdin)["devices"]
+for runtime in sorted(devices, reverse=True):
+    if "iOS" not in runtime:
+        continue
+    for device in devices[runtime]:
+        if device["name"].startswith("iPhone") and device.get("isAvailable", True):
+            print(device["udid"])
+            sys.exit(0)
+sys.exit("no available iPhone simulator found")
+')"
+          echo "device_id=$DEVICE_ID" >> "$GITHUB_OUTPUT"
+          echo "Using simulator $DEVICE_ID"
+
+      - name: Boot the simulator
+        run: xcrun simctl bootstatus "${{ steps.sim.outputs.device_id }}" -b || true
+
       - name: Build
         run: |
           xcodebuild \
             -project Estran.xcodeproj \
             -scheme Estran \
             -configuration Debug \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination "id=${{ steps.sim.outputs.device_id }}" \
             build
       - name: Test
         run: |
@@ -60,7 +85,9 @@ jobs:
             -project Estran.xcodeproj \
             -scheme Estran \
             -configuration Debug \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination "id=${{ steps.sim.outputs.device_id }}" \
+            -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance 300 \
             test
 
   macos-archive:
