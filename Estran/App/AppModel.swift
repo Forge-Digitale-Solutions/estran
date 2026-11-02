@@ -73,6 +73,10 @@ final class AppModel {
     private(set) var activity: Activity = .shoreFishing
     private(set) var decision: GoDecision?
     private(set) var slots: [ActivitySlot] = []
+    /// Every activity's answer for the selected spot, in `Activity.allCases`
+    /// order. The spot detail and the activity picker read this, never their own
+    /// engine call.
+    private(set) var overviews: [ActivityOverview] = []
     /// Activities the current conditions cannot answer (missing national
     /// coefficient, missing sea temperature…). Rendered as a visible
     /// « Données indisponibles » state, never as a plain `Non`.
@@ -98,13 +102,16 @@ final class AppModel {
     }
 
     /// The production provider is the live one; DEBUG builds use the demo
-    /// provider so the UI can be built before M2. The demo type does not exist
-    /// in release (`#if DEBUG` around its file).
+    /// provider so the UI can be built before M2, unless the app was launched
+    /// with `-liveData` (simulator / device check of the real sources).
     static func defaultProvider() -> any ConditionsProviding {
         #if DEBUG
-            DemoConditionsProvider()
+            if ProcessInfo.processInfo.arguments.contains("-liveData") {
+                return LiveConditionsProvider()
+            }
+            return DemoConditionsProvider()
         #else
-            LiveConditionsProvider()
+            return LiveConditionsProvider()
         #endif
     }
 
@@ -139,6 +146,7 @@ final class AppModel {
         decision = nil
         slots = []
         unavailableActivities = []
+        overviews = []
         await store.load(spot: selectedSpot, provider: provider)
         refreshDecision()
     }
@@ -149,6 +157,7 @@ final class AppModel {
             decision = nil
             slots = []
             unavailableActivities = []
+            overviews = []
             return
         }
 
@@ -164,6 +173,17 @@ final class AppModel {
             }
         }
         unavailableActivities = unavailable
+
+        overviews = Activity.allCases.map { candidate in
+            let candidateDecision = engine.decide(
+                activity: candidate, conditions: conditions, forecast: store.forecast)
+            let candidateSlots = engine.windows(activity: candidate, over: store.forecast)
+            return ActivityOverview(
+                activity: candidate,
+                decision: candidateDecision,
+                current: candidateSlots.first { $0.window.contains(conditions.at) },
+                upcoming: candidateSlots.first { $0.window.start > conditions.at })
+        }
     }
 
     // MARK: - Windows

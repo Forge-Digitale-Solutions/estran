@@ -52,7 +52,7 @@ struct VerdictBadge: View {
         let state = VerdictState(decision: decision)
         Label(state.word, systemImage: state.symbolName)
             .font(OceanTypography.button)
-            .foregroundStyle(state.color)
+            .foregroundStyle(state.badgeColor)
             .fixedSize(horizontal: false, vertical: true)
     }
 }
@@ -65,7 +65,7 @@ struct SwimmingRiskBadge: View {
     var body: some View {
         Label(level.label, systemImage: "exclamationmark.triangle.fill")
             .font(OceanTypography.button)
-            .foregroundStyle(OceanPalette.swimmingRisk(level))
+            .foregroundStyle(OceanPalette.swimmingRiskText(level))
             .fixedSize(horizontal: false, vertical: true)
     }
 }

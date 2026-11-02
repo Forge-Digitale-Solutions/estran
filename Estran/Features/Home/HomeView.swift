@@ -8,11 +8,13 @@ import SwiftUI
 /// no Dynamic Type clamp.
 struct HomeView: View {
     @Environment(AppModel.self) private var app
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: OceanSpacing.lg) {
+                    headerRow
                     titleBlock
                     // The segmented control and the answer card are adjacent
                     // glass shapes: the container lets them merge as the system
@@ -51,7 +53,46 @@ struct HomeView: View {
             }
             .background(OceanPalette.backgroundGradient.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { toolbarContent }
+            .toolbar(.hidden, for: .navigationBar)
+        }
+    }
+
+    /// Spot pill and the prototype badge, inside the scroll content.
+    ///
+    /// They used to live in the navigation toolbar, where the glass button style
+    /// collapsed the pill to its icon and clipped the spot name. `DESIGN_REFERENCE.md`
+    /// §3.1 puts this row above the large title, which is also where it reads
+    /// best at AX sizes.
+    ///
+    /// At accessibility sizes the two controls cannot share a line: the spot
+    /// name alone is wider than the screen, so the row stacks. Nothing is
+    /// clamped and nothing is truncated.
+    @ViewBuilder
+    private var headerRow: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: OceanSpacing.xs) {
+                spotButton
+                sampleBadge
+            }
+        } else {
+            HStack(spacing: OceanSpacing.sm) {
+                spotButton
+                Spacer(minLength: OceanSpacing.xs)
+                sampleBadge
+            }
+        }
+    }
+
+    private var spotButton: some View {
+        SpotButton(name: app.selectedSpot.name) {
+            app.select(tab: .spots)
+        }
+    }
+
+    @ViewBuilder
+    private var sampleBadge: some View {
+        if app.usesSampleData {
+            SampleDataBadge()
         }
     }
 
@@ -65,6 +106,7 @@ struct HomeView: View {
                 .font(OceanTypography.largeTitle)
                 .foregroundStyle(OceanPalette.white)
                 .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("app.title")
             Text(
                 "\(app.selectedSpot.name) · "
                     + FrenchFormat.time(referenceDate, in: app.selectedSpot.timezone))
@@ -117,20 +159,6 @@ struct HomeView: View {
             .font(OceanTypography.smallLabel)
             .foregroundStyle(OceanPalette.white.opacity(0.6))
             .fixedSize(horizontal: false, vertical: true)
-    }
-
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            SpotButton(name: app.selectedSpot.name) {
-                app.select(tab: .spots)
-            }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            if app.usesSampleData {
-                SampleDataBadge()
-            }
-        }
     }
 }
 

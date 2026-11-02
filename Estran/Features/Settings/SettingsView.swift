@@ -8,6 +8,9 @@ import SwiftUI
 /// harmonic fit, not a SHOM prediction.
 struct SettingsView: View {
     @Environment(\.openURL) private var openURL
+    @Environment(AppModel.self) private var app
+
+    @State private var showsActivityPicker = false
 
     private static let licenceURL =
         URL(string: "https://github.com/etalab/licence-ouverte/blob/master/LO.md")
@@ -15,6 +18,26 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section("Ton activité") {
+                    Button {
+                        showsActivityPicker = true
+                    } label: {
+                        HStack(spacing: OceanSpacing.sm) {
+                            Text("Activité")
+                                .foregroundStyle(OceanPalette.white)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: OceanSpacing.xs)
+                            Text(app.activity.displayName)
+                                .foregroundStyle(OceanPalette.white.opacity(0.7))
+                                .multilineTextAlignment(.trailing)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Activité")
+                    .accessibilityValue(app.activity.displayName)
+                }
+
                 Section("Source des données") {
                     LabeledContent("Producteur", value: "REFMAR / Shom")
                     LabeledContent("Licence", value: "Licence Ouverte 2.0")
@@ -56,6 +79,14 @@ struct SettingsView: View {
             .background(OceanPalette.backgroundGradient.ignoresSafeArea())
             .navigationTitle("Réglages")
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .fullScreenCover(isPresented: $showsActivityPicker) {
+                ActivityPickerView(
+                    spotName: app.selectedSpot.name,
+                    overviews: app.overviews,
+                    selection: app.activity,
+                    timeZone: app.selectedSpot.timezone,
+                    onSelect: { app.select(activity: $0) })
+            }
         }
     }
 

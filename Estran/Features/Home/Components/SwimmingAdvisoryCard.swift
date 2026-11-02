@@ -55,7 +55,7 @@ struct SwimmingAdvisoryCard: View {
 
             Label(advisory.level.label, systemImage: advisory.level.symbolName)
                 .font(OceanTypography.caption)
-                .foregroundStyle(OceanPalette.swimmingRisk(advisory.level))
+                .foregroundStyle(OceanPalette.swimmingRiskText(advisory.level))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

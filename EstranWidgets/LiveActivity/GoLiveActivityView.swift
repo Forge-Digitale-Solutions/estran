@@ -24,9 +24,14 @@ struct GoLiveActivityView: View {
 
     private var standardBody: some View {
         HStack(spacing: OceanSpacing.sm) {
-            Text(context.state.isGo ? "Oui" : "Non")
+            Label(
+                context.state.isGo ? "Oui" : "Non",
+                systemImage: context.state.isGo
+                    ? "checkmark.circle.fill"
+                    : "xmark.circle.fill")
                 .font(OceanTypography.rounded(size: badgeSize))
                 .foregroundStyle(context.state.isGo ? OceanPalette.oui : OceanPalette.non)
+                .labelStyle(.titleAndIcon)
 
             VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
                 Text(context.attributes.spotName)
@@ -107,10 +112,15 @@ struct GoLiveActivityWidget: Widget {
                             .foregroundStyle(
                                 OceanPalette.swimmingRisk(context.state.swimmingAdvisory?.level ?? .unknown))
                     } else {
-                        Text(context.state.isGo ? "Oui" : "Non")
+                        Label(
+                            context.state.isGo ? "Oui" : "Non",
+                            systemImage: context.state.isGo
+                                ? "checkmark.circle.fill"
+                                : "xmark.circle.fill")
                             .font(OceanTypography.metricValue)
                             .foregroundStyle(
                                 context.state.isGo ? OceanPalette.oui : OceanPalette.non)
+                            .labelStyle(.titleAndIcon)
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
@@ -130,6 +140,13 @@ struct GoLiveActivityWidget: Widget {
                                 .font(OceanTypography.smallLabel)
                                 .foregroundStyle(
                                     OceanPalette.swimmingRisk(advisory?.level ?? .unknown))
+                            // Same permanent disclaimer as the lock screen: the
+                            // expanded island must not be the one surface that
+                            // drops it (VoiceOver audit, F6).
+                            Text(SwimmingRiskLevel.disclaimer)
+                                .font(OceanTypography.smallLabel)
+                                .foregroundStyle(OceanPalette.white.opacity(0.7))
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     } else {
                         Text(context.state.activityName)
@@ -142,11 +159,15 @@ struct GoLiveActivityWidget: Widget {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(OceanTypography.tabLabel)
                         .foregroundStyle(OceanPalette.sand)
+                        .accessibilityLabel("Baignade : risque de courants")
                 } else {
                     Text(context.state.isGo ? "O" : "N")
                         .font(OceanTypography.tabLabel)
                         .foregroundStyle(
                             context.state.isGo ? OceanPalette.oui : OceanPalette.non)
+                        // The letter is a width compromise; VoiceOver reads the
+                        // verdict, never « O » (VoiceOver audit, F3).
+                        .accessibilityLabel(context.state.isGo ? "Oui" : "Non")
                 }
             } compactTrailing: {
                 Text(context.attributes.spotName)
@@ -158,11 +179,13 @@ struct GoLiveActivityWidget: Widget {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(OceanTypography.tabLabel)
                         .foregroundStyle(OceanPalette.sand)
+                        .accessibilityLabel("Baignade : risque de courants")
                 } else {
                     Text(context.state.isGo ? "O" : "N")
                         .font(OceanTypography.tabLabel)
                         .foregroundStyle(
                             context.state.isGo ? OceanPalette.oui : OceanPalette.non)
+                        .accessibilityLabel(context.state.isGo ? "Oui" : "Non")
                 }
             }
         }

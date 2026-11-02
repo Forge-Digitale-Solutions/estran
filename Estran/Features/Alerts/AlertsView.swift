@@ -65,24 +65,9 @@ struct AlertsView: View {
     }
 
     private var alertCard: some View {
-        Toggle(isOn: $alertsEnabled) {
-            VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
-                Text("Me prévenir 1 h avant")
-                    .font(OceanTypography.bodyEmphasized)
-                    .foregroundStyle(OceanPalette.white)
-                Text("Une notification par créneau, jamais la nuit.")
-                    .font(OceanTypography.smallLabel)
-                    .foregroundStyle(OceanPalette.white.opacity(0.75))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .tint(OceanPalette.turquoise)
-        .padding(OceanSpacing.md)
-        .oceanGlassCard(cornerRadius: OceanGlass.cardCornerRadius)
-        .onChange(of: alertsEnabled) { _, enabled in
-            guard enabled else { return }
-            requestAuthorization()
-        }
+        AlertOptInToggle { permissionDenied = true }
+            .padding(OceanSpacing.md)
+            .oceanGlassCard(cornerRadius: OceanGlass.cardCornerRadius)
     }
 
     private var deniedCard: some View {
@@ -100,7 +85,9 @@ struct AlertsView: View {
                 }
             }
             .font(OceanTypography.button)
-            .foregroundStyle(OceanPalette.turquoise)
+            .foregroundStyle(OceanPalette.turquoiseOnGlass)
+            .frame(minHeight: OceanGlass.minimumTapHeight, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(OceanSpacing.md)
@@ -119,18 +106,6 @@ struct AlertsView: View {
         }
         .font(OceanTypography.smallLabel)
         .foregroundStyle(OceanPalette.white.opacity(0.6))
-    }
-
-    @MainActor
-    private func requestAuthorization() {
-        Task {
-            let granted = await (try? UNUserNotificationCenter.current()
-                .requestAuthorization(options: [.alert, .sound])) ?? false
-            if !granted {
-                alertsEnabled = false
-                permissionDenied = true
-            }
-        }
     }
 }
 

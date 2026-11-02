@@ -10,6 +10,10 @@ struct GoEntry: TimelineEntry {
     /// Swimming is a risk level, never a Oui/Non (product decision, v8).
     var isSwimming: Bool = false
     var swimmingAdvisory: SwimmingAdvisory?
+    /// The verdict the answer stands for. The icon and the colour both read it,
+    /// so a `Non` can never be painted green (VoiceOver audit, F2). Defaults to
+    /// `true` so the M0 placeholder keeps compiling until M5 fills it.
+    var isGo: Bool = true
 }
 
 struct GoWidgetView: View {
@@ -44,7 +48,7 @@ struct GoWidgetView: View {
 
             Text(entry.answer)
                 .font(OceanTypography.rounded(size: badgeSize))
-                .foregroundStyle(OceanPalette.oui)
+                .foregroundStyle(entry.isGo ? OceanPalette.oui : OceanPalette.non)
 
             Text(entry.detail)
                 .font(OceanTypography.smallLabel)
@@ -96,7 +100,7 @@ struct GoWidgetView: View {
 
             Text("Courants : \(advisory.level.shortTitle)")
                 .font(OceanTypography.smallLabel)
-                .foregroundStyle(OceanPalette.swimmingRisk(advisory.level))
+                .foregroundStyle(OceanPalette.swimmingRiskText(advisory.level))
 
             Text(SwimmingRiskLevel.disclaimer)
                 .font(OceanTypography.smallLabel)

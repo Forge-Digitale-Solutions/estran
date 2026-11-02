@@ -79,7 +79,18 @@ struct ActivitySegmentedControl: View {
         }
         .oceanGlassCapsule()
         .accessibilityLabel("Activité")
-        .accessibilityValue(selection.displayName)
+        .accessibilityValue(menuValue)
+    }
+
+    /// The menu branch has to carry the same facts as the chips: the selected
+    /// activity and, for swimming or a missing dataset, the warning the chip
+    /// shows. Both branches share `accessibilityValue(for:isUnavailable:)` so
+    /// they cannot drift.
+    private var menuValue: String {
+        let detail = accessibilityValue(
+            for: selection,
+            isUnavailable: unavailable.contains(selection))
+        return detail.isEmpty ? selection.displayName : "\(selection.displayName), \(detail)"
     }
 
     private func chip(for activity: Activity) -> some View {

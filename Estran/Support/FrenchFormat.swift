@@ -22,6 +22,26 @@ enum FrenchFormat {
         "\(time(interval.start, in: timeZone)) à \(time(interval.end, in: timeZone))"
     }
 
+    /// « lundi 26 oct. » in the spot's time zone, for the spot detail subtitle.
+    static func weekdayDate(_ date: Date, in timeZone: TimeZone) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "fr_FR")
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "EEEE d MMM"
+        return formatter.string(from: date)
+    }
+
+    /// « Bassin d'Arcachon » or « Médoc », the area name of a spot.
+    ///
+    /// The catalog's tide-station names are internal codes (`PORT-BLOC`,
+    /// `ARCACHON_EYRAC`); they are never shown to a user.
+    static func regionName(_ region: Region) -> String {
+        switch region {
+        case .bassin: "Bassin d'Arcachon"
+        case .medoc: "Médoc"
+        }
+    }
+
     /// « demain », « après-demain », or `nil` for today and further out.
     static func relativeDay(
         _ date: Date,
@@ -55,6 +75,12 @@ enum FrenchFormat {
 
     static func wind(_ wind: Wind) -> String {
         "\(Int(wind.speed.rounded())) km/h"
+    }
+
+    /// Speed alone, for the four-up tile row where the unit rides on the
+    /// caption line (« 9 » / « km/h NO ») as in `DESIGN_REFERENCE.md` §3.1.
+    static func windSpeed(_ wind: Wind) -> String {
+        "\(Int(wind.speed.rounded()))"
     }
 
     static func windDirection(_ wind: Wind) -> String {
@@ -140,6 +166,17 @@ enum FrenchFormat {
         case .some(true): "montante"
         case .some(false): "descendante"
         case .none: "indisponible"
+        }
+    }
+
+    /// One short word for the tile caption: « descendante » hyphenates in an
+    /// 80 pt tile at the default size, and a hyphenated tide is worse than a
+    /// shorter word. The spoken label keeps `tideTrend`.
+    static func tideTrendShort(_ state: TideState) -> String {
+        switch state.isRising {
+        case .some(true): "hausse"
+        case .some(false): "baisse"
+        case .none: "—"
         }
     }
 

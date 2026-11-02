@@ -3,8 +3,11 @@ import SwiftUI
 
 /// The four condition tiles: tide, wind, swell, weather.
 ///
-/// The grid is two columns at normal sizes and **one column at accessibility
-/// sizes**, so a 17 pt value can grow to AX5 without truncation. No fixed
+/// The row matches `DESIGN_REFERENCE.md` §3.1: four tiles side by side at normal
+/// sizes, two columns from `.xLarge` and **one column at accessibility sizes**,
+/// so a 17 pt value can grow to AX5 without truncation. The visible caption is
+/// the short unit detail the Figma frame shows (« basse », « NO », « 11 s »,
+/// « éclaircies »); the accessibility label keeps the full sentence. No fixed
 /// height anywhere.
 struct ConditionsGrid: View {
     let conditions: Conditions
@@ -15,10 +18,10 @@ struct ConditionsGrid: View {
         if dynamicTypeSize.isAccessibilitySize {
             return [GridItem(.flexible(), spacing: OceanSpacing.sm)]
         }
-        return [
-            GridItem(.flexible(), spacing: OceanSpacing.sm),
-            GridItem(.flexible(), spacing: OceanSpacing.sm)
-        ]
+        let count = dynamicTypeSize >= .xLarge ? 2 : 4
+        return Array(
+            repeating: GridItem(.flexible(), spacing: OceanSpacing.sm),
+            count: count)
     }
 
     var body: some View {
@@ -26,19 +29,26 @@ struct ConditionsGrid: View {
             ConditionTile(
                 icon: "water.waves",
                 value: tideHeight,
-                label: "Marée · \(FrenchFormat.tideTrend(conditions.tide))")
+                label: FrenchFormat.tideTrendShort(conditions.tide),
+                spoken: "Marée : \(tideHeight), \(FrenchFormat.tideTrend(conditions.tide))")
             ConditionTile(
                 icon: "wind",
-                value: FrenchFormat.wind(conditions.weather.wind),
-                label: "Vent · \(FrenchFormat.windDirection(conditions.weather.wind))")
+                value: FrenchFormat.windSpeed(conditions.weather.wind),
+                label: "km/h \(FrenchFormat.windDirection(conditions.weather.wind))",
+                spoken: "Vent : \(FrenchFormat.wind(conditions.weather.wind)), "
+                    + "direction \(FrenchFormat.windDirection(conditions.weather.wind))")
             ConditionTile(
                 icon: "wave.3.right",
                 value: FrenchFormat.swellHeight(conditions.swell),
-                label: "Houle · \(FrenchFormat.swellPeriod(conditions.swell))")
+                label: FrenchFormat.swellPeriod(conditions.swell),
+                spoken: "Houle : \(FrenchFormat.swellHeight(conditions.swell)), "
+                    + "période \(FrenchFormat.swellPeriod(conditions.swell))")
             ConditionTile(
                 icon: FrenchFormat.weatherSymbol(conditions.weather.condition),
                 value: FrenchFormat.temperature(conditions.weather.temperature),
-                label: "Météo · \(FrenchFormat.weatherLabel(conditions.weather.condition))")
+                label: FrenchFormat.weatherLabel(conditions.weather.condition),
+                spoken: "Météo : \(FrenchFormat.temperature(conditions.weather.temperature)), "
+                    + FrenchFormat.weatherLabel(conditions.weather.condition))
         }
     }
 
@@ -55,6 +65,9 @@ struct ConditionTile: View {
     let icon: String
     let value: String
     let label: String
+    /// Full sentence for VoiceOver: the visible caption is a unit detail, not a
+    /// sentence, so the combined element cannot rely on it alone.
+    let spoken: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
@@ -72,8 +85,10 @@ struct ConditionTile: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(OceanSpacing.md)
+        .padding(.vertical, OceanSpacing.sm)
+        .padding(.horizontal, OceanSpacing.xs)
         .oceanGlassCard(cornerRadius: OceanGlass.tileCornerRadius)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(spoken)
     }
 }

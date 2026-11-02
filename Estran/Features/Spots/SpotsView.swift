@@ -12,8 +12,20 @@ struct SpotsView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var camera: MapCameraPosition = .automatic
+    @State private var showsDetail = false
 
     var body: some View {
+        NavigationStack {
+            map
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationDestination(isPresented: $showsDetail) {
+                    SpotDetailView()
+                        .toolbar(.hidden, for: .tabBar)
+                }
+        }
+    }
+
+    private var map: some View {
         ZStack(alignment: .bottom) {
             Map(position: $camera, interactionModes: []) {
                 Marker(
@@ -79,6 +91,26 @@ struct SpotsView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+
+            // The detail screen is where the chart, the five activities and the
+            // alert opt-in live; the card stays a summary.
+            Button {
+                showsDetail = true
+            } label: {
+                HStack(spacing: OceanSpacing.xxs) {
+                    Text("Voir le détail")
+                        .font(OceanTypography.button)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Image(systemName: "chevron.right")
+                        .font(OceanTypography.smallLabel)
+                        .accessibilityHidden(true)
+                }
+                .foregroundStyle(OceanPalette.turquoiseOnGlass)
+                .frame(maxWidth: .infinity, minHeight: OceanGlass.minimumTapHeight, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Ouvre la courbe de marée et les cinq activités")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(OceanSpacing.md)

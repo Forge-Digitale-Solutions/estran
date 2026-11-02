@@ -4,8 +4,8 @@ import SwiftUI
 /// The Home answer card: label, giant verdict, reason and context line.
 ///
 /// Accessibility: the whole card is **one** element read as a sentence
-/// (« Oui, pêche à pied, conditions réunies »), and the verdict always carries
-/// a word plus an icon, so colour is never the only signal.
+/// (« Oui, pêche à pied. Marée basse à 14 h 12. »), and the verdict always
+/// carries a word plus an icon, so colour is never the only signal.
 struct AnswerCard: View {
     let decision: GoDecision
     let activity: Activity
@@ -21,11 +21,12 @@ struct AnswerCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: OceanSpacing.sm) {
+        VStack(alignment: .center, spacing: OceanSpacing.sm) {
             Text("BON MOMENT POUR SORTIR ?")
                 .font(OceanTypography.smallLabel)
                 .tracking(1.2)
                 .foregroundStyle(OceanPalette.white.opacity(0.7))
+                .multilineTextAlignment(.center)
 
             HStack(alignment: .center, spacing: OceanSpacing.sm) {
                 Image(systemName: state.symbolName)
@@ -42,16 +43,18 @@ struct AnswerCard: View {
             Text(decision.reason)
                 .font(OceanTypography.bodyEmphasized)
                 .foregroundStyle(OceanPalette.white)
+                .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
             if let detail {
                 Text(detail)
                     .font(OceanTypography.subtitle)
                     .foregroundStyle(OceanPalette.white.opacity(0.85))
+                    .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
         .padding(OceanSpacing.lg)
         .oceanGlassCard(cornerRadius: OceanGlass.answerCornerRadius)
         .accessibilityElement(children: .ignore)
@@ -86,7 +89,9 @@ struct AnswerCard: View {
     private var accessibilitySentence: String {
         switch state {
         case .go:
-            var sentence = "Oui, \(activity.displayName), conditions réunies."
+            // Speak exactly the line the card draws, the way `.noGo` does: the
+            // reason is part of the answer, not a decorative subtitle.
+            var sentence = "Oui, \(activity.displayName). \(decision.reason)"
             if let detail {
                 sentence += " \(detail)."
             }
