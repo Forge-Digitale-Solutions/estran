@@ -132,7 +132,8 @@ struct HomeView: View {
                     AnswerCard(
                         decision: decision,
                         activity: app.activity,
-                        conditions: conditions)
+                        conditions: conditions,
+                        refinedReason: app.refinedReason)
                 }
             } else if app.activity == .swimming {
                 SwimmingAdvisoryCard(

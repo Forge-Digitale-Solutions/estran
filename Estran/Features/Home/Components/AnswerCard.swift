@@ -1,4 +1,5 @@
 import EstranCore
+import Foundation
 import SwiftUI
 
 /// The Home answer card: label, giant verdict, reason and context line.
@@ -10,6 +11,10 @@ struct AnswerCard: View {
     let decision: GoDecision
     let activity: Activity
     let conditions: Conditions
+    /// The generated sentence for this decision, or `nil` while the on-device
+    /// model has not answered. It only ever replaces the reason line, never the
+    /// verdict.
+    let refinedReason: String?
 
     /// 76 pt at the default size, scaled by Dynamic Type. No clamp: the card
     /// lives in a `ScrollView`, so AX5 grows the layout instead of clipping it.
@@ -40,7 +45,7 @@ struct AnswerCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Text(decision.reason)
+            Text(displayedReason)
                 .font(OceanTypography.bodyEmphasized)
                 .foregroundStyle(OceanPalette.white)
                 .multilineTextAlignment(.center)
@@ -59,6 +64,21 @@ struct AnswerCard: View {
         .oceanGlassCard(cornerRadius: OceanGlass.answerCornerRadius)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilitySentence)
+    }
+
+    /// The reason line the card draws, and the only string VoiceOver may read
+    /// for it: one property, so a generated sentence can never diverge from the
+    /// spoken one (VoiceOver audit F1).
+    var displayedReason: String {
+        if let refinedReason {
+            let sentence = refinedReason.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !sentence.isEmpty {
+                return sentence
+            }
+        }
+        // The template stays until a valid refined sentence exists: never an
+        // empty line, never a placeholder.
+        return decision.reason
     }
 
     /// « Indisponible » is a long word: it is displayed smaller than Oui/Non so
@@ -91,13 +111,13 @@ struct AnswerCard: View {
         case .go:
             // Speak exactly the line the card draws, the way `.noGo` does: the
             // reason is part of the answer, not a decorative subtitle.
-            var sentence = "Oui, \(activity.displayName). \(decision.reason)"
+            var sentence = "Oui, \(activity.displayName). \(displayedReason)"
             if let detail {
                 sentence += " \(detail)."
             }
             return sentence
         case .noGo:
-            var sentence = "Non, \(activity.displayName). \(decision.reason)"
+            var sentence = "Non, \(activity.displayName). \(displayedReason)"
             if let detail {
                 sentence += " \(detail)."
             }
