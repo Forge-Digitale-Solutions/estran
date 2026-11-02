@@ -6,7 +6,10 @@ import SwiftUI
 ///
 /// The map is deliberately **not** interactive: free panning across the 90 km
 /// between the two spots would turn it into a browsing map. The camera animates
-/// between two fixed framings, and `SpotSwitcher` is the only selector.
+/// between two fixed framings, and `SpotSwitcher` is the only selector. Under
+/// Reduce Motion the camera still moves to the new spot, but it does not slide
+/// across the 90 km: `OceanGlass.animation(_:reduceMotion:)` returns `nil`, so
+/// the framing is applied at once.
 struct SpotsView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -57,12 +60,14 @@ struct SpotsView: View {
         }
         .onChange(of: app.selectedSpot.id) { _, _ in
             let target = position(for: app.selectedSpot)
-            if reduceMotion {
+            // `withAnimation(nil)` applies the new framing without moving the
+            // camera across the Bassin, which is what Reduce Motion asks for.
+            withAnimation(
+                OceanGlass.animation(
+                    .spring(response: 0.55, dampingFraction: 0.85),
+                    reduceMotion: reduceMotion))
+            {
                 camera = target
-            } else {
-                withAnimation(.spring(response: 0.55, dampingFraction: 0.85)) {
-                    camera = target
-                }
             }
         }
     }

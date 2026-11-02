@@ -18,6 +18,7 @@ struct ActivitySegmentedControl: View {
     let onSelect: (Activity) -> Void
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         if dynamicTypeSize >= .accessibility1 {
@@ -41,6 +42,15 @@ struct ActivitySegmentedControl: View {
             }
         }
         .accessibilityElement(children: .contain)
+        // The control declares no animation of its own: a selection is a tint
+        // change on the glass. Glass in a container can still morph when the
+        // transaction carries an animation, so under Reduce Motion the
+        // transaction is stripped. With the flag off it is left untouched.
+        .transaction { transaction in
+            guard reduceMotion else { return }
+            transaction.animation = nil
+            transaction.disablesAnimations = true
+        }
     }
 
     private var menu: some View {
