@@ -17,6 +17,10 @@ public struct SurfRule: ActivityRule {
     public init() {}
 
     public func blockers(_ conditions: Conditions) -> [ActivityBlocker] {
+        waveBlockers(conditions) + dataBlockers(conditions)
+    }
+
+    private func waveBlockers(_ conditions: Conditions) -> [ActivityBlocker] {
         var blockers: [ActivityBlocker] = []
         if RuleSignals.isStormy(conditions.weather) {
             blockers.append(.storm)
@@ -39,7 +43,11 @@ public struct SurfRule: ActivityRule {
         {
             blockers.append(.onshoreWind)
         }
+        return blockers
+    }
 
+    private func dataBlockers(_ conditions: Conditions) -> [ActivityBlocker] {
+        var blockers: [ActivityBlocker] = []
         var missingData = false
         if let orientation = conditions.spot.coastOrientationDegrees {
             let distance = ScoreMath.angularDistance(conditions.swell.directionDegrees, orientation)

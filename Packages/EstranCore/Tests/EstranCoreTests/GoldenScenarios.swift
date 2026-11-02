@@ -20,7 +20,11 @@ enum GoldenScenarios {
     static let summerNoonUTC = DecisionFixtures.date("2026-06-21T12:00:00Z")
     static let summerNightUTC = DecisionFixtures.date("2026-06-21T01:00:00Z")
 
-    static let all: [GoldenScenario] = [
+    static let all: [GoldenScenario] = primaryScenarios + gateScenarios
+}
+
+extension GoldenScenarios {
+    static let primaryScenarios: [GoldenScenario] = [
         GoldenScenario(
             name: "shore fishing ideal",
             activity: .shoreFishing,
@@ -172,7 +176,12 @@ enum GoldenScenarios {
                 spot: DecisionFixtures.swimmingStrongSpot),
             expectedGo: false,
             expectedScore: 0.96,
-            expectedBlockers: [.strongCurrent]),
+            expectedBlockers: [.strongCurrent])
+    ]
+}
+
+extension GoldenScenarios {
+    static let gateScenarios: [GoldenScenario] = [
         GoldenScenario(
             name: "shore fishing high water",
             activity: .shoreFishing,

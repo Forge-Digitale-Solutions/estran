@@ -33,6 +33,10 @@ public struct SwimmingRule: ActivityRule {
     public init() {}
 
     public func blockers(_ conditions: Conditions) -> [ActivityBlocker] {
+        weatherBlockers(conditions) + currentBlockers(conditions)
+    }
+
+    private func weatherBlockers(_ conditions: Conditions) -> [ActivityBlocker] {
         var blockers: [ActivityBlocker] = []
         if RuleSignals.isStormy(conditions.weather) {
             blockers.append(.storm)
@@ -56,6 +60,11 @@ public struct SwimmingRule: ActivityRule {
         if !isDaylight(conditions) {
             blockers.append(.night)
         }
+        return blockers
+    }
+
+    private func currentBlockers(_ conditions: Conditions) -> [ActivityBlocker] {
+        var blockers: [ActivityBlocker] = []
         switch currentRisk(conditions) {
         case .strong:
             blockers.append(.strongCurrent)

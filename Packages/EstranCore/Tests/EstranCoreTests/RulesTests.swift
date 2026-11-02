@@ -119,33 +119,43 @@ final class RulesTests: XCTestCase {
         XCTAssertTrue(rule.blockers(current).contains(.strongCurrent))
     }
 
+    private struct ExtremeInput {
+        let weather: WeatherNow
+        let swell: Swell
+        let tide: TideState
+    }
+
     func testScoresStayBoundedUnderExtremeInputs() throws {
         let engine = DecisionEngine()
-        let extremes: [(WeatherNow, Swell, TideState)] = [
-            (
-                DecisionFixtures.weather(
+        let extremes: [ExtremeInput] = [
+            ExtremeInput(
+                weather: DecisionFixtures.weather(
                     temperature: -50,
                     condition: .thunderstorm,
                     precipitationChance: 1,
                     windSpeed: 200,
                     windGust: 250,
                     visibility: 0),
-                DecisionFixtures.swell(waveHeight: 20, period: 30, seaSurfaceTemperature: -5),
-                DecisionFixtures.tide(at: noon, coefficient: 120)),
-            (
-                DecisionFixtures.weather(
+                swell: DecisionFixtures.swell(waveHeight: 20, period: 30, seaSurfaceTemperature: -5),
+                tide: DecisionFixtures.tide(at: noon, coefficient: 120)),
+            ExtremeInput(
+                weather: DecisionFixtures.weather(
                     temperature: 60,
                     condition: .clear,
                     precipitationChance: 0,
                     windSpeed: 0,
                     windGust: 0,
                     visibility: 100_000),
-                DecisionFixtures.swell(waveHeight: 0, period: 0, seaSurfaceTemperature: 40),
-                DecisionFixtures.tide(at: noon, coefficient: 20))
+                swell: DecisionFixtures.swell(waveHeight: 0, period: 0, seaSurfaceTemperature: 40),
+                tide: DecisionFixtures.tide(at: noon, coefficient: 20))
         ]
 
-        for (weather, swell, tide) in extremes {
-            let conditions = DecisionFixtures.conditions(at: noon, tide: tide, weather: weather, swell: swell)
+        for extreme in extremes {
+            let conditions = DecisionFixtures.conditions(
+                at: noon,
+                tide: extreme.tide,
+                weather: extreme.weather,
+                swell: extreme.swell)
             for activity in Activity.allCases {
                 let rule = try XCTUnwrap(engine.rule(for: activity))
                 let score = rule.score(conditions)

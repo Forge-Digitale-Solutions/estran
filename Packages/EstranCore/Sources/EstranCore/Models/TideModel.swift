@@ -217,6 +217,15 @@ public struct TideModel: Codable, Hashable, Sendable {
         stations.map(\.tidalStation)
     }
 
+    /// Decodes a dataset from JSON, using ISO-8601 dates.
+    public static func load(from data: Data) throws -> TideModel {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try decoder.decode(TideModel.self, from: data)
+    }
+}
+
+public extension TideModel {
     /// Contract checks that must hold before the dataset can be loaded.
     ///
     /// **v1 scope (D3 = Option A):** the shipped catalog contains only the
@@ -224,7 +233,7 @@ public struct TideModel: Codable, Hashable, Sendable {
     /// calibrated/estimated correction, and an inactive envelope: under Option A
     /// the envelope *is* the safety argument, so a silent `0 / 0` would disable
     /// the fail-closed gate without anything noticing.
-    public var validationError: TideError? {
+    var validationError: TideError? {
         guard !official else {
             return .invalidStation("dataset must not claim official status")
         }
@@ -294,7 +303,7 @@ public struct TideModel: Codable, Hashable, Sendable {
     }
 
     /// Builds the engine from the dataset, enforcing the contract first.
-    public func engine() throws -> TideEngine {
+    func engine() throws -> TideEngine {
         if let error = validationError {
             throw error
         }
@@ -302,13 +311,6 @@ public struct TideModel: Codable, Hashable, Sendable {
             stations: tidalStations,
             coefficientStationID: coefficient?.stationId,
             coefficientValidated: coefficient?.validated ?? false)
-    }
-
-    /// Decodes a dataset from JSON, using ISO-8601 dates.
-    public static func load(from data: Data) throws -> TideModel {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(TideModel.self, from: data)
     }
 }
 

@@ -13,6 +13,9 @@ excluded:
 disabled_rules:
   - todo
   - trailing_comma
+  # Brace placement is owned by SwiftFormat (`wrapMultilineStatementBraces`):
+  # SwiftLint's opening_brace rule flags the wrapped form SwiftFormat enforces.
+  - opening_brace
 
 opt_in_rules:
   - empty_count

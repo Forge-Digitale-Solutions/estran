@@ -223,7 +223,7 @@ final class SwimmingRiskLevelTests: XCTestCase {
         ]
         XCTAssertEqual(Set(expected.keys), Set(ActivityBlocker.allCases))
         for blocker in ActivityBlocker.allCases {
-            let note = expected[blocker] ?? nil
+            let note = expected[blocker].flatMap(\.self)
             XCTAssertEqual(
                 SwimmingAdvisory.notes(for: [blocker]),
                 note.map { [$0] } ?? [],

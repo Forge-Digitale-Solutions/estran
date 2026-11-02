@@ -252,7 +252,9 @@ final class SafetyGatesTests: XCTestCase {
             swell: DecisionFixtures.swell(waveHeight: 0.5, seaSurfaceTemperature: nil))
         XCTAssertTrue(rule.blockers(missingWaterTemperature).contains(.dataUnavailable))
     }
+}
 
+extension SafetyGatesTests {
     // MARK: Missing-data guards across the board
 
     func testSwimmingSpringTideWithoutTideEventsIsBlocked() throws {

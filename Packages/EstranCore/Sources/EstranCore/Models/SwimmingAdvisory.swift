@@ -77,52 +77,38 @@ public struct SwimmingAdvisory: Codable, Hashable, Sendable {
     }
 
     /// French words for the blockers that are **not** about currents.
+    ///
+    /// Blockers absent from the table are deliberately silent: currents are the
+    /// level, and a data gap is either the unknown level or the « eau
+    /// indisponible » conditions line.
     public static func notes(for blockers: [ActivityBlocker]) -> [String] {
         var seen = Set<String>()
         var notes: [String] = []
         for blocker in blockers {
-            let note: String? = switch blocker {
-            case .storm:
-                "orage"
-            case .wind:
-                "vent fort"
-            case .swellTooLarge, .waveTooLarge:
-                "houle trop forte"
-            case .waterTemperature:
-                "eau froide"
-            case .temperature:
-                "air froid"
-            case .night:
-                "la nuit"
-            case .rain:
-                "pluie"
-            case .fog:
-                "brouillard"
-            case .strongCurrent, .insufficientMargin, .currentDataUnavailable,
-                 .dataUnavailable:
-                // Currents are the level; a data gap is either the unknown
-                // level or the « eau indisponible » conditions line.
-                nil
-            case .coefficient, .tideTiming, .waterLevel:
-                // Not a swimming gate today; the level owns the tide/coefficient.
-                nil
-            case .waveTooSmall:
-                "mer trop plate"
-            case .wavePeriod:
-                "période de houle inadaptée"
-            case .swellDirection:
-                "houle mal orientée"
-            case .onshoreWind:
-                "vent onshore"
-            case .visibility:
-                "visibilité insuffisante"
+            guard let note = notesByBlocker[blocker], seen.insert(note).inserted else {
+                continue
             }
-            if let note, seen.insert(note).inserted {
-                notes.append(note)
-            }
+            notes.append(note)
         }
         return notes
     }
+
+    private static let notesByBlocker: [ActivityBlocker: String] = [
+        .storm: "orage",
+        .wind: "vent fort",
+        .swellTooLarge: "houle trop forte",
+        .waveTooLarge: "houle trop forte",
+        .waterTemperature: "eau froide",
+        .temperature: "air froid",
+        .night: "la nuit",
+        .rain: "pluie",
+        .fog: "brouillard",
+        .waveTooSmall: "mer trop plate",
+        .wavePeriod: "période de houle inadaptée",
+        .swellDirection: "houle mal orientée",
+        .onshoreWind: "vent onshore",
+        .visibility: "visibilité insuffisante"
+    ]
 
     private static func decimal(_ value: Double, digits: Int) -> String {
         String(format: "%.\(digits)f", value)
