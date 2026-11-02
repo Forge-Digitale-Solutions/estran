@@ -39,7 +39,11 @@ jobs:
 
   macos-build-test:
     name: Xcode build and test
-    runs-on: macos-26
+    # macos-26 ships Xcode 26.6 only, which cannot run an iOS 27 app: the
+    # destination list had no iOS simulator and `downloadPlatform` could not
+    # connect to the simulator service. macos-latest tracks the newest image,
+    # which carries the Xcode that matches the project's iOS 27 target.
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -68,7 +72,11 @@ jobs:
           xcodebuild -project Estran.xcodeproj -scheme Estran -showdestinations 2>/dev/null || true
           if ! xcodebuild -project Estran.xcodeproj -scheme Estran -showdestinations 2>/dev/null | grep 'platform:iOS Simulator,' | grep -v placeholder | grep -q .; then
             echo 'No usable iOS simulator runtime, downloading...'
-            xcodebuild -downloadPlatform iOS
+            xcodebuild -downloadPlatform iOS || {
+              echo '::error::No iOS simulator runtime and the download failed. The runner Xcode is:'
+              xcodebuild -version
+              exit 1
+            }
           fi
 
       # Derive the destination from xcodebuild itself, never from simctl: only
