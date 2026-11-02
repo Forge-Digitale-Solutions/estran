@@ -6,6 +6,9 @@
 - **File**: `oQzyhUddb0oCLL2hlIWsM1`
 - **Page used**: `v3 kit iOS 27` (frames `12:3`, `12:116`, `12:248`, `12:335`)
 - **Frame size**: 402 × 874 (iPhone)
+- **Offline copy**: `docs/design/estran-maquette-v1.pdf` (Figma export, 4 frames,
+  2026-10-28) — the version the M3 match is checked against when Figma is not
+  open.
 
 ---
 

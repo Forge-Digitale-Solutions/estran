@@ -53,20 +53,44 @@ Violating one of these is a regression, even if the code is cleaner afterwards.
 python3 scripts/tides/refresh   # regenerate the tide dataset (free, cached)
 ```
 
-## Current state — 2026-10-27
+## Current state — 2026-10-28
 
 | Milestone | State |
 |---|---|
 | M0 Setup | done |
-| M1 Domain + tide dataset | done — schema 6, 164 tests |
-| M2 Weather (WeatherKit + Open-Meteo Marine) | **not started** |
-| M3 UI | written, **never compiled on macOS** |
+| M1 Domain + tide dataset | done — schema 6, 165 tests |
+| M2 Weather (WeatherKit + Open-Meteo Marine) | **in progress** — marine source + cache + tests done (Open-Meteo returns 15.7 °C at Pointe de Grave); WeatherKit service written, capability still to enable in the portal; Bassin wave data unusable (see `docs/data-sourcing/marine-2026-10-28.md`) |
+| M3 UI | **Frames 01/02/03 built and matched** — first build 2026-10-28 (Xcode 27.1, iOS 27 simulator); accessibility findings fixed; device VoiceOver open |
 | M4 Foundation Models / Siri / notifications | not started |
-| M5 Widgets / Live Activity | views written, data path not wired |
+| M5 Widgets / Live Activity | views written and compiling, data path not wired |
 
-**Next action: the first macOS build.** `glassEffect`, the swimming views and
-the widget branches have never seen an Apple compiler. Everything else is
-verified on Linux.
+**Next action: close M3, then M2.** `check-macos.sh` is green (build, tests,
+lint, archive), the app runs in the simulator, and the three mockup screens that
+exist are matched (`docs/design/figma-match-2026-10-28.md`). What still blocks
+M3:
+
+1. **Real-device VoiceOver** — the source audits are done
+   (`docs/accessibility/`), the device pass is not.
+2. **Increase Contrast, Reduce Motion, Reduce Transparency** on the glass
+   surfaces, and the `SpotsView` glass measured over map tiles.
+3. The `Favori` heart of frame 02 has no feature behind it: decide whether
+   favourites ship in v1 or the frame drops the pill.
+
+Frame 04 (widgets, Live Activity) cannot match before M5. Then **M2**, which is
+what makes the water temperature real.
+
+M2 state (2026-10-28): the Open-Meteo Marine source, cache, per-spot policy and
+tests are in; the WeatherKit service is written but the App ID capability is not
+enabled on this Mac, so the live provider fail-closes on the weather. Two
+decisions are open before the lagoon can answer: model a **missing sea** in the
+domain (optional wave fields), or drop wave-dependent activities inside the
+Bassin.
+
+First-build evidence (2026-10-28): `xcodebuild` build/test and `--archive`
+pass, 165 package tests pass, SwiftLint `0`, SwiftFormat `0/90`, app launched
+on iPhone 18 Pro (iOS 27). The three accessibility audits (AX5, contrast,
+VoiceOver) and their remediation are recorded in `docs/accessibility/` and
+`worksplit.md` §8.6.
 
 ## Rules of engagement
 

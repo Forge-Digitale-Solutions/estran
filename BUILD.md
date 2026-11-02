@@ -36,6 +36,30 @@ SDK on the Linux host. The app is syntax-parsed and the non-UI layer is
 type-checked; the macOS gates stay explicitly pending until `check-macos.sh`
 has actually run.
 
+**Real data in the simulator.** Debug builds use the demo provider unless the app
+is launched with `-liveData`:
+
+```sh
+xcrun simctl launch "iPhone 18 Pro" com.forgedigitale.estran -liveData
+```
+
+The live path needs the WeatherKit capability (§1.3): without it the app stops at
+« La météo n'est pas encore disponible pour ce spot », which is the fail-closed
+path, not a bug. Open-Meteo Marine (waves, sea temperature) needs no key and no
+capability.
+
+**Simulator runtime after an Xcode update.** `xcodebuild test` can abort with
+« The iOS <version> simulator runtime is not available » even though the build
+works. Check `xcrun simctl list runtimes`: when it prints no runtime, the
+disk image is present but unmounted (`xcrun simctl runtime list` still shows it).
+`check-macos.sh` boots the device first, which covers the common cold-start case;
+a fully unregistered runtime needs Xcode → **Settings → Components → iOS
+<version>** (re-download), or:
+
+```sh
+xcodebuild -downloadPlatform iOS
+```
+
 ---
 
 ## 1. One-time portal setup (developer.apple.com)
@@ -75,9 +99,22 @@ xcodebuild -project Estran.xcodeproj -scheme Estran \
 
 To run: pick an iPhone simulator and ⌘R. In DEBUG the app uses `DemoConditionsProvider` (real tide model, synthetic weather) and shows the *Données d'exemple* badge. In Release it uses `LiveConditionsProvider`, which refuses until M2 ships the weather pipeline — that is intended, not a bug.
 
-## 3. Expected first-build failures
+## 3. First-build failures
 
-The app layer has never been compiled. A first batch of errors is normal. The usual four families, in order of likelihood:
+The first macOS build ran on 2026-10-28 with Xcode 27.1 / iOS 27 (iPhone 18
+Pro simulator). It exposed one real error and one test fixture gap:
+
+- the asset catalog required an `AppIcon` set (an interim generated icon now
+  ships — replace it with the final asset, §4);
+- the UI test looked for `app.title`, which did not exist; the Home title now
+  carries that accessibility identifier;
+- SwiftLint's `opening_brace` conflicted with SwiftFormat's
+  `wrapMultilineStatementBraces`, and ten genuine lint findings (complexity,
+  type-body length, a large tuple, two IUOs) were cleaned up. Both linters now
+  pass with `--strict`.
+
+Keep the four families below in mind when a new target (widget, intents) is
+compiled for the first time:
 
 1. **Swift 6 strict concurrency** — `Sendable` across actor boundaries, `@MainActor` isolation on view models, `TideEngine` captured by a task. Fix at the API boundary, do not add `@unchecked Sendable` to silence it.
 2. **iOS 27 API surface** — the exact `glassEffect(_:in:)` signature, `GlassEffectContainer`, `.buttonStyle(.glass)`, `ControlWidget`. Confirm against the SDK; keep the availability branch in the theme layer.
@@ -86,11 +123,17 @@ The app layer has never been compiled. A first batch of errors is normal. The us
 
 Do not "fix" a compile error by deleting an accessibility modifier, a `fixedSize` or an `@ScaledMetric`: those are release gates (`DESIGN_REFERENCE.md` §2.1, `ARCHITECTURE_PLAN.md` §13).
 
+**Signing trap.** A simulator build made with `CODE_SIGNING_ALLOWED=NO` has no
+App Group entitlement, and the SwiftData container traps at launch
+(« Unable to find App Group Container in Entitlements »). Build and run with
+the normal signing settings (`check-macos.sh` does). Keep
+`CODE_SIGNING_ALLOWED=NO` for the archive-only check, which never launches.
+
 ## 4. Before TestFlight — assets and declarations
 
 These are missing today and are **hard submission blockers**:
 
-- [ ] **App icon.** There is no `AppIcon.appiconset` in `Estran/Resources/Assets.xcassets`. App Store Connect rejects a build without a 1024×1024 icon (no alpha, no rounded corners — the system rounds it).
+- [ ] **Final app icon.** An interim 1024×1024 `AppIcon.appiconset` was generated on 2026-10-28 so the build and archive can run (night-sea gradient, no alpha, no rounded corners). It is a placeholder: replace it with the final Figma export before TestFlight. App Store Connect rejects a build without a 1024×1024 icon.
 - [ ] **Privacy manifest.** Add `Estran/PrivacyInfo.xcprivacy`:
   ```xml
   <?xml version="1.0" encoding="UTF-8"?>
@@ -113,7 +156,7 @@ These are missing today and are **hard submission blockers**:
   </plist>
   ```
   (`CA92.1` = access to the app's own preferences. The App Group storage counts as the app's own data.)
-- [ ] **WeatherKit entitlement** in `Estran/Estran.entitlements` (`com.apple.developer.weatherkit`, boolean `true`) once M2 lands.
+- [ ] **WeatherKit entitlement** in `Estran/Estran.entitlements` (`com.apple.developer.weatherkit`, boolean `true`) once the capability is enabled on the App ID in the portal. Until then the live provider stops at `.weatherUnavailable` and the app says « La météo n'est pas encore disponible pour ce spot » — that is the fail-closed path, not a crash.
 - [ ] **Privacy policy URL** — required even though the app collects nothing. A static French page is enough (GitHub Pages, 0 €). It must say: no account, no analytics, no data collection; attribution REFMAR/Shom — Licence Ouverte 2.0; weather from Apple WeatherKit and Open-Meteo.
 - [ ] **App Privacy answers** in App Store Connect: *Data Not Collected*.
 - [ ] **Version and build number** bumped (`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in `project.yml`).

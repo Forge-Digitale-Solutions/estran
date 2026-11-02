@@ -46,9 +46,9 @@ a green « Oui ». Details in
 | **M0 — Setup** | done |
 | **M1 — Domain core + tide dataset** | done — schema 6, 3 stations × 25 constituents, 2 gauged spots |
 | **M2 — Weather** | **not started** — WeatherKit and Open-Meteo Marine |
-| **M3 — UI** | written, **never compiled on macOS** |
+| **M3 — UI** | **builds and runs on macOS** — first build 2026-10-28; accessibility/design gate open |
 | **M4 — Intelligence** | not started — Foundation Models, Siri, notifications |
-| **M5 — Widgets / Live Activity** | views written, data path not wired |
+| **M5 — Widgets / Live Activity** | views written and compiling, data path not wired |
 
 Release-relevant facts:
 
@@ -58,11 +58,13 @@ Release-relevant facts:
   maintenance, not as a product expiry;
 - the national Brest coefficient is computed but **not validated and not
   displayed**; it drives no safety decision;
-- `EstranCore` on Linux: **164 tests, 0 failures**, SwiftFormat clean.
+- `EstranCore`: **165 tests, 0 failures**, SwiftFormat clean;
+- first macOS build (2026-10-28, Xcode 27.1 / iOS 27): `xcodebuild` build,
+  test and archive pass, SwiftLint and SwiftFormat clean, app launched on an
+  iPhone 18 Pro simulator.
 
-The Linux host has no Apple SDK, so the SwiftUI layer is syntax-parsed only.
-Every Apple-platform build, test and archive is **pending** until it runs on
-macOS or in CI.
+The M3 product gate is still open: Figma match, VoiceOver, contrast and a full
+AX5 tour. M2 has not started.
 
 ## Requirements
 

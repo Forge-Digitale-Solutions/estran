@@ -195,6 +195,13 @@ Blocking checklist:
 
 | ID | Worker / model | Task | Exclusive files | Required checks | Status |
 |---|---|---|---|---|---|
+| D3 | Cursor Agent (Composer 2.5) | AX5 simulator tour + tap-target evidence | `EstranUITests/AccessibilityTourUITests.swift`, `docs/accessibility/ax5-audit.md`, `build/ax5/**` | `xcodebuild test -only-testing:EstranUITests/AccessibilityTourUITests` at medium and AX5 | Closed — 18 screenshots (9 × 2 text sizes), tap-target reports, report written. Lead fixed two tour defects: the AX5 menu was below the fold, and screenshots were captured mid-animation. |
+| D4 | OpenCode GLM-5.3 Flash Free | Static WCAG 2.1 AA contrast audit | `docs/accessibility/contrast-audit.md` | Lead re-measured the real render (pixel sampling) against the audit's 15 % glass model | Closed — 118 pairs; 6 modelled FAIL, 22 marginal, 16 unverifiable. Lead measured the real card at `#19476A` (coral 3.49:1, turquoise 5.34:1) and fixed the small-text subset with two text tokens. |
+| D5 | OpenCode GLM-5.3 Flash Free | Static VoiceOver / Dynamic Type audit | `docs/accessibility/voiceover-audit.md` | Lead reviewed F1–F6 and applied the in-scope corrections | Closed — 6 findings. F1, F3, F4, F5, F6 fixed as proposed; F2 fixed for the real defect (the widget painted a `Non` green) — the icon was not added to the 48 pt widget verdict, where the word itself carries the meaning; device verification still open. |
+| D6 | OpenCode (free model) | Frame 02 — tide chart card | `Estran/Features/SpotDetail/TideChartCard.swift` | Lead reviews the contract (no invented value, one accessibility element, AX5), then `check-macos.sh` | Closed — Swift Charts day curve, good-window bands, « now » rule, next-extremum marker, one spoken element; Lead fixed the chart header to name the activity |
+| D7 | OpenCode (free model) | Frame 02 — the five activity rows | `Estran/Features/SpotDetail/ActivityOverviewList.swift` | Same, plus the swimming rule: level, never Oui/Non | Closed — green time range / coral reason / sand unavailable, swimming on its level with the year-round warning, 44 pt rows reflowing at AX; Lead raised the green to `ouiOnGlass` (4.5:1) |
+| D8 | OpenCode (free model) | Frame 03 — activity picker sheet | `Estran/Features/ActivityPicker/ActivityPickerView.swift` | Same, plus selection state and AX5 scrolling | Closed — full-screen sheet, five glass rows, ring + check + `.isSelected`, AX reflow; Lead switched it to a full-screen cover and removed the outer panel to match the frame |
+
 | D0 | OpenCode MiniMax M3.1 Flash | Initial theme tokens | `Estran/Theme/OceanPalette.swift`, `Estran/Theme/OceanTypography.swift` | — | Closed — worker quota error before writing; Lead implemented the scope |
 | D1a | OpenCode GPT-5.4 Mini | Harmonic tide engine and tests | `Domain/Tides/HarmonicPredictor.swift`, `Domain/Tides/TideEngine.swift`, `Tests/EstranCoreTests/TideFixtures.swift`, `Tests/EstranCoreTests/TideEngineTests.swift` | `swift build`, `swift test` | Closed — provider error “Insufficient account funds” before any write; no file created |
 | D1b | OpenCode GLM-5.3 Flash Free | Harmonic tide engine and tests | Same four files as D1a | `swift build`, `swift test`, SwiftFormat lint | Closed — Lead verified, fixed force unwraps and the model epoch, 16 tide tests pass |
@@ -208,6 +215,7 @@ Blocking checklist:
 | Contract | Lead self-check | Not applicable | `WORKSPLIT VALIDÉ` from the designated Architect session | Validated |
 | M0 — Setup | `swift build` and `swift test` pass with Swift 6.0.3 (3 tests); SwiftFormat lint pass; plist/JSON/YAML parsed; static target/path/App Group checks pass; `xcodegen generate` pass with XcodeGen 2.46.0 built on Linux | Pending — no Xcode, Apple SDK, SwiftLint, or CI execution | `review.md`: **No blocking issues** (2026-10-26) | Code review passed — macOS/CI gates pending |
 | M1 — Domain core | **M1 data layer closed (review v8, no blocker).** **164 package tests pass** (rules, golden scenarios, window scanning, solar daylight, tide helpers, tide engine, safety gates, station validation, constituent coverage, interval uncertainty gate, dataset loader, shipped dataset, labels, interval coverage, horizon, national coefficient, LOYO time and height bounds, swimming range); SwiftFormat lint **0/89 files**; `swift build` pass; `scripts/check-linux.sh` pass | Pending — no Apple SDK. **B5 data gate closed**; **Z20–Z30 closed**; **M1 data layer closed (review v8)**; horizon 2029 | `review.md` v8: Z29/Z30 closed, M1 data layer closed; dataset production recorded in §8.4 | Code review passed on real data — Apple gates pending |
+| macOS first build — M0/M3 checkpoint (2026-10-28) | `xcodegen generate`; `xcodebuild … build` pass; `xcodebuild … test` pass (1 app unit test, 1 UI launch test); `swift test` **165/0**; `scripts/check-linux.sh` pass; SwiftLint **0/88**, SwiftFormat **0/89**; `--archive` pass | Xcode **27.1**, iOS **27** SDK, iPhone 18 Pro simulator. App installed and launched; Home, Baignade, Spots, Alertes, Réglages screens captured; AX5 Home checked | Not requested — M3 design/accessibility review still open | Build/test/archive **green** — M3 product gate still open |
 
 ### 8.1 M1 review remediation (B1–B4, B6)
 
@@ -271,6 +279,141 @@ Blocking checklist:
 **Open after production:** the Brest coefficient validation (for the future displayed coefficient, not the swimming level), and the **annual regeneration ritual** (`BUILD.md`) before the 2029 horizon (Z28).
 
 **v6 verification run (2026-10-27, Linux host):** `scripts/check-linux.sh` exit 0 — `swift build` pass, `swift test` **164 tests / 0 failures**; SwiftFormat lint **0/89 files**. Apple-platform gates remain **pending** (no Xcode/Apple SDK).
+
+### 8.5 First macOS build remediation (2026-10-28)
+
+| Finding | Correction | Evidence |
+|---|---|---|
+| Asset catalog had no `AppIcon`, so every build failed before compiling Swift | Interim generated 1024×1024 `AppIcon.appiconset` (night-sea gradient, no alpha); final Figma asset still required before TestFlight | `xcodebuild build` pass; `--archive` pass; `BUILD.md` §4 |
+| UI test waited for `app.title`, which no view exposed | `HomeView` title now carries `.accessibilityIdentifier("app.title")` | `EstranUITests.testAppLaunchesAndShowsTitle` pass |
+| Unsigned simulator builds trapped in `EstranModelContainer.make` (missing App Group entitlement) | `check-macos.sh` builds/tests with normal simulator signing; `CODE_SIGNING_ALLOWED=NO` stays archive-only | app launched on iPhone 18 Pro; signing trap documented in `BUILD.md` §3 |
+| `check-macos.sh` hard-coded `iPhone 16`, absent from the iOS 27 runtime | Auto-detects the first available iPhone simulator (`ESTRAN_DESTINATION` overrides); test timeouts enabled | `check-macos.sh` end-to-end pass |
+| SwiftLint `opening_brace` contradicted SwiftFormat's `wrapMultilineStatementBraces` | `opening_brace` disabled in `.swiftlint.yml` (SwiftFormat owns brace placement) | SwiftLint 0, SwiftFormat 0/89 |
+| Ten real strict-lint findings: cyclomatic complexity (`SwimmingRule`, `SurfRule`, `SwimmingAdvisory`), type-body length (`TideModel`, `GoldenScenarios`, `SafetyGatesTests`), a large tuple (`RulesTests`), two IUOs (`SpotSelectionStorageTests`), redundant nil coalescing | Rules split into named helpers, blocker notes moved to a lookup table, model/test bodies moved to extensions, test fixtures typed and unwrapped | `swift test` **165/0** after refactor; SwiftLint **0/88** |
+
+**v7 verification run (2026-10-28, macOS host):** `scripts/check-macos.sh` exit 0 — build pass, test pass, SwiftLint **0/88**, SwiftFormat **0/89**; `scripts/check-macos.sh --archive` exit 0. Simulator launch and screenshots recorded. Remaining M3 work is the product gate (Figma match, VoiceOver, contrast, AX5 on every screen), not compilation.
+
+### 8.6 M3 accessibility and Figma pass (2026-10-28)
+
+Three audits ran in parallel (delegation log D3–D5), then the Lead applied the
+in-scope corrections and re-verified on the simulator.
+
+| Finding | Correction | Evidence |
+|---|---|---|
+| Spot pill in the navigation toolbar rendered as a clipped icon blob (`.buttonStyle(.glass)` in a toolbar) | Pill moved into the scroll content above the title; stacks with the sample badge at accessibility sizes; wraps instead of overflowing | `01-home-peche.png` (medium) and `01-home-peche.png` (AX5) in the re-run |
+| Answer card was left-aligned; the Figma frame centres it | Label, verdict, reason and detail centred | medium capture |
+| Conditions grid was 2 × 2 at every size, frame shows 4 tiles | 4 columns up to `.large`, 2 from `.xLarge`, 1 at AX; captions shortened to the frame's wording, full sentence kept as the accessibility label | medium capture: « 4,5 m / baisse », « 19 / km/h O » |
+| VoiceOver F1: `.go` card spoke a paraphrase | Speaks `decision.reason`, the line drawn on screen | `AnswerCard.swift` |
+| VoiceOver F3/F6: Live Activity verdict without icon, bare « O »/« N », disclaimer missing from the expanded island | `Label` on the lock screen and expanded leading; letters speak the word; swimming glyph labelled; disclaimer added to the expanded bottom | `GoLiveActivityView.swift` |
+| VoiceOver F4: activity menu did not announce the unavailable state | Menu value reuses the chip helper | `ActivitySegmentedControl.swift` |
+| VoiceOver F5: « Ouvrir les réglages » was 28 pt tall | `minHeight: 44` + `contentShape` | `AlertsView.swift` |
+| VoiceOver F2: widget painted every verdict green | `GoEntry.isGo` drives colour and word | `GoWidget.swift` |
+| Contrast A20/B23/B50/B21: coral and turquoise under 4.5:1 as small text on glass | `nonOnGlass` `#FFBAB2` and `turquoiseOnGlass` `#5DDED4` for the text scale only; vivid hues stay for large display and the opaque Live Activity | `OceanPalette.swift`, `contrast-audit.md` Lead review |
+| AX5 tour tapped an off-screen menu and captured mid-animation frames | `openMenu` scrolls the control into view; the tour waits for layout and scrolls Home to the top before each shot | tour re-run, 9 × 2 screenshots |
+
+Measured, not modelled: the answer card renders at `#19476A` (L 0.0575) on
+iPhone 18 Pro, so the vivid coral clears 3:1 as the 76 pt verdict (3.49:1) and
+turquoise clears 4.5:1 (5.34:1) — the audit's 15 % glass model was pessimistic
+for these rows.
+
+**Figma match state.** Frame 01 matches after these fixes
+(`docs/design/figma-match-2026-10-28.md`). Frames **02 (spot detail with tide
+chart)** and **03 (activity picker)** have no screen in the app — an M3 blocking
+item, not polish. Frame 04 (widgets, Live Activity) cannot match before the M5
+App Group data path exists.
+
+**v8 verification run (2026-10-28, macOS host):** `scripts/check-macos.sh` exit 0
+— build, 1 app unit test, 2 UI tests; SwiftLint **0/89**; SwiftFormat **0/90**;
+`--archive` exit 0. AX5 tour green at both text sizes.
+
+### 8.7 Frame 02 and 03 (2026-10-28)
+
+The two screens the mockup draws and the app did not have. Three view workers ran
+in parallel on exclusive files (D6–D8); the Lead owned the data path, the
+navigation and the integration.
+
+| Piece | Where | Notes |
+|---|---|---|
+| `ActivityOverview` + `AppModel.overviews` | `Estran/Features/SpotDetail/ActivityOverview.swift`, `Estran/App/AppModel.swift` | one engine call per activity, shared by the detail and the picker, so the two cannot disagree |
+| Tide chart card | `TideChartCard.swift` | Swift Charts, day curve from `TideState.curve`, green good-window bands, « now » rule, next extremum + height, one accessibility element |
+| Activity rows | `ActivityOverviewList.swift` | green range / coral reason / sand unavailable, swimming on its level, 44 pt, AX reflow |
+| Activity picker | `ActivityPickerView.swift` | full-screen cover, five glass rows, ring + check + `.isSelected`, first launch + Réglages |
+| Spot detail screen | `SpotDetailView.swift` | header, chart, metrics, rows, alert opt-in, attribution |
+| Navigation | `SpotsView.swift`, `RootView.swift`, `SettingsView.swift` | « Voir le détail » push (tab bar hidden), first-launch `fullScreenCover` with an App Group flag |
+| Alert opt-in | `AlertOptInToggle.swift` | extracted from `AlertsView` so both screens share one key and one permission request |
+
+Corrections the Lead made on top of the workers:
+
+- the chart header names the activity (« Bon créneau surf · … »): the bands belong
+  to the Home selection while the list below covers all five;
+- green as small text moved to `ouiOnGlass` (`#7BE495`, 4.67:1 at the audit's
+  model): `oui` is 3.30:1 at 17 pt on glass;
+- the detail header stacks the sample badge at AX sizes — in a row it squeezed
+  the title and wrapped the badge inside a word;
+- the picker became a `fullScreenCover` without the outer glass panel, which is
+  the frame's layout;
+- the row reasons lose their trailing period, as the frame writes them.
+
+**Figma state.** Frame 01, 02 and 03 are matched. Frame 04 (widgets, Live
+Activity) still cannot match before the M5 App Group data path; its views now
+carry the icon, the `isGo` colour and the swimming disclaimer.
+
+**Pending at M3.** Real-device VoiceOver, Increase Contrast / Reduce Motion,
+the `SpotsView` glass measured over map tiles, and the favourite heart of
+frame 02 (no favourites feature exists — a dead control was not added).
+
+**v9 verification run (2026-10-28, macOS host):** `scripts/check-macos.sh` exit 0
+— build, 1 app unit test, 2 UI tests (the tour now captures the picker and the
+spot detail at medium and AX5); SwiftLint **0/95**; SwiftFormat **0/96**;
+`--archive` exit 0.
+
+### 8.8 M2 — data layer, first half (2026-10-28)
+
+| Piece | Where | State |
+|---|---|---|
+| `WeatherSource` protocol | `Estran/Data/WeatherSource.swift` | contract shared by the demo and live providers |
+| `WeatherKitService` | `Estran/Data/WeatherKitService.swift` | actor: current + hourly, all 33 WeatherKit conditions mapped to the domain's 9, units converted, precipitation chance taken from the covering hourly sample (CurrentWeather has none), any failure → `.weatherUnavailable` |
+| `MarineService` | `Estran/Data/MarineService.swift` | Open-Meteo Marine, keyless; `null` wave drops the hour, never a 0 m sea |
+| `MarineCache` | `Estran/Data/MarineCache.swift` | actor, 30 min fresh / 2 h stale, one JSON per spot, App Group container |
+| `MarinePolicy` | `Estran/Data/MarinePolicy.swift` | `.offshoreModel` for Pointe de Grave, `.unavailable` for the Bassin |
+| `LiveConditionsProvider` | `Estran/Data/LiveConditionsProvider.swift` | tide + weather + marine, fail closed per field, hours without swell skipped |
+| `-liveData` launch argument | `Estran/App/AppModel.swift` | DEBUG only: run the real sources in the simulator instead of the demo provider |
+| App-hosted tests | `EstranTests/MarineServiceTests.swift`, `project.yml` | 11 tests: decoder, null handling, malformed payload, empty series, TTL/stale cache, per-spot cache, policy, nearest-sample tolerance |
+
+**Measured, not assumed** (`docs/data-sourcing/marine-2026-10-28.md`): at Pointe
+de Grave the model returns 1.16 m / 11.6 s / 278° / **15.7 °C**; at Arcachon-Eyrac
+it returns 2.50 m / 11.25 s / 285° — open-ocean swell inside the Bassin, which is
+why the lagoon is marked `.unavailable`.
+
+**Blocked on two decisions, not on code:**
+
+1. **Lagoon wave data.** The domain has no way to say « this sea is unknown »:
+   `Swell` fields are non-optional, so either they become optional (every rule
+   fails closed per activity) or the Bassin drops wave-dependent activities.
+   Until then Arcachon-Eyrac answers « Données indisponibles » in Release.
+2. **WeatherKit capability.** The portal step in `BUILD.md` §2 is not done on
+   this Mac, so the live provider stops at `.weatherUnavailable` and the app
+   shows « La météo n'est pas encore disponible pour ce spot » — the fail-closed
+   behaviour working as designed, not a bug.
+
+**v10 verification run (2026-10-28, macOS host):** `scripts/check-macos.sh` exit 0
+— build, **12 app unit tests** (app-hosted target now), 2 UI tests; SwiftLint
+**0/102**; SwiftFormat **0/103**.
+
+### 8.9 Environment note (2026-11-02)
+
+Xcode moved from 27.1 to **27.2** (build 27B52) with the same iOS 27.0 runtime.
+Nothing in the repository changed; `xcodebuild build` is still green and the full
+test suite ran green today (12 app + 2 UI) **before** the simulator runtime
+broke. `check-macos.sh` now boots the destination device explicitly
+(`simctl bootstatus -b`) because a shut-down device after an Xcode update aborts
+`xcodebuild test` with « simulator runtime is not available ».
+
+As of 14:30 the runtime is unregistered on this Mac (`simctl list runtimes` is
+empty while the disk image is still listed as Ready): every simulator is
+`unavailable, runtime profile not found`. That is a host problem, not a code
+problem; the repair is Xcode → Settings → Components, or
+`xcodebuild -downloadPlatform iOS` (`BUILD.md` §Local checks).
 
 ## 9. Open external dependencies
 

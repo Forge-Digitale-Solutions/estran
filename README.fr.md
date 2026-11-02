@@ -48,9 +48,9 @@ permanent sur les baïnes et les courants — jamais un « Oui » vert. Détail 
 | **M0 — Setup** | fait |
 | **M1 — Moteur + dataset de marée** | fait — schema 6, 3 stations × 25 constituants, 2 spots jaugés |
 | **M2 — Météo** | **pas commencé** — WeatherKit et Open-Meteo Marine |
-| **M3 — UI** | écrite, **jamais compilée sur macOS** |
+| **M3 — UI** | **compile et tourne sur macOS** — premier build le 2026-10-28 ; porte accessibilité/design ouverte |
 | **M4 — Intelligence** | pas commencé — Foundation Models, Siri, notifications |
-| **M5 — Widgets / Live Activity** | vues écrites, données non branchées |
+| **M5 — Widgets / Live Activity** | vues écrites et compilées, données non branchées |
 
 Points utiles pour une release :
 
@@ -60,11 +60,13 @@ Points utiles pour une release :
   par an comme maintenance, pas comme une date de péremption produit ;
 - le coefficient national de Brest est calculé mais **non validé et non
   affiché** ; il ne pilote aucune décision de sécurité ;
-- `EstranCore` sous Linux : **164 tests, 0 échec**, SwiftFormat propre.
+- `EstranCore` : **165 tests, 0 échec**, SwiftFormat propre ;
+- premier build macOS (2026-10-28, Xcode 27.1 / iOS 27) : build, tests et
+  archive `xcodebuild` passent, SwiftLint et SwiftFormat propres, app lancée
+  sur un simulateur iPhone 18 Pro.
 
-L'hôte Linux n'a pas de SDK Apple : la couche SwiftUI n'est que parsée. Tout
-build, test et archive Apple est **en attente** tant que ça n'a pas tourné sur
-macOS ou en CI.
+La porte produit M3 reste ouverte : correspondance Figma, VoiceOver, contraste
+et tour complet en AX5. M2 n'a pas commencé.
 
 ## Prérequis
 

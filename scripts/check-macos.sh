@@ -13,7 +13,39 @@ done
 
 xcodegen generate
 
-DESTINATION="platform=iOS Simulator,name=iPhone 16,OS=latest"
+# Pick the first available iPhone simulator instead of hard-coding a model
+# name: the installed Xcode runtime decides which iPhones exist.
+if [[ -z "${ESTRAN_DESTINATION:-}" ]]; then
+    DEVICE_ID="$(xcrun simctl list devices available --json | python3 -c '
+import json, sys
+
+devices = json.load(sys.stdin)["devices"]
+for runtime in sorted(devices, reverse=True):
+    if "iOS" not in runtime:
+        continue
+    for device in devices[runtime]:
+        if device["name"].startswith("iPhone") and device.get("isAvailable", True):
+            print(device["udid"])
+            sys.exit(0)
+sys.exit("no available iPhone simulator found")
+')"
+    DESTINATION="id=$DEVICE_ID"
+else
+    DESTINATION="$ESTRAN_DESTINATION"
+fi
+echo "Using destination: $DESTINATION"
+
+# Boot the simulator explicitly. After an Xcode update the device can be left
+# shut down with a runtime whose disk image is mounted by a stale cryptex, and
+# `xcodebuild test` then aborts with « The iOS <version> simulator runtime is not
+# available » before running a single test. Booting first (idempotent) removes
+# that cold-start failure.
+if [[ "$DESTINATION" == id=* ]]; then
+    DEVICE_ID="${DESTINATION#id=}"
+    if ! xcrun simctl bootstatus "$DEVICE_ID" -b >/dev/null 2>&1; then
+        echo "warning: could not boot $DEVICE_ID; xcodebuild will try on its own." >&2
+    fi
+fi
 
 xcodebuild \
     -project Estran.xcodeproj \
@@ -27,6 +59,8 @@ xcodebuild \
     -scheme Estran \
     -configuration Debug \
     -destination "$DESTINATION" \
+    -test-timeouts-enabled YES \
+    -default-test-execution-time-allowance 300 \
     test
 
 if command -v swiftlint >/dev/null 2>&1; then
