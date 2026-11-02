@@ -73,8 +73,8 @@ M3:
    (`docs/accessibility/`), the device pass is not.
 2. **Increase Contrast, Reduce Motion, Reduce Transparency** on the glass
    surfaces, and the `SpotsView` glass measured over map tiles.
-3. The `Favori` heart of frame 02 has no feature behind it: decide whether
-   favourites ship in v1 or the frame drops the pill.
+3. ~~The `Favori` heart~~ — **decided 2026-11-02**: dropped in v1, the model
+   stays in the schema unused (`DESIGN_REFERENCE.md` §3.2).
 
 Frame 04 (widgets, Live Activity) cannot match before M5. Then **M2**, which is
 what makes the water temperature real.

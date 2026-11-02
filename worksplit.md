@@ -358,9 +358,14 @@ Corrections the Lead made on top of the workers:
 Activity) still cannot match before the M5 App Group data path; its views now
 carry the icon, the `isGo` colour and the swimming disclaimer.
 
-**Pending at M3.** Real-device VoiceOver, Increase Contrast / Reduce Motion,
-the `SpotsView` glass measured over map tiles, and the favourite heart of
-frame 02 (no favourites feature exists — a dead control was not added).
+**Pending at M3.** Real-device VoiceOver, and the `SpotsView` glass measured
+over map tiles.
+
+**Decided 2026-11-02 (2a):** the frame 02 `Favori` heart is **dropped from v1**.
+With two spots and a single selection, a favourite adds an state to keep in sync
+across app, widget and Siri for no user gain. `FavoriteSpot` stays in the
+SwiftData schema, unused, so a later release can ship it without a migration.
+`DESIGN_REFERENCE.md` §3.2 carries the rationale.
 
 **v9 verification run (2026-10-28, macOS host):** `scripts/check-macos.sh` exit 0
 — build, 1 app unit test, 2 UI tests (the tour now captures the picker and the

@@ -50,7 +50,7 @@ Fixes applied in this pass:
 | Back chevron + `Données d'exemple` badge | native back button; badge stacks under the title at AX sizes | **MATCH** |
 | Title + subtitle « spot · jour » | « Arcachon-Eyrac » + « Bassin d'Arcachon · mercredi 28 oct. » | **MATCH** (subtitle uses the area and the date: the tide-station names are internal codes and the coefficient is not shown, review Z23) |
 | Chart card: header, next event, good window, curve, band, 24 h axis | Swift Charts curve with the day's 10-min samples, green good windows, dashed « now » rule and dot, next extremum marked with its height, 0/6/12/18/24 h | **MATCH**, with one clarification: the header names the activity (« Bon créneau surf · … »), because the bands belong to the activity selected on Home |
-| `Favori` heart pill | **absent** | **GAP** — there is no favourites feature yet; a dead heart is worse than no heart |
+| `Favori` heart pill | **dropped on purpose** | **Decision 2026-11-02 (2a)** — two spots, one selection: favourites add an state to sync for no user gain. Recorded in `DESIGN_REFERENCE.md` §3.2; the model stays in the schema for a later release |
 | Metrics row: Vent / Houle / Météo | three tiles, same wording | **MATCH** |
 | Créneaux list, five rows | glass card, one row per activity, 44 pt, reflows at AX | **MATCH** in layout; **baignade shows the current level, never « Non, eau à 15° »** (`AGENTS.md` invariant 1) |
 | « Me prévenir 1 h avant » | `AlertOptInToggle`, the same App Group key as Alertes | **MATCH** |

@@ -135,7 +135,7 @@ Vertical layout, deep-blue gradient background:
 
 ### 3.2 — 02 Détail spot (Spot detail)
 
-1. **Nav bar** — back chevron, `Données d'exemple` badge, `Favori` (heart) pill.
+1. **Nav bar** — back chevron, `Données d'exemple` badge. **No `Favori` pill in v1** (decision 2026-11-02): with two spots and a single selection, a favourite adds an state to sync across app, widget and Siri for no user gain. The `FavoriteSpot` model stays in the SwiftData schema, unused, so the feature can ship later without a migration. The frame keeps the pill; the app deliberately does not render it.
 2. **Large title** — « Arcachon » + subtitle « Jetée Thiers · lundi 26 oct. · coef 92 ».
 3. **Chart card (Swift Charts)** (glass, radius 26):
    - Header « Marée » + « Basse 14 h 12 · 1,2 m » (turquoise).
