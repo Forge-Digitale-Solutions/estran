@@ -52,19 +52,8 @@ jobs:
       - name: Pick a simulator
         id: sim
         run: |
-          DEVICE_ID="$(xcrun simctl list devices available --json | python3 -c '
-import json, sys
-
-devices = json.load(sys.stdin)["devices"]
-for runtime in sorted(devices, reverse=True):
-    if "iOS" not in runtime:
-        continue
-    for device in devices[runtime]:
-        if device["name"].startswith("iPhone") and device.get("isAvailable", True):
-            print(device["udid"])
-            sys.exit(0)
-sys.exit("no available iPhone simulator found")
-')"
+          DEVICE_ID="$(xcrun simctl list devices available | grep -m1 -E '^[[:space:]]+iPhone' | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')"
+          test -n "$DEVICE_ID"
           echo "device_id=$DEVICE_ID" >> "$GITHUB_OUTPUT"
           echo "Using simulator $DEVICE_ID"
 
