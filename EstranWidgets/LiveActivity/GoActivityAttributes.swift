@@ -13,6 +13,9 @@ public struct GoActivityAttributes: ActivityAttributes, Sendable {
         public var isSwimming: Bool
         /// Level, conditions line, non-current blockers and warning (Z31).
         public var swimmingAdvisory: SwimmingAdvisory?
+        /// `true` when the data cannot answer: « Données indisponibles », never
+        /// a `Non`. Defaulted so a state written by a previous build decodes.
+        public var isUnavailable: Bool
 
         public init(
             isGo: Bool,
@@ -20,7 +23,8 @@ public struct GoActivityAttributes: ActivityAttributes, Sendable {
             nextWindowStart: Date?,
             updatedAt: Date,
             isSwimming: Bool = false,
-            swimmingAdvisory: SwimmingAdvisory? = nil)
+            swimmingAdvisory: SwimmingAdvisory? = nil,
+            isUnavailable: Bool = false)
         {
             self.isGo = isGo
             self.activityName = activityName
@@ -28,6 +32,22 @@ public struct GoActivityAttributes: ActivityAttributes, Sendable {
             self.updatedAt = updatedAt
             self.isSwimming = isSwimming
             self.swimmingAdvisory = swimmingAdvisory
+            self.isUnavailable = isUnavailable
+        }
+
+        /// Tolerates a state written before `isUnavailable` existed: an absent
+        /// flag is a readable verdict, never an unavailable one.
+        public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            isGo = try container.decode(Bool.self, forKey: .isGo)
+            activityName = try container.decode(String.self, forKey: .activityName)
+            nextWindowStart = try container.decodeIfPresent(
+                Date.self, forKey: .nextWindowStart)
+            updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+            isSwimming = try container.decodeIfPresent(Bool.self, forKey: .isSwimming) ?? false
+            swimmingAdvisory = try container.decodeIfPresent(
+                SwimmingAdvisory.self, forKey: .swimmingAdvisory)
+            isUnavailable = try container.decodeIfPresent(Bool.self, forKey: .isUnavailable) ?? false
         }
     }
 

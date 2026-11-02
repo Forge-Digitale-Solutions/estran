@@ -23,15 +23,8 @@ struct GoLiveActivityView: View {
     }
 
     private var standardBody: some View {
-        HStack(spacing: OceanSpacing.sm) {
-            Label(
-                context.state.isGo ? "Oui" : "Non",
-                systemImage: context.state.isGo
-                    ? "checkmark.circle.fill"
-                    : "xmark.circle.fill")
-                .font(OceanTypography.rounded(size: badgeSize))
-                .foregroundStyle(context.state.isGo ? OceanPalette.oui : OceanPalette.non)
-                .labelStyle(.titleAndIcon)
+        HStack(alignment: .top, spacing: OceanSpacing.sm) {
+            verdictBadge
 
             VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
                 Text(context.attributes.spotName)
@@ -43,6 +36,30 @@ struct GoLiveActivityView: View {
             }
 
             Spacer(minLength: 0)
+        }
+    }
+
+    /// The lock-screen verdict: a word, an icon and a colour, never colour
+    /// alone. Missing data is a state of its own — it is not a `Non`, and it
+    /// is never green. No line limit: at AX5 the text wraps instead of
+    /// truncating.
+    @ViewBuilder
+    private var verdictBadge: some View {
+        if context.state.isUnavailable {
+            Label("Données indisponibles", systemImage: "exclamationmark.triangle.fill")
+                .font(OceanTypography.rounded(size: badgeSize * 0.5))
+                .foregroundStyle(OceanPalette.unavailable)
+                .labelStyle(.titleAndIcon)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            Label(
+                context.state.isGo ? "Oui" : "Non",
+                systemImage: context.state.isGo
+                    ? "checkmark.circle.fill"
+                    : "xmark.circle.fill")
+                .font(OceanTypography.rounded(size: badgeSize))
+                .foregroundStyle(context.state.isGo ? OceanPalette.oui : OceanPalette.non)
+                .labelStyle(.titleAndIcon)
         }
     }
 
@@ -111,6 +128,11 @@ struct GoLiveActivityWidget: Widget {
                             .font(OceanTypography.metricValue)
                             .foregroundStyle(
                                 OceanPalette.swimmingRisk(context.state.swimmingAdvisory?.level ?? .unknown))
+                    } else if context.state.isUnavailable {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(OceanTypography.metricValue)
+                            .foregroundStyle(OceanPalette.unavailable)
+                            .accessibilityLabel("Données indisponibles")
                     } else {
                         Label(
                             context.state.isGo ? "Oui" : "Non",
@@ -148,6 +170,15 @@ struct GoLiveActivityWidget: Widget {
                                 .foregroundStyle(OceanPalette.white.opacity(0.7))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
+                    } else if context.state.isUnavailable {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Données indisponibles")
+                                .font(OceanTypography.smallLabel)
+                                .foregroundStyle(OceanPalette.unavailable)
+                            Text(context.state.activityName)
+                                .font(OceanTypography.smallLabel)
+                                .foregroundStyle(OceanPalette.white.opacity(0.8))
+                        }
                     } else {
                         Text(context.state.activityName)
                             .font(OceanTypography.smallLabel)
@@ -160,6 +191,11 @@ struct GoLiveActivityWidget: Widget {
                         .font(OceanTypography.tabLabel)
                         .foregroundStyle(OceanPalette.sand)
                         .accessibilityLabel("Baignade : risque de courants")
+                } else if context.state.isUnavailable {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(OceanTypography.tabLabel)
+                        .foregroundStyle(OceanPalette.unavailable)
+                        .accessibilityLabel("Données indisponibles")
                 } else {
                     Text(context.state.isGo ? "O" : "N")
                         .font(OceanTypography.tabLabel)
@@ -180,6 +216,11 @@ struct GoLiveActivityWidget: Widget {
                         .font(OceanTypography.tabLabel)
                         .foregroundStyle(OceanPalette.sand)
                         .accessibilityLabel("Baignade : risque de courants")
+                } else if context.state.isUnavailable {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(OceanTypography.tabLabel)
+                        .foregroundStyle(OceanPalette.unavailable)
+                        .accessibilityLabel("Données indisponibles")
                 } else {
                     Text(context.state.isGo ? "O" : "N")
                         .font(OceanTypography.tabLabel)

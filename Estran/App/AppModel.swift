@@ -159,6 +159,9 @@ final class AppModel {
             slots = []
             unavailableActivities = []
             overviews = []
+            // No data, no card: a running Live Activity would keep describing a
+            // window the app can no longer compute (M5 review, finding 2).
+            LiveActivityController.shared.endAll(reason: "conditions unavailable")
             return
         }
 
@@ -208,6 +211,13 @@ final class AppModel {
                 // snapshot rather than showing a value we could not persist.
             }
         }
+
+        // M5: the Live Activity reads that same snapshot, so the lock screen
+        // and the widgets can never disagree on the verdict or the window.
+        LiveActivityController.shared.sync(
+            snapshot: snapshot,
+            current: currentSlot,
+            upcoming: upcomingSlot)
     }
 
     // MARK: - Windows
