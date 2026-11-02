@@ -15,14 +15,23 @@ import EstranCore
 enum MarinePolicy {
     /// The spot sits on the open coast, inside the model's grid.
     case offshoreModel
-    /// The model does not describe this water. Wave-dependent activities are
-    /// « Données indisponibles », never a guessed sea.
-    case unavailable
+    /// The model does not describe this water. The sea is estimated from the
+    /// local wind and a fetch length, and says so (`WindSeaEstimator`).
+    case windSeaEstimate
 
     static func source(for spot: Spot) -> MarinePolicy {
         switch spot.region {
         case .medoc: .offshoreModel
-        case .bassin: .unavailable
+        case .bassin: .windSeaEstimate
+        }
+    }
+
+    /// Fetch length used by the estimate, per region. The Bassin is ~3 km wide
+    /// at the Eyrac jetty; the Médoc never uses this path.
+    static func fetchMeters(for spot: Spot) -> Double {
+        switch spot.region {
+        case .bassin: WindSeaEstimator.defaultFetchMeters
+        case .medoc: WindSeaEstimator.defaultFetchMeters
         }
     }
 }

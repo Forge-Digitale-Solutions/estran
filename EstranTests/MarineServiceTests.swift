@@ -103,7 +103,7 @@ final class MarineServiceTests: XCTestCase {
 
     func testOnlyTheOceanSpotUsesTheOffshoreModel() {
         XCTAssertEqual(MarinePolicy.source(for: SpotCatalog.pointeDeGrave), .offshoreModel)
-        XCTAssertEqual(MarinePolicy.source(for: SpotCatalog.arcachonEyrac), .unavailable)
+        XCTAssertEqual(MarinePolicy.source(for: SpotCatalog.arcachonEyrac), .windSeaEstimate)
     }
 
     func testNearestSwellRejectsASampleOutsideTheTolerance() throws {

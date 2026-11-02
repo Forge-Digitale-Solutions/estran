@@ -13,22 +13,53 @@ public struct Wind: Codable, Hashable, Sendable {
 }
 
 public struct Swell: Codable, Hashable, Sendable {
+    /// Where the wave values come from.
+    ///
+    /// `model` is a wave model that resolves the water at the spot. A
+    /// `windSeaEstimate` is computed locally from the measured wind and a fetch
+    /// length: it is a **model of the lagoon sea**, not an observation, and the
+    /// UI says so. Nothing is ever `.estimate` on a spot the marine grid covers.
+    public enum Source: String, Codable, Hashable, Sendable {
+        case model
+        case windSeaEstimate
+    }
+
     public let waveHeight: Double
     public let period: Double
     public let directionDegrees: Double
     /// Sea surface temperature in Celsius, when available.
     public let seaSurfaceTemperature: Double?
+    /// Provenance of the wave values.
+    public let source: Source
+
+    public var isEstimated: Bool {
+        source == .windSeaEstimate
+    }
 
     public init(
         waveHeight: Double,
         period: Double,
         directionDegrees: Double,
-        seaSurfaceTemperature: Double? = nil)
+        seaSurfaceTemperature: Double? = nil,
+        source: Source = .model)
     {
         self.waveHeight = waveHeight
         self.period = period
         self.directionDegrees = directionDegrees
         self.seaSurfaceTemperature = seaSurfaceTemperature
+        self.source = source
+    }
+
+    /// Tolerates payloads written before `source` existed (fixtures, cached
+    /// JSON): an absent value is a model value, never an estimate.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        waveHeight = try container.decode(Double.self, forKey: .waveHeight)
+        period = try container.decode(Double.self, forKey: .period)
+        directionDegrees = try container.decode(Double.self, forKey: .directionDegrees)
+        seaSurfaceTemperature = try container.decodeIfPresent(
+            Double.self, forKey: .seaSurfaceTemperature)
+        source = try container.decodeIfPresent(Source.self, forKey: .source) ?? .model
     }
 }
 

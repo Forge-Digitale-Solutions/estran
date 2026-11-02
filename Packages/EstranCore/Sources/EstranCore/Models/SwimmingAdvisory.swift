@@ -67,7 +67,10 @@ public struct SwimmingAdvisory: Codable, Hashable, Sendable {
     public static func conditionsLine(for conditions: Conditions) -> String {
         var parts: [String] = []
         parts.append("Vent \(Int(conditions.weather.wind.speed.rounded())) km/h")
-        parts.append("houle \(decimal(conditions.swell.waveHeight, digits: 1)) m")
+        // An estimated sea must say so: it is a model of the lagoon, computed
+        // from the wind, not a measurement of the water.
+        let swellPrefix = conditions.swell.isEstimated ? "houle estimée" : "houle"
+        parts.append("\(swellPrefix) \(decimal(conditions.swell.waveHeight, digits: 1)) m")
         if let water = conditions.swell.seaSurfaceTemperature {
             parts.append("eau \(Int(water.rounded())) °C")
         } else {

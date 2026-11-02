@@ -128,8 +128,11 @@ struct SpotDetailView: View {
             ConditionTile(
                 icon: "wave.3.right",
                 value: FrenchFormat.swellHeight(conditions.swell),
-                label: FrenchFormat.swellPeriod(conditions.swell),
-                spoken: "Houle : \(FrenchFormat.swellHeight(conditions.swell)), "
+                label: conditions.swell.isEstimated
+                    ? "estimée · \(FrenchFormat.swellPeriod(conditions.swell))"
+                    : FrenchFormat.swellPeriod(conditions.swell),
+                spoken: "Houle\(conditions.swell.isEstimated ? " estimée à partir du vent" : "") : "
+                    + "\(FrenchFormat.swellHeight(conditions.swell)), "
                     + "période \(FrenchFormat.swellPeriod(conditions.swell))")
             ConditionTile(
                 icon: FrenchFormat.weatherSymbol(conditions.weather.condition),
