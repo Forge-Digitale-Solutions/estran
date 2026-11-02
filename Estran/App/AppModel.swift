@@ -237,6 +237,10 @@ final class AppModel {
                 decision: decision ?? engine.decide(activity: activity, conditions: conditions),
                 timeZone: selectedSpot.timezone,
                 isSampleData: usesSampleData))
+        // The notification scheduler reads the same snapshot and the same
+        // windows, off the main actor: a refused or failed notification never
+        // delays a refresh.
+        let windows = slots
         Task.detached(priority: .utility) {
             do {
                 try snapshot.save()
@@ -247,6 +251,10 @@ final class AppModel {
                 // No App Group container: the widget keeps its previous
                 // snapshot rather than showing a value we could not persist.
             }
+            // M4: one notification per good window, rescheduled from scratch on
+            // every refresh. The policy drops the ones already too close.
+            await LocalNotificationScheduler.shared.reschedule(
+                for: snapshot, windows: windows, now: Date())
         }
 
         // The Live Activity reads that same snapshot, so the lock screen and the
