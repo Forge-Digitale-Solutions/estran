@@ -7,5 +7,6 @@ struct EstranWidgetsBundle: WidgetBundle {
         GoWidget()
         ConditionsWidget()
         GoLiveActivityWidget()
+        EstranControl()
     }
 }
