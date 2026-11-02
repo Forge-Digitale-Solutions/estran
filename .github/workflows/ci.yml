@@ -63,8 +63,11 @@ jobs:
       # happens. No dest copy left, so it runs on a fresh image in ~6 min.
       - name: Ensure an iOS simulator runtime
         run: |
-          if ! xcodebuild -project Estran.xcodeproj -scheme Estran -showdestinations 2>/dev/null             | grep -q "platform:iOS Simulator,"; then
-            echo "No iOS simulator runtime available, downloading..."
+          # 'Any iOS Simulator Device' is a placeholder that also matches the
+          # platform string, so it must be excluded or the check always passes.
+          xcodebuild -project Estran.xcodeproj -scheme Estran -showdestinations 2>/dev/null || true
+          if ! xcodebuild -project Estran.xcodeproj -scheme Estran -showdestinations 2>/dev/null | grep 'platform:iOS Simulator,' | grep -v placeholder | grep -q .; then
+            echo 'No usable iOS simulator runtime, downloading...'
             xcodebuild -downloadPlatform iOS
           fi
 
