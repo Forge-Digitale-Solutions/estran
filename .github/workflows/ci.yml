@@ -62,22 +62,12 @@ jobs:
 
       - name: Build
         run: |
-          xcodebuild \
-            -project Estran.xcodeproj \
-            -scheme Estran \
-            -configuration Debug \
-            -destination "id=${{ steps.sim.outputs.device_id }}" \
-            build
+          set -x
+          xcodebuild -project Estran.xcodeproj -scheme Estran -configuration Debug -destination 'generic/platform=iOS Simulator' build
       - name: Test
         run: |
-          xcodebuild \
-            -project Estran.xcodeproj \
-            -scheme Estran \
-            -configuration Debug \
-            -destination "id=${{ steps.sim.outputs.device_id }}" \
-            -test-timeouts-enabled YES \
-            -default-test-execution-time-allowance 300 \
-            test
+          set -x
+          xcodebuild -project Estran.xcodeproj -scheme Estran -configuration Debug -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.device_id }}" -test-timeouts-enabled YES -default-test-execution-time-allowance 300 test
 
   macos-archive:
     name: Unsigned archive compile check
