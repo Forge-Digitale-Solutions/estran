@@ -406,9 +406,15 @@ Consequence for the gate: the input is the **local predicted range** (§7.1), an
 
 `WeatherKitService` (actor) wraps `WeatherService`, returning current + hourly forecast for `WeatherNow` and a forecast series. Handles authorization and the entitlement requirement. Cached locally with a short TTL (15 min) in `CachedForecast`.
 
+**Fallback.** `FallbackWeatherSource` calls WeatherKit first and Open-Meteo's keyless forecast (`api.open-meteo.com/v1/forecast`: temperature, WMO weather code, precipitation probability, cloud cover, wind speed/gusts/direction, visibility) when WeatherKit cannot answer — a missing capability, an unsigned build or a quota. The substitution is logged; neither source returns a neutral value.
+
 ### 9.2 Marine (Open-Meteo)
 
 `MarineService` (actor) calls the Open-Meteo Marine endpoint (`marine-api.open-meteo.com/v1/marine`) with `wave_height, wave_period, wave_direction, sea_surface_temperature`. Maps to `Swell`. Cached with a 30-min TTL.
+
+**The grid is offshore.** Measured 2026-10-28/31: at Pointe de Grave it returns a coherent Atlantic sea (1.16 m / 11.6 s / 278° / 15.7 °C); at the Eyrac jetty, inside the Bassin, it returns the same open-ocean swell (1.4–2.5 m / 11 s) — not the water at the jetty. `MarinePolicy` therefore uses the model at the ocean spot only.
+
+**Inside the Bassin** the sea is a short, fetch-limited wind sea computed from the measured wind (`WindSeaEstimator`, SMB constants, 3 km fetch, `Swell.source = .windSeaEstimate`). It is a model, not a measurement: the UI writes « houle estimée », the sea temperature stays `nil` (« eau indisponible »), and no free source measures the lagoon. See `docs/data-sourcing/marine-2026-10-28.md`.
 
 ### 9.3 Spots catalog
 

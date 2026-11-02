@@ -59,7 +59,7 @@ python3 scripts/tides/refresh   # regenerate the tide dataset (free, cached)
 |---|---|
 | M0 Setup | done |
 | M1 Domain + tide dataset | done — schema 6, 165 tests |
-| M2 Weather (WeatherKit + Open-Meteo Marine) | **in progress** — marine source + cache + tests done (Open-Meteo returns 15.7 °C at Pointe de Grave); WeatherKit service written, capability still to enable in the portal; Bassin wave data unusable (see `docs/data-sourcing/marine-2026-10-28.md`) |
+| M2 Weather (WeatherKit + Open-Meteo Marine) | **live sources operational** — WeatherKit adapter + Open-Meteo fallback, marine model at Pointe de Grave, wind-sea estimate (labelled) inside the Bassin; 17 app tests. WeatherKit capability still to enable in the portal |
 | M3 UI | **Frames 01/02/03 built and matched** — first build 2026-10-28 (Xcode 27.1, iOS 27 simulator); accessibility findings fixed; device VoiceOver open |
 | M4 Foundation Models / Siri / notifications | not started |
 | M5 Widgets / Live Activity | views written and compiling, data path not wired |

@@ -402,18 +402,46 @@ why the lagoon is marked `.unavailable`.
 
 ### 8.9 Environment note (2026-11-02)
 
-Xcode moved from 27.1 to **27.2** (build 27B52) with the same iOS 27.0 runtime.
-Nothing in the repository changed; `xcodebuild build` is still green and the full
-test suite ran green today (12 app + 2 UI) **before** the simulator runtime
-broke. `check-macos.sh` now boots the destination device explicitly
-(`simctl bootstatus -b`) because a shut-down device after an Xcode update aborts
-`xcodebuild test` with « simulator runtime is not available ».
+Xcode moved from 27.1 to **27.2** (build 27B52). The update left three iOS 27.0
+runtime images, two of them unusable, and then unregistered the last one: every
+simulator became `unavailable, runtime profile not found` while the disk image
+still reported Ready. Host problem, not a code problem.
 
-As of 14:30 the runtime is unregistered on this Mac (`simctl list runtimes` is
-empty while the disk image is still listed as Ready): every simulator is
-`unavailable, runtime profile not found`. That is a host problem, not a code
-problem; the repair is Xcode → Settings → Components, or
-`xcodebuild -downloadPlatform iOS` (`BUILD.md` §Local checks).
+Repair, done on this Mac:
+
+1. removed the stale `iOS DeviceSupport/iPhone14,4 27.0.1` symbols (6.4 GB) and
+   the dead runtime images (7.5 GB) to make room — the download needs 8.3 GB and
+   the disk was at 7.1 GB free;
+2. `xcodebuild -downloadPlatform iOS` → iOS 27.2 (24B8117) runtime;
+3. created a fresh `iPhone 18 Pro` device on the new runtime and deleted the
+   unavailable ones.
+
+`check-macos.sh` now boots its destination first (`simctl bootstatus -b`): after
+an Xcode update, a shut-down device aborts `xcodebuild test` with « simulator
+runtime is not available ». The repair procedure is also in `BUILD.md`
+(§ Local checks).
+
+### 8.10 M2 — live data end to end (2026-11-02)
+
+| Piece | Where | Notes |
+|---|---|---|
+| `OpenMeteoWeatherService` | `Estran/Data/OpenMeteoWeatherService.swift` | keyless air weather: temperature, WMO code, precipitation probability, cloud cover, wind speed/gusts/direction, visibility; the covering hourly sample also serves « now » because the API has no current precipitation chance |
+| `FallbackWeatherSource` | `Estran/Data/FallbackWeatherSource.swift` | WeatherKit first, Open-Meteo when it cannot answer; the substitution is logged, never silent |
+| `WindSeaEstimator` | `Estran/Data/WindSeaEstimator.swift` | fetch-limited SMB relation (Hs, Tp) from the measured wind and a 3 km fetch — the lagoon sea, labelled as an estimate |
+| `Swell.source` | `Packages/EstranCore/…/Conditions.swift` | `.model` / `.windSeaEstimate`, decoded tolerantly so cached and fixture JSON without the key still load |
+| `MarinePolicy` | `Estran/Data/MarinePolicy.swift` | ocean → model, Bassin → `.windSeaEstimate` |
+| UI disclosure | `ConditionsGrid`, `SpotDetailView`, `SwimmingAdvisory.conditionsLine` | « houle estimée · 1 s », « Houle estimée à partir du vent : … », and « houle estimée 0,1 m · eau indisponible » in the swimming line |
+| Tests | `EstranTests/` | **17 app tests**: 11 marine, 5 estimator, 1 smoke (calm sea, 10 m/s over 3 km ≈ 0.39 m / 2.4 s, monotonicity, fetch sensitivity, the estimate is visible in the conditions line) |
+
+**Live run, iPhone 18 Pro / iOS 27.2, `-liveData`, 2026-11-02 15:02**: Arcachon-Eyrac
+answered from real sources — marée basse 17 h 26, vent 12 km/h NE, **houle 0,1 m
+estimée · 1 s**, 15° ensoleillé, verdict « Non — coefficient trop faible », and no
+« Données d'exemple » badge. The sea temperature stayed « eau indisponible », as
+it must: nothing measures it in the Bassin.
+
+**v11 verification run (2026-11-02, macOS host, Xcode 27.2 / iOS 27.2 runtime):**
+build pass, **17 app unit tests**, 2 UI tests, 165 package tests; SwiftLint
+**0/104**; SwiftFormat **0/105**.
 
 ## 9. Open external dependencies
 
