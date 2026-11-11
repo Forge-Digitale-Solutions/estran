@@ -98,6 +98,8 @@ final class AppModel {
     /// The one generation in flight. Cancelled when the decision it describes
     /// is replaced, and never awaited, so a slow model cannot delay a refresh.
     @ObservationIgnored private var reasonTask: Task<Void, Never>?
+    /// `true` once the on-device session was asked to load (M4 prewarm).
+    @ObservationIgnored private var hasPrewarmedReasonSession = false
 
     init(
         provider: any ConditionsProviding = AppModel.defaultProvider(),
@@ -155,6 +157,10 @@ final class AppModel {
 
     @MainActor
     func reload() async {
+        // M4: the on-device session is asked to load on the first activation,
+        // off the critical path. It is a no-op when Apple Intelligence is
+        // unavailable, and it never delays the refresh below.
+        prewarmReasonSessionIfNeeded()
         // Clear the derived state before the await, so no surface can render the
         // previous spot's verdict or windows while the new data loads.
         decision = nil
@@ -163,6 +169,23 @@ final class AppModel {
         overviews = []
         await store.load(spot: selectedSpot, provider: provider)
         refreshDecision()
+    }
+
+    /// Loads the on-device model session once, in the background, so the first
+    /// generated sentence does not pay for it (`LanguageModelSession.prewarm`,
+    /// iOS 26+). Called from the launch path; guarded so a spot change or a
+    /// second activation never starts a second load. Nothing is shown, nothing
+    /// is awaited, and the template sentence stays the floor.
+    @MainActor
+    func prewarmReasonSessionIfNeeded() {
+        guard !hasPrewarmedReasonSession else { return }
+        hasPrewarmedReasonSession = true
+        // A test or preview that injected the template provider has no model to
+        // warm; `prewarm()` itself also checks availability.
+        guard reasonProvider is FoundationModelReasonProvider else { return }
+        Task.detached(priority: .utility) {
+            FoundationModelReasonProvider.prewarm()
+        }
     }
 
     @MainActor

@@ -35,8 +35,13 @@ struct GoTimelineProvider: TimelineProvider {
     static func entry(from snapshot: WidgetSnapshot?) -> GoEntry {
         guard let snapshot else { return .placeholder }
 
+        // Swimming is a risk level, never a verdict (invariant 1): the answer is
+        // the level the app computed, in the same word the small widget shows.
+        // `.unknown` is the fallback only when no advisory travelled with the
+        // snapshot — never a made-up « low ».
         let answer: String = if snapshot.activity == .swimming {
-            SwimmingRiskLevel.unknown.shortTitle
+            snapshot.swimmingAdvisory?.level.shortTitle
+                ?? SwimmingRiskLevel.unknown.shortTitle
         } else if snapshot.isUnavailable {
             "Données indisponibles"
         } else {
@@ -54,7 +59,10 @@ struct GoTimelineProvider: TimelineProvider {
             isUnavailable: snapshot.isUnavailable,
             lines: snapshot.lines,
             metrics: snapshot.metrics,
-            isSampleData: snapshot.isSampleData)
+            isSampleData: snapshot.isSampleData,
+            // The selected activity is carried explicitly: inferring it from
+            // `lines` guessed another activity whenever two answers matched.
+            selectedActivity: snapshot.activity)
     }
 }
 

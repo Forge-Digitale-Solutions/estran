@@ -4,8 +4,10 @@ import WidgetKit
 
 /// Lock Screen inline widget (`accessoryInline`).
 ///
-/// Format: « Pêche : Non · Pluie », « Baignade : courants modérés · Baïnes »,
-/// or « Estran : — · Ouvre l'app » when stale/missing.
+/// One line, shared with the date: « Pêche : Non · Pluie », « Surf : Oui ·
+/// 14 h 00 », « Baignade : courants modérés », or « Estran : — · Ouvre l'app »
+/// when stale/missing. The system truncates rather than wraps here, so each
+/// string is kept inside the ~280 pt the inline slot gets on a 6.3″ iPhone.
 struct GoAccessoryInlineView: View {
     let entry: GoEntry
 
@@ -13,11 +15,14 @@ struct GoAccessoryInlineView: View {
         if entry.isSwimming {
             if entry.isEmpty || entry.isStale {
                 Label(
-                    "Baignade : baïnes · — · Ouvre l'app",
+                    "Baignade : baïnes · —",
                     systemImage: "exclamationmark.triangle.fill")
             } else {
+                // No trailing « · Baïnes »: the level plus the warning glyph
+                // already say it, and the extra segment pushed the line past
+                // the slot (it rendered as « courants modérés ·… »).
                 Label(
-                    "Baignade : courants \(entry.resolvedSwimmingLevel.shortTitle) · Baïnes",
+                    "Baignade : courants \(entry.resolvedSwimmingLevel.shortTitle)",
                     systemImage: "exclamationmark.triangle.fill")
             }
         } else if entry.isEmpty || entry.isStale {
@@ -29,9 +34,25 @@ struct GoAccessoryInlineView: View {
         } else {
             let verdict = entry.isGo ? "Oui" : "Non"
             Label(
-                "\(entry.shortActivityLabel) : \(verdict) · \(entry.detail)",
+                "\(entry.shortActivityLabel) : \(verdict) · \(inlineDetail)",
                 systemImage: entry.activitySymbol)
         }
+    }
+
+    /// The detail, shortened to what fits: a window keeps its start
+    /// (« 14 h 00 à 17 h 30 » → « 14 h 00 »), anything else stays whole.
+    ///
+    /// The end of a window is not a value lost — the rectangular widget and the
+    /// app both show the full range; the inline slot is a glance, not a plan.
+    private var inlineDetail: String {
+        let separator = " à "
+        guard entry.detail.contains(separator),
+              let start = entry.detail.components(separatedBy: separator).first,
+              !start.isEmpty
+        else {
+            return entry.detail
+        }
+        return start
     }
 }
 
