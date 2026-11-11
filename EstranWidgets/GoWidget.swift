@@ -15,11 +15,13 @@ struct GoEntry: TimelineEntry {
     var isGo: Bool = true
     /// Missing data: a visible state, never a plain `Non`.
     var isUnavailable: Bool = false
-    /// The five answers, for the medium widget (frame 04).
+    /// The five answers, for the medium and large widgets (frame 04).
     var lines: [WidgetSnapshot.ActivityLine] = []
     /// Tide, wind, swell, weather, already in French.
     var metrics: [WidgetSnapshot.Metric] = []
     var isSampleData: Bool = false
+    /// Optional explicit activity for previews; inferred from `lines`/`isSwimming` when nil.
+    var selectedActivity: Activity?
 }
 
 struct GoWidgetView: View {
@@ -32,20 +34,67 @@ struct GoWidgetView: View {
 
     @Environment(\.widgetFamily) private var family
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.levelOfDetail) private var levelOfDetail
+
+    private var isAccessoryFamily: Bool {
+        switch family {
+        case .accessoryCircular, .accessoryRectangular, .accessoryInline:
+            true
+        default:
+            false
+        }
+    }
 
     var body: some View {
         Group {
-            if family == .systemMedium, entry.lines.count > 1, !dynamicTypeSize.isAccessibilitySize {
-                mediumBody
-            } else if entry.isSwimming {
-                swimmingBody
-            } else {
-                standardBody
+            switch family {
+            case .accessoryInline:
+                GoAccessoryInlineView(entry: entry)
+            case .accessoryCircular:
+                GoAccessoryCircularView(entry: entry)
+            case .accessoryRectangular:
+                GoAccessoryRectangularView(entry: entry)
+            case .systemLarge:
+                GoWidgetLargeView(entry: entry)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            case .systemMedium:
+                mediumOrFallbackBody
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            default:
+                smallBody
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .containerBackground(for: .widget) {
-            OceanPalette.backgroundGradient
+            if isAccessoryFamily {
+                Color.clear
+            } else {
+                WidgetOceanBackground()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var mediumOrFallbackBody: some View {
+        if !dynamicTypeSize.isAccessibilitySize,
+           !entry.isEmpty,
+           !entry.isStale,
+           entry.lines.count > 1
+        {
+            mediumBody
+        } else {
+            smallBody
+        }
+    }
+
+    @ViewBuilder
+    private var smallBody: some View {
+        if entry.isSwimming {
+            swimmingBody
+        } else if entry.isEmpty || entry.isStale {
+            staleOrEmptySmallBody
+        } else {
+            standardBody
         }
     }
 
@@ -56,22 +105,39 @@ struct GoWidgetView: View {
     private var mediumBody: some View {
         HStack(alignment: .top, spacing: OceanSpacing.sm) {
             VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
-                Label(entry.title, systemImage: "mappin.and.ellipse")
-                    .font(OceanTypography.caption)
-                    .foregroundStyle(OceanPalette.sand)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 4) {
+                    Image(systemName: "mappin.and.ellipse")
+                        .widgetAccentedRenderingMode(.accentedDesaturated)
+                        .font(OceanTypography.caption)
+                        .foregroundStyle(OceanPalette.turquoiseOnGlass)
+                        .widgetAccentable()
+                        .accessibilityHidden(true)
+
+                    Text(entry.title)
+                        .font(OceanTypography.caption)
+                        .foregroundStyle(OceanPalette.sand)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
                 Spacer(minLength: 0)
 
-                Text(entry.answer)
-                    .font(OceanTypography.rounded(size: badgeSize * 0.62))
-                    .foregroundStyle(verdictColor)
-                    .fixedSize(horizontal: false, vertical: true)
+                if entry.isSwimming {
+                    mediumSwimmingColumn
+                } else {
+                    Text(entry.isUnavailable ? "Données indisponibles" : entry.answer)
+                        .font(OceanTypography.rounded(
+                            size: entry.isUnavailable ? badgeSize * 0.42 : badgeSize * 0.62))
+                        .foregroundStyle(entry.verdictColor)
+                        .widgetAccentable()
+                        .fixedSize(horizontal: false, vertical: true)
 
-                Text(entry.detail)
-                    .font(OceanTypography.smallLabel)
-                    .foregroundStyle(OceanPalette.white.opacity(0.8))
-                    .fixedSize(horizontal: false, vertical: true)
+                    if levelOfDetail != .simplified {
+                        Text(entry.detail)
+                            .font(OceanTypography.smallLabel)
+                            .foregroundStyle(OceanPalette.white.opacity(0.85))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -79,80 +145,130 @@ struct GoWidgetView: View {
                 ForEach(entry.lines) { line in
                     HStack(spacing: OceanSpacing.xxs) {
                         Text(line.activity.shortLabel)
-                            .foregroundStyle(OceanPalette.white.opacity(0.85))
+                            .foregroundStyle(OceanPalette.white.opacity(0.88))
                         Spacer(minLength: 0)
-                        Text(line.answer)
-                            .foregroundStyle(color(for: line))
+                        Text(entry.safeLineAnswer(for: line))
+                            .foregroundStyle(entry.lineColor(for: line))
                             .multilineTextAlignment(.trailing)
                     }
                     .font(OceanTypography.smallLabel)
                     .fixedSize(horizontal: false, vertical: true)
                 }
             }
+            .padding(OceanSpacing.xs)
             .frame(maxWidth: .infinity, alignment: .trailing)
+            .widgetGlassCard(minimumRadius: 12)
         }
     }
 
-    /// Never `oui` for swimming, and never green for a `Non`.
-    private var verdictColor: Color {
-        if entry.isSwimming {
-            return OceanPalette.sand
-        }
-        if entry.isUnavailable {
-            return OceanPalette.unavailable
-        }
-        return entry.isGo ? OceanPalette.oui : OceanPalette.non
-    }
+    private var mediumSwimmingColumn: some View {
+        let advisory = entry.resolvedSwimmingAdvisory
+        return VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 3) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .widgetAccentedRenderingMode(.accentedDesaturated)
+                    .font(OceanTypography.smallLabel)
+                    .foregroundStyle(OceanPalette.sand)
+                    .widgetAccentable()
+                    .accessibilityHidden(true)
+                Text("Baignade")
+                    .font(OceanTypography.tabLabel)
+                    .foregroundStyle(OceanPalette.sand)
+            }
 
-    private func color(for line: WidgetSnapshot.ActivityLine) -> Color {
-        if line.activity == .swimming {
-            return line.swimmingLevel.map(OceanPalette.swimmingRisk) ?? OceanPalette.sand
+            Text("Courants : \(advisory.level.shortTitle)")
+                .font(OceanTypography.tabLabel)
+                .foregroundStyle(OceanPalette.swimmingRiskText(advisory.level))
+                .widgetAccentable()
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Baïnes dangereuses toute l'année.")
+                .font(OceanTypography.smallLabel)
+                .foregroundStyle(OceanPalette.white.opacity(0.85))
+                .fixedSize(horizontal: false, vertical: true)
         }
-        if line.isUnavailable {
-            return OceanPalette.unavailable
-        }
-        return line.isGo ? OceanPalette.oui : OceanPalette.non
     }
 
     private var standardBody: some View {
         VStack(alignment: .leading, spacing: OceanSpacing.xs) {
-            Text(entry.title)
-                .font(OceanTypography.caption)
-                .foregroundStyle(OceanPalette.sand)
+            HStack(spacing: 4) {
+                Image(systemName: "mappin.and.ellipse")
+                    .widgetAccentedRenderingMode(.accentedDesaturated)
+                    .font(OceanTypography.caption)
+                    .foregroundStyle(OceanPalette.turquoiseOnGlass)
+                    .widgetAccentable()
+                    .accessibilityHidden(true)
+
+                Text(entry.title)
+                    .font(OceanTypography.caption)
+                    .foregroundStyle(OceanPalette.sand)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             Spacer(minLength: 0)
 
-            Text(entry.answer)
-                .font(OceanTypography.rounded(size: badgeSize))
-                .foregroundStyle(verdictColor)
+            Text(entry.isUnavailable ? "Données indisponibles" : entry.answer)
+                .font(OceanTypography.rounded(
+                    size: entry.isUnavailable ? badgeSize * 0.44 : badgeSize))
+                .foregroundStyle(entry.verdictColor)
+                .widgetAccentable()
+                .fixedSize(horizontal: false, vertical: true)
 
-            Text(entry.detail)
-                .font(OceanTypography.smallLabel)
-                .foregroundStyle(OceanPalette.white.opacity(0.8))
-                .lineLimit(2)
+            if levelOfDetail != .simplified {
+                Text(entry.detail)
+                    .font(OceanTypography.smallLabel)
+                    .foregroundStyle(OceanPalette.white.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var staleOrEmptySmallBody: some View {
+        VStack(alignment: .leading, spacing: OceanSpacing.xs) {
+            Text(entry.title)
+                .font(OceanTypography.caption)
+                .foregroundStyle(OceanPalette.sand)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+
+            Text("—")
+                .font(OceanTypography.rounded(size: badgeSize))
+                .foregroundStyle(OceanPalette.unavailable)
+                .widgetAccentable()
+
+            Text(entry.isStale
+                ? "Données de plus de 2 h · Ouvre l'app"
+                : "Ouvre l'app pour charger les conditions")
+                .font(OceanTypography.smallLabel)
+                .foregroundStyle(OceanPalette.white.opacity(0.85))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
     }
 
     /// No giant Oui, no green: the level, the conditions line, the non-current
     /// blockers, the coast warning and the disclaimer (Z31).
     private var swimmingBody: some View {
-        let advisory = entry.swimmingAdvisory ?? SwimmingAdvisory(
-            level: .unknown,
-            region: .bassin)
+        let advisory = entry.resolvedSwimmingAdvisory
 
         return VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
             Text(entry.title)
                 .font(OceanTypography.caption)
                 .foregroundStyle(OceanPalette.sand)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text("Baignade")
                 .font(OceanTypography.smallLabel)
-                .foregroundStyle(OceanPalette.white.opacity(0.7))
+                .foregroundStyle(OceanPalette.white.opacity(0.75))
 
-            HStack(alignment: .top, spacing: 2) {
+            HStack(alignment: .top, spacing: 3) {
                 Image(systemName: "exclamationmark.triangle.fill")
+                    .widgetAccentedRenderingMode(.accentedDesaturated)
                     .font(OceanTypography.smallLabel)
                     .foregroundStyle(OceanPalette.sand)
+                    .widgetAccentable()
                     .accessibilityHidden(true)
                 Text(advisory.level.widgetWarning(for: advisory.region))
                     .font(OceanTypography.smallLabel)
@@ -160,31 +276,41 @@ struct GoWidgetView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            if let line = advisory.conditionsLine {
-                Text(line)
+            if entry.isStale {
+                Text("Données de plus de 2 h · Ouvre l'app")
                     .font(OceanTypography.smallLabel)
-                    .foregroundStyle(OceanPalette.white.opacity(0.85))
+                    .foregroundStyle(OceanPalette.unavailable)
                     .fixedSize(horizontal: false, vertical: true)
+            } else if levelOfDetail != .simplified {
+                if let line = advisory.conditionsLine {
+                    Text(line)
+                        .font(OceanTypography.smallLabel)
+                        .foregroundStyle(OceanPalette.white.opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if !advisory.notes.isEmpty {
+                    Text(advisory.notes.joined(separator: " · "))
+                        .font(OceanTypography.smallLabel)
+                        .foregroundStyle(OceanPalette.sand)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
-            if !advisory.notes.isEmpty {
-                Text(advisory.notes.joined(separator: " · "))
-                    .font(OceanTypography.smallLabel)
-                    .foregroundStyle(OceanPalette.sand)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Text("Courants : \(advisory.level.shortTitle)")
+            Text("Courants : \(entry.isStale ? "—" : advisory.level.shortTitle)")
                 .font(OceanTypography.smallLabel)
                 .foregroundStyle(OceanPalette.swimmingRiskText(advisory.level))
+                .widgetAccentable()
+                .fixedSize(horizontal: false, vertical: true)
 
             Text(SwimmingRiskLevel.disclaimer)
                 .font(OceanTypography.smallLabel)
-                .foregroundStyle(OceanPalette.white.opacity(0.7))
+                .foregroundStyle(OceanPalette.white.opacity(0.75))
                 .fixedSize(horizontal: false, vertical: true)
 
             Spacer(minLength: 0)
         }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -197,12 +323,68 @@ struct GoWidget: Widget {
         }
         .configurationDisplayName("Estran")
         .description("Le verdict ou le niveau de risque, en un coup d'œil.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies([
+            .systemSmall,
+            .systemMedium,
+            .systemLarge,
+            .accessoryRectangular,
+            .accessoryCircular,
+            .accessoryInline
+        ])
+        .supportedMountingStyles([.elevated, .recessed])
     }
 }
 
-#Preview(as: .systemSmall) {
+#Preview("Small", as: .systemSmall) {
     GoWidget()
 } timeline: {
+    GoEntry.sample
+    GoEntry.sampleSwimming
+    GoEntry.sampleStale
+    GoEntry.placeholder
+}
+
+#Preview("Medium", as: .systemMedium) {
+    GoWidget()
+} timeline: {
+    GoEntry.sample
+    GoEntry.sampleSwimming
+    GoEntry.sampleStale
+    GoEntry.placeholder
+}
+
+#Preview("Large", as: .systemLarge) {
+    GoWidget()
+} timeline: {
+    GoEntry.sample
+    GoEntry.sampleSwimming
+    GoEntry.sampleStale
+    GoEntry.placeholder
+}
+
+#Preview("Rectangular", as: .accessoryRectangular) {
+    GoWidget()
+} timeline: {
+    GoEntry.sampleNoGo
+    GoEntry.sampleSwimming
+    GoEntry.sampleStale
+    GoEntry.placeholder
+}
+
+#Preview("Circular", as: .accessoryCircular) {
+    GoWidget()
+} timeline: {
+    GoEntry.sample
+    GoEntry.sampleSwimming
+    GoEntry.sampleStale
+    GoEntry.placeholder
+}
+
+#Preview("Inline", as: .accessoryInline) {
+    GoWidget()
+} timeline: {
+    GoEntry.sampleNoGo
+    GoEntry.sampleSwimming
+    GoEntry.sampleStale
     GoEntry.placeholder
 }
