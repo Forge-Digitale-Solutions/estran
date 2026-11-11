@@ -20,6 +20,16 @@ if [[ -z "${ESTRAN_DESTINATION:-}" ]]; then
 import json, sys
 
 devices = json.load(sys.stdin)["devices"]
+# Prefer the reference device the mockups were matched on: a foldable or an
+# unusual form factor can render the TabView without a tab bar and break the UI
+# tour for reasons that are not regressions.
+for runtime in sorted(devices, reverse=True):
+    if "iOS" not in runtime:
+        continue
+    for device in devices[runtime]:
+        if device["name"] == "iPhone 18 Pro" and device.get("isAvailable", True):
+            print(device["udid"])
+            sys.exit(0)
 for runtime in sorted(devices, reverse=True):
     if "iOS" not in runtime:
         continue
@@ -49,6 +59,7 @@ fi
 
 xcodebuild \
     -project Estran.xcodeproj \
+    -derivedDataPath "$ROOT_DIR/build/DerivedData" \
     -scheme Estran \
     -configuration Debug \
     -destination "$DESTINATION" \
@@ -56,6 +67,7 @@ xcodebuild \
 
 xcodebuild \
     -project Estran.xcodeproj \
+    -derivedDataPath "$ROOT_DIR/build/DerivedData" \
     -scheme Estran \
     -configuration Debug \
     -destination "$DESTINATION" \
@@ -78,6 +90,7 @@ fi
 if [[ "${1:-}" == "--archive" ]]; then
     xcodebuild \
         -project Estran.xcodeproj \
+    -derivedDataPath "$ROOT_DIR/build/DerivedData" \
         -scheme Estran \
         -configuration Release \
         -destination "generic/platform=iOS" \
