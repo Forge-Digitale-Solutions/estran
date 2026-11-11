@@ -40,6 +40,7 @@ struct ActivityOverviewList: View {
 
 private struct ActivityOverviewRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let overview: ActivityOverview
     let timeZone: TimeZone
@@ -55,6 +56,9 @@ private struct ActivityOverviewRow: View {
             .frame(minHeight: OceanGlass.minimumTapHeight, alignment: .leading)
             .accessibilityElement(children: .combine)
             .accessibilityLabel(answer.spoken)
+            .animation(
+                OceanGlass.animation(.smooth, reduceMotion: reduceMotion),
+                value: answer.text)
     }
 
     @ViewBuilder
@@ -82,6 +86,7 @@ private struct ActivityOverviewRow: View {
             Image(systemName: overview.activity.symbolName)
                 .font(OceanTypography.body)
                 .foregroundStyle(OceanPalette.sand)
+                .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
                 .accessibilityHidden(true)
 
             Text(overview.activity.displayName)
@@ -96,8 +101,10 @@ private struct ActivityOverviewRow: View {
             Text(answer.text)
                 .multilineTextAlignment(reflowed ? .leading : .trailing)
                 .fixedSize(horizontal: false, vertical: true)
+                .contentTransition(reduceMotion ? .identity : .numericText())
         } icon: {
             Image(systemName: answer.symbolName)
+                .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
                 .accessibilityHidden(true)
         }
         .font(OceanTypography.body)
@@ -211,7 +218,7 @@ private struct ActivityRowAnswer {
             timeZone: PreviewData.timeZone)
             .padding(OceanSpacing.md)
     }
-    .background(OceanPalette.backgroundGradient.ignoresSafeArea())
+    .background { OceanBackdrop() }
 }
 
 /// Five hard-coded rows — a `Oui` with a window, a `Non`, an unavailable state,

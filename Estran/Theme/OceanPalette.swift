@@ -30,6 +30,10 @@ enum OceanPalette {
     /// Green as 11–17 pt text on glass: `oui` measures 3.30:1 there, this
     /// 4.67:1 at the audit's 15 % model and 6.22:1 on the sampled card.
     static let ouiOnGlass = Color(hex: 0x7BE495)
+    /// Permanent navy scrim laid behind glass cards over map tiles (`SpotsView`),
+    /// where the raster backdrop is brighter than the ocean gradient
+    /// (`docs/accessibility/settings-pass-2026-11-11.md` §6 B1/B2).
+    static let mapGlassScrimOpacity: Double = 0.45
 
     /// Colour for a swimming risk level. Never `oui`: swimming has no green.
     static func swimmingRisk(_ level: SwimmingRiskLevel) -> Color {

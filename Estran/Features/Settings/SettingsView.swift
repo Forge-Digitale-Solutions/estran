@@ -76,7 +76,8 @@ struct SettingsView: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(OceanPalette.backgroundGradient.ignoresSafeArea())
+            .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
+            .background { OceanBackdrop() }
             .navigationTitle("Réglages")
             .toolbarColorScheme(.dark, for: .navigationBar)
             .fullScreenCover(isPresented: $showsActivityPicker) {

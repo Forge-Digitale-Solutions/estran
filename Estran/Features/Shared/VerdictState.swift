@@ -50,7 +50,7 @@ enum VerdictState: Equatable {
     /// keeps the vivid Figma hues, which only clear 4.5:1 as large text.
     var badgeColor: Color {
         switch self {
-        case .go: OceanPalette.oui
+        case .go: OceanPalette.ouiOnGlass
         case .noGo: OceanPalette.nonOnGlass
         case .unavailable: OceanPalette.unavailable
         }

@@ -21,6 +21,8 @@ struct AnswerCard: View {
     @ScaledMetric(relativeTo: .largeTitle) private var badgeSize: CGFloat =
         OceanTypography.goBadgeBaseSize
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     private var state: VerdictState {
         VerdictState(decision: decision)
     }
@@ -37,6 +39,7 @@ struct AnswerCard: View {
                 Image(systemName: state.symbolName)
                     .font(.system(size: wordSize * 0.4, weight: .semibold))
                     .foregroundStyle(state.color)
+                    .modifier(VerdictSymbolMotion(value: state, reduceMotion: reduceMotion))
                     .accessibilityHidden(true)
 
                 Text(state.word)
@@ -125,6 +128,30 @@ struct AnswerCard: View {
         case .unavailable:
             return "Données indisponibles pour \(activity.displayName). "
                 + (detail ?? "")
+        }
+    }
+}
+
+// MARK: - Verdict motion
+
+/// Glyph motion for a verdict change (`docs/design/ios27-opportunities.md`,
+/// item 4).
+///
+/// The `checkmark` / `xmark` / `triangle` is replaced by the system morph and
+/// bounces once on the new state; the word beside it changes word, not symbol,
+/// so nothing else is animated. Under Reduce Motion nothing is applied: the
+/// glyph swaps instantly, exactly as a still frame would show it.
+private struct VerdictSymbolMotion: ViewModifier {
+    let value: VerdictState
+    let reduceMotion: Bool
+
+    func body(content: Content) -> some View {
+        if reduceMotion {
+            content
+        } else {
+            content
+                .contentTransition(.symbolEffect(.replace))
+                .symbolEffect(.bounce, value: value)
         }
     }
 }

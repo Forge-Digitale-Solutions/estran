@@ -86,11 +86,15 @@ struct GlassAppearance: Equatable, Sendable {
     /// `navyInk` backing opacity under the glass; `0` when nothing is drawn.
     let backingOpacity: Double
 
-    init(reduceTransparency: Bool, increaseContrast: Bool) {
+    init(
+        reduceTransparency: Bool,
+        increaseContrast: Bool,
+        permanentBacking: Bool = false)
+    {
         // The fill and the backing are exclusive: an opaque card has nothing
         // left to darken, and glass under a full backing is no longer glass.
         usesSolidFill = reduceTransparency
-        backingOpacity = (increaseContrast && !reduceTransparency)
+        backingOpacity = ((increaseContrast || permanentBacking) && !reduceTransparency)
             ? Self.contrastBackingOpacity
             : 0
         if reduceTransparency {
@@ -116,6 +120,9 @@ struct GlassAppearance: Equatable, Sendable {
 
 private struct OceanGlassSurfaceModifier<Surface: InsettableShape>: ViewModifier {
     let shape: Surface
+    let permanentBacking: Bool
+    let tint: Color?
+    let isInteractive: Bool
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
@@ -123,22 +130,33 @@ private struct OceanGlassSurfaceModifier<Surface: InsettableShape>: ViewModifier
     private var appearance: GlassAppearance {
         GlassAppearance(
             reduceTransparency: reduceTransparency,
-            increaseContrast: colorSchemeContrast == .increased)
+            increaseContrast: colorSchemeContrast == .increased,
+            permanentBacking: permanentBacking)
+    }
+
+    private var resolvedGlass: Glass {
+        let base: Glass = if let tint {
+            Glass.regular.tint(tint)
+        } else {
+            .regular
+        }
+        return isInteractive ? base.interactive() : base
     }
 
     func body(content: Content) -> some View {
         let state = appearance
+        let glass = resolvedGlass
         Group {
             if state.usesSolidFill {
                 content
-                    .background(OceanPalette.navyInk, in: shape)
-            } else if state.backingOpacity > 0 {
+                    .background(tint ?? OceanPalette.navyInk, in: shape)
+            } else if state.backingOpacity > 0, tint == nil {
                 content
                     .background(OceanPalette.navyInk.opacity(state.backingOpacity), in: shape)
-                    .glassEffect(.regular, in: shape)
+                    .glassEffect(glass, in: shape)
             } else {
                 content
-                    .glassEffect(.regular, in: shape)
+                    .glassEffect(glass, in: shape)
             }
         }
         .overlay {
@@ -152,13 +170,41 @@ private struct OceanGlassSurfaceModifier<Surface: InsettableShape>: ViewModifier
 }
 
 extension View {
-    func oceanGlassCard(cornerRadius: CGFloat = OceanGlass.cardCornerRadius) -> some View {
+    func oceanGlassCard(
+        cornerRadius: CGFloat = OceanGlass.cardCornerRadius,
+        permanentBacking: Bool = false) -> some View
+    {
         modifier(
             OceanGlassSurfaceModifier(
-                shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)))
+                shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous),
+                permanentBacking: permanentBacking,
+                tint: nil,
+                isInteractive: false))
     }
 
-    func oceanGlassCapsule() -> some View {
-        modifier(OceanGlassSurfaceModifier(shape: Capsule(style: .continuous)))
+    func oceanGlassCapsule(
+        tinting tint: Color? = nil,
+        interactive isInteractive: Bool = false) -> some View
+    {
+        modifier(
+            OceanGlassSurfaceModifier(
+                shape: Capsule(style: .continuous),
+                permanentBacking: false,
+                tint: tint,
+                isInteractive: isInteractive))
+    }
+
+    /// Shared Liquid Glass capsule styling for interactive segmented chips
+    /// (`SpotSwitcher`, `ActivitySegmentedControl`). Routes both selected
+    /// (white-tinted) and unselected chips through `GlassAppearance` so Reduce
+    /// Transparency (`navyInk` / `white` solid fill) and Increase Contrast
+    /// (45 % `navyInk` backing + 1.5 pt border) reach them (`settings-pass` §5.1).
+    func oceanGlassChip(
+        isSelected: Bool,
+        isInteractive: Bool = true) -> some View
+    {
+        oceanGlassCapsule(
+            tinting: isSelected ? OceanPalette.white : nil,
+            interactive: isInteractive)
     }
 }

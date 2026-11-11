@@ -72,16 +72,15 @@ struct ConditionTile: View {
     /// sentence, so the combined element cannot rely on it alone.
     let spoken: String
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
             Image(systemName: icon)
                 .font(OceanTypography.body)
                 .foregroundStyle(OceanPalette.sand)
                 .accessibilityHidden(true)
-            Text(value)
-                .font(OceanTypography.bodyEmphasized)
-                .foregroundStyle(OceanPalette.white)
-                .fixedSize(horizontal: false, vertical: true)
+            valueText
             Text(label)
                 .font(OceanTypography.smallLabel)
                 .foregroundStyle(OceanPalette.white.opacity(0.75))
@@ -93,5 +92,30 @@ struct ConditionTile: View {
         .oceanGlassCard(cornerRadius: OceanGlass.tileCornerRadius)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(spoken)
+    }
+
+    /// The measurement, rolled like an instrument dial when it changes.
+    ///
+    /// Only a value that carries a digit is animated: « — » is a missing
+    /// measurement, not a zero, and rolling it against a number would invent a
+    /// journey through `0` (`AGENTS.md` invariant 3). Under Reduce Motion the
+    /// new value lands in one frame.
+    @ViewBuilder
+    private var valueText: some View {
+        let text = Text(value)
+            .font(OceanTypography.bodyEmphasized)
+            .foregroundStyle(OceanPalette.white)
+            .fixedSize(horizontal: false, vertical: true)
+        if value.contains(where: \.isNumber) {
+            text
+                .contentTransition(.numericText())
+                .animation(
+                    OceanGlass.animation(
+                        .spring(response: 0.38, dampingFraction: 0.9),
+                        reduceMotion: reduceMotion),
+                    value: value)
+        } else {
+            text
+        }
     }
 }

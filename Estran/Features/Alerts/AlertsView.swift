@@ -32,7 +32,8 @@ struct AlertsView: View {
                 .padding(.top, OceanSpacing.sm)
                 .padding(.bottom, OceanSpacing.xxl)
             }
-            .background(OceanPalette.backgroundGradient.ignoresSafeArea())
+            .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
+            .background { OceanBackdrop() }
             .navigationBarTitleDisplayMode(.inline)
             .onAppear { refreshAuthorizationStatus() }
         }

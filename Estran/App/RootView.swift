@@ -5,6 +5,8 @@ import SwiftUI
 struct RootView: View {
     @State private var app = AppModel()
     @State private var showsActivityPicker = false
+    @State private var showsScreenshotDetail = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// First launch only: the activity picker introduces the five activities
     /// (Figma frame 03). Dismissing it without choosing is allowed — the Home
@@ -19,27 +21,27 @@ struct RootView: View {
                 get: { app.selectedTab },
                 set: { app.select(tab: $0) }))
         {
-            HomeView()
-                .tabItem { Label(AppTab.now.title, systemImage: AppTab.now.symbolName) }
-                .tag(AppTab.now)
-
-            SpotsView()
-                .tabItem { Label(AppTab.spots.title, systemImage: AppTab.spots.symbolName) }
-                .tag(AppTab.spots)
-
-            AlertsView()
-                .tabItem { Label(AppTab.alerts.title, systemImage: AppTab.alerts.symbolName) }
-                .tag(AppTab.alerts)
-
-            SettingsView()
-                .tabItem { Label(AppTab.settings.title, systemImage: AppTab.settings.symbolName) }
-                .tag(AppTab.settings)
+            Tab(AppTab.now.title, systemImage: AppTab.now.symbolName, value: AppTab.now) {
+                HomeView()
+            }
+            Tab(AppTab.spots.title, systemImage: AppTab.spots.symbolName, value: AppTab.spots) {
+                SpotsView()
+            }
+            Tab(AppTab.alerts.title, systemImage: AppTab.alerts.symbolName, value: AppTab.alerts) {
+                AlertsView()
+            }
+            Tab(AppTab.settings.title, systemImage: AppTab.settings.symbolName, value: AppTab.settings) {
+                SettingsView()
+            }
         }
+        .tabBarMinimizeBehavior(reduceMotion ? .never : .onScrollDown)
+        .modifier(PrefersTabBarCompressionModifier())
         .environment(app)
         .tint(OceanPalette.turquoise)
         .preferredColorScheme(.dark)
         .task {
             await app.reload()
+            applyScreenshotLaunchArguments()
         }
         // `onChange` rather than the line after `await app.reload()`: the picker
         // needs the loaded overviews, and a phase change is the reliable signal
@@ -55,6 +57,30 @@ struct RootView: View {
                 timeZone: app.selectedSpot.timezone,
                 onSelect: { app.select(activity: $0) })
         }
+        .fullScreenCover(isPresented: $showsScreenshotDetail) {
+            NavigationStack {
+                SpotDetailView()
+            }
+            .environment(app)
+            .preferredColorScheme(.dark)
+        }
+    }
+
+    /// Simulator screenshot helpers (`-estranTab`, `-estranOpenDetail`). No-ops
+    /// in normal launches; the integrator's UI tests do not depend on them.
+    private func applyScreenshotLaunchArguments() {
+        let args = ProcessInfo.processInfo.arguments
+        if let index = args.firstIndex(of: "-estranTab"), args.index(after: index) < args.endIndex {
+            switch args[args.index(after: index)] {
+            case "spots": app.select(tab: .spots)
+            case "alerts": app.select(tab: .alerts)
+            case "settings": app.select(tab: .settings)
+            default: break
+            }
+        }
+        if args.contains("-estranOpenDetail") {
+            showsScreenshotDetail = true
+        }
     }
 
     /// One shot, first launch only, once the answers exist. Dismissing without
@@ -64,6 +90,18 @@ struct RootView: View {
         guard !hasChosenActivity, !app.overviews.isEmpty, !showsActivityPicker else { return }
         hasChosenActivity = true
         showsActivityPicker = true
+    }
+}
+
+/// iOS 27.1 coordinates top toolbar and bottom tab bar compression. Deployment
+/// is 27.0, so the call is gated; skip silently on 27.0 runtimes.
+private struct PrefersTabBarCompressionModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 27.1, *) {
+            content.toolbarVerticalCompressionBehavior(.prefersTabBar)
+        } else {
+            content
+        }
     }
 }
 

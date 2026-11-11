@@ -13,26 +13,38 @@ import SwiftUI
 struct SpotDetailView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: OceanSpacing.lg) {
-                header
-                content
-                if case .ready = app.store.phase, app.store.conditions != nil {
-                    AlertOptInToggle()
-                        .padding(OceanSpacing.md)
-                        .oceanGlassCard(cornerRadius: OceanGlass.cardCornerRadius)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: OceanSpacing.lg) {
+                    header
+                    content
+                    if case .ready = app.store.phase, app.store.conditions != nil {
+                        AlertOptInToggle()
+                            .padding(OceanSpacing.md)
+                            .oceanGlassCard(cornerRadius: OceanGlass.cardCornerRadius)
+                            .spotDetailScrollTransition(reduceMotion: reduceMotion)
+                    }
+                    attribution
+                        .id("spot.detail.bottom")
                 }
-                attribution
+                .padding(.horizontal, OceanSpacing.md)
+                .padding(.top, OceanSpacing.sm)
+                .padding(.bottom, OceanSpacing.xxl)
             }
-            .padding(.horizontal, OceanSpacing.md)
-            .padding(.top, OceanSpacing.sm)
-            .padding(.bottom, OceanSpacing.xxl)
+            .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
+            .background { OceanBackdrop() }
+            .navigationBarTitleDisplayMode(.inline)
+            .accessibilityIdentifier("spot.detail")
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-estranScrollDetailBottom")
+                else { return }
+                try? await Task.sleep(for: .milliseconds(600))
+                proxy.scrollTo("spot.detail.bottom", anchor: .bottom)
+            }
         }
-        .background(OceanPalette.backgroundGradient.ignoresSafeArea())
-        .navigationBarTitleDisplayMode(.inline)
-        .accessibilityIdentifier("spot.detail")
     }
 
     // MARK: - Header
@@ -94,8 +106,10 @@ struct SpotDetailView: View {
         switch app.store.phase {
         case .idle, .loading:
             LoadingDetailCard()
+                .spotDetailScrollTransition(reduceMotion: reduceMotion)
         case let .unavailable(message):
             UnavailableDetailCard(message: message)
+                .spotDetailScrollTransition(reduceMotion: reduceMotion)
         case .ready:
             if let conditions = app.store.conditions {
                 TideChartCard(
@@ -107,12 +121,16 @@ struct SpotDetailView: View {
                     timeZone: app.selectedSpot.timezone,
                     now: conditions.at,
                     accessibilitySentence: chartSentence(conditions))
+                    .spotDetailScrollTransition(reduceMotion: reduceMotion)
                 metrics(conditions)
+                    .spotDetailScrollTransition(reduceMotion: reduceMotion)
                 ActivityOverviewList(
                     overviews: app.overviews,
                     timeZone: app.selectedSpot.timezone)
+                    .spotDetailScrollTransition(reduceMotion: reduceMotion)
             } else {
                 UnavailableDetailCard(message: "Les données sont indisponibles pour ce spot.")
+                    .spotDetailScrollTransition(reduceMotion: reduceMotion)
             }
         }
     }
@@ -202,6 +220,24 @@ struct SpotDetailView: View {
             parts.append(line)
         }
         return parts.joined(separator: ". ") + "."
+    }
+}
+
+// MARK: - Scroll choreography
+
+private extension View {
+    /// Subtle depth entrance on lower glass cards. Identity under Reduce Motion.
+    @ViewBuilder
+    func spotDetailScrollTransition(reduceMotion: Bool) -> some View {
+        if reduceMotion {
+            scrollTransition(.identity) { content, _ in content }
+        } else {
+            scrollTransition(.animated(.smooth)) { content, phase in
+                content
+                    .opacity(phase.isIdentity ? 1 : 0.88)
+                    .scaleEffect(phase.isIdentity ? 1 : 0.97)
+            }
+        }
     }
 }
 

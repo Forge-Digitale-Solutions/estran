@@ -9,6 +9,16 @@ import SwiftUI
 struct HomeView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Shared by the chips' droplet and the answer card, so the two morphs
+    /// belong to the same glass rendering pass.
+    @Namespace private var glassNamespace
+
+    /// One identity for the answer area in both of its shapes: switching to or
+    /// from Baignade changes what the card says, not which glass is on screen,
+    /// so the surface materialises instead of popping.
+    private static let answerGlassID = "answer-card"
 
     var body: some View {
         NavigationStack {
@@ -26,6 +36,17 @@ struct HomeView: View {
                                 unavailable: app.unavailableActivities,
                                 onSelect: { app.select(activity: $0) })
                             answerSection
+                                .glassEffectID(Self.answerGlassID, in: glassNamespace)
+                                .glassEffectTransition(answerTransition)
+                                // The morph is a glass transition, so the
+                                // selection itself has to be animated here:
+                                // nothing upstream wraps the change in
+                                // `withAnimation`. Reduce Motion passes `nil`.
+                                .animation(
+                                    OceanGlass.animation(
+                                        .spring(response: 0.45, dampingFraction: 0.86),
+                                        reduceMotion: reduceMotion),
+                                    value: app.activity)
                         }
                     }
                     // Swimming has no "good window": it is a risk level, not a verdict.
@@ -51,10 +72,21 @@ struct HomeView: View {
                 .padding(.top, OceanSpacing.sm)
                 .padding(.bottom, OceanSpacing.xxl)
             }
-            .background(OceanPalette.backgroundGradient.ignoresSafeArea())
+            .background { OceanBackdrop() }
+            // The bar is hidden, so cards pass under the status bar and above
+            // the floating tab bar: the soft pocket keeps both edges legible
+            // (`docs/design/ios27-opportunities.md`, item 6). The system turns
+            // it into an opaque bar under Reduce Transparency by itself.
+            .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
         }
+    }
+
+    /// `.identity` under Reduce Motion: the card still changes, the glass does
+    /// not travel or dissolve.
+    private var answerTransition: GlassEffectTransition {
+        reduceMotion ? .identity : .materialize
     }
 
     /// Spot pill and the prototype badge, inside the scroll content.

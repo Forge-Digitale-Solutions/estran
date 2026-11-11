@@ -9,9 +9,25 @@ import SwiftUI
 /// horizontal hunt. Each chip is one VoiceOver element; an unavailable activity
 /// says so as its value and carries an icon, never a colour-only cue.
 ///
-/// The chips are real iOS 27 glass (`glassEffect` inside a
-/// `GlassEffectContainer`), so adjacent pills merge as the system does. Every
-/// chip is at least 44 pt tall (early M3 review, points 1 and 5).
+/// The chips are interactive iOS 27 glass: every pill is
+/// `Glass.regular.interactive()`, so it deflects light under the finger, and the
+/// whole bar is one `GlassEffectContainer`. The selected pill is a **droplet**:
+/// it carries one fixed `glassEffectID` whichever chip is selected, so the white
+/// glass stretches from one chip to the next instead of switching on and off
+/// (`docs/design/ios27-opportunities.md`, item 1). Every chip is at least 44 pt
+/// tall (early M3 review, points 1 and 5).
+///
+/// ## Motion and contrast
+///
+/// - The selection animation runs on the glass only. The label carries
+///   `.animation(nil, value: selection)` so it snaps from white to `ink` instead
+///   of crossing a ~1.3:1 grey while the tint fades (accessibility report §5.2).
+/// - Reduce Motion replaces the droplet's matched geometry with `.identity`: the
+///   selection is still visible, it simply does not travel.
+/// - Reduce Transparency and Increase Contrast reach the chips through
+///   `oceanGlassChip(isSelected:)`, the shared tint-aware surface: opaque
+///   `navyInk` (or the white pill) with a border, and the 45 % backing plus the
+///   1.5 pt border under Increase Contrast (accessibility report §5.1).
 struct ActivitySegmentedControl: View {
     let selection: Activity
     let unavailable: Set<Activity>
@@ -19,6 +35,13 @@ struct ActivitySegmentedControl: View {
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var glassNamespace
+
+    /// The single identity the selected pill carries on every chip. Two glass
+    /// effects that share an identity inside one `GlassEffectContainer` morph
+    /// into each other, which is what makes the selection look like one droplet
+    /// of water moving along the bar rather than five pills blinking.
+    private static let selectionGlassID = "activity-selection"
 
     var body: some View {
         if dynamicTypeSize >= .accessibility1 {
@@ -41,16 +64,16 @@ struct ActivitySegmentedControl: View {
                 .padding(OceanSpacing.xxs)
             }
         }
+        // The only animated value of the control is the selection, and it is
+        // animated here so the glass travels. `nil` under Reduce Motion makes
+        // the change land on its final frame in one pass.
+        .animation(
+            OceanGlass.animation(
+                .spring(response: 0.42, dampingFraction: 0.82),
+                reduceMotion: reduceMotion),
+            value: selection)
+        .sensoryFeedback(.selection, trigger: selection)
         .accessibilityElement(children: .contain)
-        // The control declares no animation of its own: a selection is a tint
-        // change on the glass. Glass in a container can still morph when the
-        // transaction carries an animation, so under Reduce Motion the
-        // transaction is stripped. With the flag off it is left untouched.
-        .transaction { transaction in
-            guard reduceMotion else { return }
-            transaction.animation = nil
-            transaction.disablesAnimations = true
-        }
     }
 
     private var menu: some View {
@@ -86,8 +109,8 @@ struct ActivitySegmentedControl: View {
             .padding(.horizontal, OceanSpacing.sm)
             .padding(.vertical, OceanSpacing.xs)
             .frame(maxWidth: .infinity, minHeight: OceanGlass.minimumTapHeight)
+            .oceanGlassCapsule(interactive: true)
         }
-        .oceanGlassCapsule()
         .accessibilityLabel("Activité")
         .accessibilityValue(menuValue)
     }
@@ -106,39 +129,59 @@ struct ActivitySegmentedControl: View {
     private func chip(for activity: Activity) -> some View {
         let isSelected = activity == selection
         let isUnavailable = unavailable.contains(activity)
-        let glass: Glass = isSelected
-            ? .regular.tint(OceanPalette.white)
-            : .regular
 
         return Button {
             onSelect(activity)
         } label: {
-            HStack(spacing: OceanSpacing.xxs) {
-                Text(activity.shortLabel)
-                    .font(OceanTypography.button)
-                    .fixedSize(horizontal: false, vertical: true)
-                if activity == .swimming {
-                    // Permanent warning: swimming is never a plain activity.
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(OceanTypography.smallLabel)
-                        .accessibilityHidden(true)
-                } else if isUnavailable {
-                    Image(systemName: "exclamationmark.circle.fill")
-                        .font(OceanTypography.smallLabel)
-                        .accessibilityHidden(true)
-                }
-            }
-            .foregroundStyle(isSelected ? OceanPalette.ink : OceanPalette.white)
-            .padding(.horizontal, OceanSpacing.sm)
-            .padding(.vertical, OceanSpacing.xs)
-            .frame(minHeight: OceanGlass.minimumTapHeight)
-            .contentShape(Capsule(style: .continuous))
-            .glassEffect(glass, in: Capsule(style: .continuous))
+            chipLabel(for: activity, isSelected: isSelected, isUnavailable: isUnavailable)
         }
         .buttonStyle(.plain)
+        // One identity for the selected pill on every chip: the droplet morphs
+        // from the old chip to the new one. The unselected chips keep their own
+        // identity so they never merge with the selection. Reduce Motion swaps
+        // matched geometry for `.identity`, so the glass is repainted in place.
+        .glassEffectID(
+            isSelected ? Self.selectionGlassID : activity.rawValue,
+            in: glassNamespace)
+        .glassEffectTransition(reduceMotion ? .identity : .matchedGeometry)
         .accessibilityLabel(activity.displayName)
         .accessibilityValue(accessibilityValue(for: activity, isUnavailable: isUnavailable))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : [.isButton])
+    }
+
+    private func chipLabel(
+        for activity: Activity,
+        isSelected: Bool,
+        isUnavailable: Bool) -> some View
+    {
+        HStack(spacing: OceanSpacing.xxs) {
+            Text(activity.shortLabel)
+                .font(OceanTypography.button)
+                .fixedSize(horizontal: false, vertical: true)
+            if activity == .swimming {
+                // Permanent warning: swimming is never a plain activity.
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(OceanTypography.smallLabel)
+                    .accessibilityHidden(true)
+            } else if isUnavailable {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .font(OceanTypography.smallLabel)
+                    .accessibilityHidden(true)
+            }
+        }
+        .foregroundStyle(isSelected ? OceanPalette.ink : OceanPalette.white)
+        // §5.2: the glass may cross-fade, the label must not. Interpolating
+        // white → ink over light glass passes through ~1.3:1 grey; with no
+        // animation on this subtree the text snaps to its final colour.
+        .animation(nil, value: selection)
+        .padding(.horizontal, OceanSpacing.sm)
+        .padding(.vertical, OceanSpacing.xs)
+        .frame(minHeight: OceanGlass.minimumTapHeight)
+        .contentShape(Capsule(style: .continuous))
+        // The selected pill stays white in every look, so selection is never
+        // carried by glass alone. `oceanGlassChip` keeps the app-owned Reduce
+        // Transparency and Increase Contrast looks (accessibility report §5.1).
+        .oceanGlassChip(isSelected: isSelected)
     }
 
     private func accessibilityValue(for activity: Activity, isUnavailable: Bool) -> String {

@@ -17,6 +17,8 @@ struct NextWindowCard: View {
     let timeZone: TimeZone
     let reference: Date
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         VStack(alignment: .leading, spacing: OceanSpacing.xs) {
             Label(headline, systemImage: isUnavailable ? "exclamationmark.triangle" : "clock")
@@ -29,10 +31,11 @@ struct NextWindowCard: View {
                     .foregroundStyle(OceanPalette.white)
                     .fixedSize(horizontal: false, vertical: true)
             } else if let primary {
-                Text(primary)
+                windowText(primary)
                     .font(OceanTypography.bodyEmphasized)
                     .foregroundStyle(OceanPalette.white)
                     .fixedSize(horizontal: false, vertical: true)
+                    .animation(windowAnimation(primary), value: primary)
             } else {
                 Text("Aucun créneau dans les 48 prochaines heures.")
                     .font(OceanTypography.body)
@@ -41,16 +44,32 @@ struct NextWindowCard: View {
             }
 
             if !isUnavailable, let secondary {
-                Text(secondary)
+                windowText(secondary)
                     .font(OceanTypography.caption)
                     .foregroundStyle(OceanPalette.white.opacity(0.8))
                     .fixedSize(horizontal: false, vertical: true)
+                    .animation(windowAnimation(secondary), value: secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(OceanSpacing.md)
         .oceanGlassCard(cornerRadius: OceanGlass.cardCornerRadius)
         .accessibilityElement(children: .combine)
+    }
+
+    /// A window is a pair of clock times: the digits roll when the window moves,
+    /// which reads as a time change rather than a jump cut. Reduce Motion passes
+    /// `nil` and the text lands on the new frame directly.
+    private func windowText(_ text: String) -> some View {
+        Text(text)
+            .contentTransition(.numericText())
+    }
+
+    private func windowAnimation(_ text: String) -> Animation? {
+        guard text.contains(where: \.isNumber) else { return nil }
+        return OceanGlass.animation(
+            .spring(response: 0.38, dampingFraction: 0.9),
+            reduceMotion: reduceMotion)
     }
 
     private var headline: String {

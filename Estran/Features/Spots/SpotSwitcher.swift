@@ -17,7 +17,13 @@ struct SpotSwitcher: View {
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityPrefersCrossFadeTransitions) private var prefersCrossFade
+    @Namespace private var glassNamespace
     @State private var announced = false
+
+    private var disablesMorphing: Bool {
+        reduceMotion || prefersCrossFade
+    }
 
     var body: some View {
         Group {
@@ -27,6 +33,7 @@ struct SpotSwitcher: View {
                 chips
             }
         }
+        .sensoryFeedback(.selection, trigger: selection.id)
         .onAppear {
             guard !announced else { return }
             announced = true
@@ -49,15 +56,15 @@ struct SpotSwitcher: View {
             .padding(OceanSpacing.xs)
         }
         .animation(
-            reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.85),
+            OceanGlass.animation(
+                .spring(response: 0.45, dampingFraction: 0.85),
+                reduceMotion: disablesMorphing),
             value: selection.id)
     }
 
     private func chip(for spot: Spot) -> some View {
         let isSelected = spot.id == selection.id
-        let glass: Glass = isSelected
-            ? .regular.tint(OceanPalette.white)
-            : .regular
+        let morphID = isSelected ? "selected-spot-chip" : spot.id
 
         return Button {
             onSelect(spot)
@@ -72,11 +79,14 @@ struct SpotSwitcher: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .foregroundStyle(isSelected ? OceanPalette.ink : OceanPalette.white)
+            .animation(nil, value: selection.id)
             .padding(.horizontal, OceanSpacing.sm)
             .padding(.vertical, OceanSpacing.xs)
             .frame(maxWidth: .infinity, minHeight: OceanGlass.minimumTapHeight)
             .contentShape(Capsule(style: .continuous))
-            .glassEffect(glass, in: Capsule(style: .continuous))
+            .oceanGlassChip(isSelected: isSelected)
+            .glassEffectID(morphID, in: glassNamespace)
+            .glassEffectTransition(disablesMorphing ? .identity : .matchedGeometry)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(spot.name)
@@ -110,7 +120,7 @@ struct SpotSwitcher: View {
             .padding(OceanSpacing.sm)
             .frame(minHeight: OceanGlass.minimumTapHeight)
         }
-        .oceanGlassCapsule()
+        .oceanGlassCapsule(interactive: true)
         .accessibilityLabel("Choisir un spot")
         .accessibilityValue(selection.name)
     }

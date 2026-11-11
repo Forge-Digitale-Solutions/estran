@@ -26,18 +26,16 @@ struct ActivityPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    /// Tap target of the two round bar buttons. It is a control, not a text
-    /// container, so it stays at the HIG minimum the way a system bar button
-    /// does — scaling it to 80 pt at AX5 would eat the line the title needs.
+    /// Flips once, on appear: staggers the entrance of the activity rows.
+    @State private var tilesAppeared = false
+
+    /// A control, not a text container: it stays at the HIG minimum at every size.
     private let barButtonSize: CGFloat = OceanGlass.minimumTapHeight
-    /// Glyph size inside those buttons: the 17 pt of a system bar button. It is
-    /// chrome, not copy, so it does not follow Dynamic Type either.
+    /// The 17 pt of a system bar button: chrome, not copy, so it never scales.
     private let barGlyphSize: CGFloat = 17
-    /// The activity glyph's rounded square, on the other hand, grows with the
-    /// text it sits next to — up to the point where it would eat the row.
+    /// The activity square grows with the text it sits next to, up to a cap.
     @ScaledMetric(relativeTo: .body) private var iconTileSize: CGFloat = 44
-    /// Decorative cap for that square. It is a glyph container, not text, and at
-    /// AX5 an uncapped tile is twice the height of the activity name.
+    /// The cap: at AX5 an uncapped glyph tile doubles the height of the row.
     private var iconTileSide: CGFloat {
         min(iconTileSize, 64)
     }
@@ -56,7 +54,9 @@ struct ActivityPickerView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .background(OceanPalette.backgroundGradient.ignoresSafeArea())
+        .background { OceanBackdrop() }
+        // The Taptic Engine confirms a real selection before the sheet closes.
+        .sensoryFeedback(.selection, trigger: selection)
     }
 
     // MARK: - Bar
@@ -91,7 +91,7 @@ struct ActivityPickerView: View {
                 .foregroundStyle(OceanPalette.white)
                 .frame(width: barButtonSize, height: barButtonSize)
                 .contentShape(Circle())
-                .glassEffect(.regular, in: Circle())
+                .modifier(PickerBarGlass())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
@@ -118,11 +118,13 @@ struct ActivityPickerView: View {
     private var rows: some View {
         GlassEffectContainer(spacing: OceanSpacing.sm) {
             VStack(spacing: OceanSpacing.sm) {
-                ForEach(overviews) { overview in
+                ForEach(Array(overviews.enumerated()), id: \.element.id) { index, overview in
                     row(for: overview)
+                        .modifier(PickerTileEntrance(index: index, appeared: tilesAppeared))
                 }
             }
         }
+        .onAppear { tilesAppeared = true }
     }
 
     private func row(for overview: ActivityOverview) -> some View {
