@@ -91,7 +91,7 @@ struct ActivityPickerView: View {
                 .foregroundStyle(OceanPalette.white)
                 .frame(width: barButtonSize, height: barButtonSize)
                 .contentShape(Circle())
-                .modifier(PickerBarGlass())
+                .oceanGlassCircle(interactive: true)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)

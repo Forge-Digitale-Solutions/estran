@@ -96,7 +96,9 @@ private struct TideChartPlot: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
-    @ScaledMetric(relativeTo: .body) private var chartHeight: CGFloat = 132
+    /// The plot, plus the room Charts reserves under it for the hour scale, so
+    /// the labels sit below the curve instead of on its troughs.
+    @ScaledMetric(relativeTo: .body) private var chartHeight: CGFloat = 148
     @ScaledMetric(relativeTo: .body) private var markerSize: CGFloat = 9
     @State private var selectedHour: Double?
 
@@ -141,9 +143,13 @@ private struct TideChartPlot: View {
             }
             ForEach(curve.indices, id: \.self) { index in
                 let point = curve[index]
+                // `yStart` anchors the fill to the plot's baseline: the gradient
+                // reaches the bottom edge of the plot instead of stopping short
+                // and leaving a band of bare card under the curve.
                 AreaMark(
                     x: .value("Heure", hours(point.time)),
-                    y: .value("Hauteur", point.height))
+                    yStart: .value("Base", yDomain.lowerBound),
+                    yEnd: .value("Hauteur", point.height))
                     .interpolationMethod(.catmullRom)
                     .foregroundStyle(areaFill)
                 LineMark(
@@ -193,13 +199,25 @@ private struct TideChartPlot: View {
         }
         .chartXScale(domain: 0 ... 24)
         .chartYScale(domain: yDomain)
-        .chartXAxis(.hidden)
+        // The hour scale is a real axis, below the plot: Charts reserves its
+        // line, so a label can never land on the curve's troughs.
+        .chartXAxis {
+            AxisMarks(position: .bottom, values: axisHours) { value in
+                AxisValueLabel(anchor: labelAnchor(for: value)) {
+                    if let hour = value.as(Double.self) {
+                        Text("\(Int(hour)) h")
+                            .font(OceanTypography.caption)
+                            .foregroundStyle(OceanPalette.white.opacity(0.6))
+                            .fixedSize()
+                    }
+                }
+            }
+        }
         .chartYAxis(.hidden)
         .chartLegend(.hidden)
         .chartXSelection(value: scrubSelection)
         .chartOverlay { proxy in
             TideChartLabels(
-                axisHours: axisHours,
                 event: nextEvent,
                 markerSize: markerSize,
                 dayStart: dayStart,
@@ -214,10 +232,12 @@ private struct TideChartPlot: View {
     }
 
     private var areaFill: LinearGradient {
+        // Lands on the plot's baseline at zero alpha: no edge, no lighter band.
         LinearGradient(
             colors: [
                 OceanPalette.turquoise.opacity(0.35),
-                OceanPalette.turquoise.opacity(0.02)
+                OceanPalette.turquoise.opacity(0.10),
+                OceanPalette.turquoise.opacity(0)
             ],
             startPoint: .top,
             endPoint: .bottom)
@@ -225,6 +245,14 @@ private struct TideChartPlot: View {
 
     private var axisHours: [Double] {
         dynamicTypeSize.isAccessibilitySize ? [0, 12, 24] : [0, 6, 12, 18, 24]
+    }
+
+    /// The first and last labels are anchored by their leading / trailing edge,
+    /// so they sit inside the plot's width instead of forcing Charts to inset
+    /// the curve away from the card's edges.
+    private func labelAnchor(for value: AxisValue) -> UnitPoint? {
+        guard let hour = value.as(Double.self) else { return nil }
+        return hour <= 0 ? .topLeading : hour >= 24 ? .topTrailing : nil
     }
 
     private var dayStart: Date {
@@ -285,9 +313,8 @@ private struct TideChartPlot: View {
     }
 }
 
-/// Hour scale and next-event height, drawn over the plot via `ChartProxy`.
+/// The next event's height, drawn over the plot via `ChartProxy`.
 private struct TideChartLabels: View {
-    let axisHours: [Double]
     let event: TideEvent?
     let markerSize: CGFloat
     let dayStart: Date
@@ -296,33 +323,10 @@ private struct TideChartLabels: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .topLeading) {
-                scale(width: geometry.size.width, height: geometry.size.height)
                 eventHeight
             }
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
         }
-    }
-
-    private func scale(width: CGFloat, height: CGFloat) -> some View {
-        ZStack(alignment: .topLeading) {
-            label(axisHours.first ?? 0)
-                .frame(width: width, height: height, alignment: .bottomLeading)
-            label(axisHours.last ?? 24)
-                .frame(width: width, height: height, alignment: .bottomTrailing)
-            ForEach(Array(axisHours.dropFirst().dropLast()), id: \.self) { hour in
-                Color.clear
-                    .frame(width: 0, height: 0)
-                    .overlay(alignment: .bottom) { label(hour) }
-                    .position(x: width * hour / 24, y: height)
-            }
-        }
-    }
-
-    private func label(_ hour: Double) -> some View {
-        Text("\(Int(hour)) h")
-            .font(OceanTypography.caption)
-            .foregroundStyle(OceanPalette.white.opacity(0.6))
-            .fixedSize()
-            .padding(.bottom, OceanSpacing.xxs)
     }
 
     @ViewBuilder

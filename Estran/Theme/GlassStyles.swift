@@ -207,4 +207,22 @@ extension View {
             tinting: isSelected ? OceanPalette.white : nil,
             interactive: isInteractive)
     }
+
+    /// Circular Liquid Glass surface for an icon-only control — the picker's
+    /// close and confirm buttons (`ActivityPickerView`).
+    ///
+    /// Same four looks as `oceanGlassCard`, because it is the same modifier:
+    /// Liquid Glass, the opaque `navyInk` fill under Reduce Transparency, the
+    /// 45 % backing plus 1.5 pt border under Increase Contrast, and both
+    /// together. `interactive` keeps the specular deflection under the finger;
+    /// the surface only deflects and never travels, so Reduce Motion leaves it
+    /// on in every configuration.
+    func oceanGlassCircle(interactive isInteractive: Bool = false) -> some View {
+        modifier(
+            OceanGlassSurfaceModifier(
+                shape: Circle(),
+                permanentBacking: false,
+                tint: nil,
+                isInteractive: isInteractive))
+    }
 }

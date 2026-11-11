@@ -10,6 +10,11 @@ import SwiftUI
 /// Reduce Motion the camera still moves to the new spot, but it does not slide
 /// across the 90 km: `OceanGlass.animation(_:reduceMotion:)` returns `nil`, so
 /// the framing is applied at once.
+///
+/// The map is drawn edge to edge with its own colours: no
+/// `backgroundExtensionEffect()` (it mirrors and blurs the raster into the safe
+/// areas, which washed the whole top of the screen with the land's green), and
+/// the card is the only glass over the tiles.
 struct SpotsView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -18,7 +23,6 @@ struct SpotsView: View {
     @Namespace private var detailTransitionNamespace
     @State private var camera: MapCameraPosition = .automatic
     @State private var showsDetail = false
-    @State private var cachedSummaries: [String: SpotCardSummary] = [:]
 
     private var usesCrossFadeTransition: Bool {
         reduceMotion || prefersCrossFade
@@ -55,7 +59,6 @@ struct SpotsView: View {
                     elevation: .flat,
                     pointsOfInterest: .excludingAll,
                     showsTraffic: false))
-            .backgroundExtensionEffect()
             .ignoresSafeArea()
 
             GlassEffectContainer(spacing: OceanSpacing.sm) {
@@ -74,14 +77,6 @@ struct SpotsView: View {
         .background { OceanBackdrop() }
         .onAppear {
             camera = position(for: app.selectedSpot)
-            cacheCurrentSpotSummaryIfReady()
-        }
-        .task(id: app.activity) {
-            cacheCurrentSpotSummaryIfReady()
-            await prewarmSummaries(for: app.activity)
-        }
-        .onChange(of: app.store.phase) { _, _ in
-            cacheCurrentSpotSummaryIfReady()
         }
         .onChange(of: app.selectedSpot.id) { _, _ in
             let target = position(for: app.selectedSpot)
@@ -97,21 +92,15 @@ struct SpotsView: View {
         }
     }
 
-    private var activeSummary: SpotCardSummary? {
-        if let live = SpotCardSummary(from: app) {
-            return live
-        }
-        if let cached = cachedSummaries[app.selectedSpot.id],
-           cached.spotID == app.selectedSpot.id,
-           cached.activity == app.activity
-        {
-            return cached
-        }
-        return nil
+    /// The one data path: the store's loaded conditions and the engine's
+    /// decision, read through `AppModel`. Nothing is cached in the view, so a
+    /// spot switch can never paint an expired window.
+    private var cardSummary: SpotCardSummary? {
+        SpotCardSummary(from: app)
     }
 
     private var spotCard: some View {
-        let summary = activeSummary
+        let summary = cardSummary
         return VStack(alignment: .leading, spacing: OceanSpacing.xs) {
             Text(app.selectedSpot.name)
                 .font(OceanTypography.bodyEmphasized)
@@ -182,9 +171,27 @@ struct SpotsView: View {
             case let .unavailable(message):
                 unavailableVerdictView(message: message)
             case .idle, .loading, .ready:
-                ProgressView()
+                // A spot switch clears the store before it reloads: the card
+                // says it is working, never the previous spot's verdict.
+                loadingVerdictView
             }
         }
+    }
+
+    /// The neutral state while the new spot loads. It shows no value at all,
+    /// which is the only honest answer before the data exists (`AGENTS.md`
+    /// invariants 3 and 4).
+    private var loadingVerdictView: some View {
+        HStack(spacing: OceanSpacing.xs) {
+            ProgressView()
+                .controlSize(.small)
+            Text("Chargement…")
+                .font(OceanTypography.smallLabel)
+                .foregroundStyle(OceanPalette.white.opacity(0.85))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Chargement des conditions")
     }
 
     private func swimmingSummaryView(_ advisory: SwimmingAdvisory) -> some View {
@@ -236,37 +243,6 @@ struct SpotsView: View {
         }
     }
 
-    @MainActor
-    private func cacheCurrentSpotSummaryIfReady() {
-        guard let summary = SpotCardSummary(from: app) else { return }
-        cachedSummaries[summary.spotID] = summary
-    }
-
-    @MainActor
-    private func prewarmSummaries(for activity: Activity) async {
-        let now = Date()
-        for spot in SpotCatalog.v1 {
-            guard !Task.isCancelled else { return }
-            if let existing = cachedSummaries[spot.id],
-               existing.activity == activity,
-               existing.window != nil
-            {
-                continue
-            }
-            if let loaded = await SpotCardSummary.load(
-                spot: spot,
-                activity: activity,
-                provider: app.provider,
-                engine: app.engine,
-                now: now)
-            {
-                cachedSummaries[spot.id] = loaded
-            } else {
-                cachedSummaries.removeValue(forKey: spot.id)
-            }
-        }
-    }
-
     private func coordinate(_ spot: Spot) -> CLLocationCoordinate2D {
         CLLocationCoordinate2D(
             latitude: spot.coordinate.latitude,
@@ -281,9 +257,11 @@ struct SpotsView: View {
     }
 }
 
+/// The card's three lines, read once from the shared store.
+///
+/// It is a projection of `AppModel` and nothing else: no provider call, no
+/// engine call, no retained copy that could outlive the conditions it describes.
 private struct SpotCardSummary {
-    let spotID: String
-    let activity: Activity
     let conditions: Conditions
     let decision: GoDecision
     let window: DateInterval?
@@ -297,62 +275,10 @@ private struct SpotCardSummary {
               let decision = app.decision
         else { return nil }
 
-        spotID = app.selectedSpot.id
-        activity = app.activity
         self.conditions = conditions
         self.decision = decision
         window = (app.currentSlot ?? app.upcomingSlot)?.window
         isActivityUnavailable = app.unavailableActivities.contains(app.activity)
-    }
-
-    init(
-        spotID: String,
-        activity: Activity,
-        conditions: Conditions,
-        decision: GoDecision,
-        window: DateInterval?,
-        isActivityUnavailable: Bool)
-    {
-        self.spotID = spotID
-        self.activity = activity
-        self.conditions = conditions
-        self.decision = decision
-        self.window = window
-        self.isActivityUnavailable = isActivityUnavailable
-    }
-
-    static func load(
-        spot: Spot,
-        activity: Activity,
-        provider: any ConditionsProviding,
-        engine: DecisionEngine,
-        now: Date) async -> SpotCardSummary?
-    {
-        do {
-            let current = try await provider.conditions(for: spot, at: now)
-            guard !Task.isCancelled else { return nil }
-            let horizon = try await provider.forecast(
-                for: spot,
-                from: now,
-                hours: ForecastStore.forecastHours)
-            guard !Task.isCancelled else { return nil }
-            let fullDecision = engine.decide(
-                activity: activity,
-                conditions: current,
-                forecast: horizon)
-            let slots = engine.windows(activity: activity, over: horizon)
-            let activeWindow = slots.first { $0.window.contains(current.at) }?.window
-                ?? slots.first { $0.window.start > current.at }?.window
-            return SpotCardSummary(
-                spotID: spot.id,
-                activity: activity,
-                conditions: current,
-                decision: fullDecision,
-                window: activeWindow,
-                isActivityUnavailable: fullDecision.isDataUnavailable)
-        } catch {
-            return nil
-        }
     }
 }
 
