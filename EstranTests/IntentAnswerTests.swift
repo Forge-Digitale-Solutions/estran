@@ -17,9 +17,10 @@ final class IntentAnswerTests: XCTestCase {
     func testUnavailableSnapshotNamesTheSpot() {
         let snapshot = makeSnapshot(isUnavailable: true, answer: "Données indisponibles")
 
-        XCTAssertEqual(
-            IntentAnswer.text(for: snapshot),
-            "Les données sont indisponibles pour Pointe de Grave.")
+        let text = IntentAnswer.text(for: snapshot)
+
+        XCTAssertEqual(text, "Données indisponibles pour Pointe de Grave.")
+        XCTAssertTrue(text.contains("Données indisponibles"))
     }
 
     func testUnavailableSwimmingIsStillUnavailableAndNeverOui() {
@@ -30,7 +31,8 @@ final class IntentAnswerTests: XCTestCase {
 
         let text = IntentAnswer.text(for: snapshot)
 
-        XCTAssertEqual(text, "Les données sont indisponibles pour Pointe de Grave.")
+        XCTAssertEqual(text, "Données indisponibles pour Pointe de Grave.")
+        XCTAssertTrue(text.contains("Données indisponibles"))
         XCTAssertFalse(text.contains("Oui"))
     }
 
@@ -111,6 +113,20 @@ final class IntentAnswerTests: XCTestCase {
         XCTAssertTrue(text.contains("Courants de marée non estimés"))
         XCTAssertTrue(text.contains("Toute l'année"))
         XCTAssertTrue(text.contains(SwimmingRiskLevel.disclaimer))
+    }
+
+    func testAnswerIntentDialogForSwimmingNeverSaysOui() {
+        let snapshot = makeSnapshot(
+            activity: .swimming,
+            isGo: true,
+            answer: "Courants de marée estimés : faibles",
+            swimmingAdvisory: SwimmingAdvisory(level: .low, region: .medoc))
+        let intent = AnswerIntent(activity: .swimming)
+
+        let text = intent.resolvedText(for: snapshot)
+
+        XCTAssertFalse(text.contains("Oui"))
+        XCTAssertTrue(text.contains("Baignade"))
     }
 
     // MARK: - Staleness

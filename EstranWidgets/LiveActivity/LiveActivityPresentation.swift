@@ -105,16 +105,14 @@ struct LiveActivityWindowLine: View {
 
     var body: some View {
         if let time = Self.time(start, in: timeZone) {
-            HStack(spacing: 2) {
-                Text("Prochain créneau ·")
-                Text(time)
-                    .contentTransition(reduceMotion ? .identity : .numericText())
-            }
-            .font(OceanTypography.caption)
-            .foregroundStyle(color)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Prochain créneau à \(time)")
+            // One `Text`, never two in an `HStack`: at 370 pt the old pair
+            // wrapped into « Prochain créneau » / « · » / « 8 h 38 ».
+            Text("Prochain créneau · \(time)")
+                .font(OceanTypography.caption)
+                .foregroundStyle(color)
+                .contentTransition(reduceMotion ? .identity : .numericText())
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityLabel("Prochain créneau à \(time)")
         }
     }
 

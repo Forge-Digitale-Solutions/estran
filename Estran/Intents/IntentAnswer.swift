@@ -15,7 +15,7 @@ enum IntentAnswer {
         }
 
         let answer = if snapshot.isUnavailable {
-            "Les données sont indisponibles pour \(snapshot.spotName)."
+            "Données indisponibles pour \(snapshot.spotName)."
         } else if snapshot.activity == .swimming {
             swimmingSentence(for: snapshot)
         } else if snapshot.isGo {
