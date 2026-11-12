@@ -15,7 +15,7 @@ import OSLog
 /// ever returns a neutral value: when both fail, the provider throws and the UI
 /// says « Données indisponibles ».
 struct FallbackWeatherSource: WeatherSource {
-    private static let logger = Logger(subsystem: "com.forgedigitale.estran", category: "weather")
+    private static let logger = Logger(subsystem: "com.forgedigitalesolutions.estran", category: "weather")
 
     private let primary: any WeatherSource
     private let fallback: any WeatherSource

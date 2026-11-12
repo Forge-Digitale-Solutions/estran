@@ -14,7 +14,7 @@ import OSLog
 /// approach as the WeatherKit adapter.
 struct OpenMeteoWeatherService: WeatherSource {
     private static let endpoint = "https://api.open-meteo.com/v1/forecast"
-    private static let logger = Logger(subsystem: "com.forgedigitale.estran", category: "weather")
+    private static let logger = Logger(subsystem: "com.forgedigitalesolutions.estran", category: "weather")
 
     private let session: URLSession
 

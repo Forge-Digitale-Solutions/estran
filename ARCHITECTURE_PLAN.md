@@ -180,7 +180,7 @@ entrant/
 ### 4.1 Target membership (shared code)
 
 - `EstranCore` → `@testable import` by unit tests; imported by app + widget targets.
-- Widget/Live Activity bundle must be in the same App Group as the app to read/write shared cache and user defaults (`group.com.forgedigitale.estran`).
+- Widget/Live Activity bundle must be in the same App Group as the app to read/write shared cache and user defaults (`group.com.forgedigitalesolutions.estran`).
 
 ---
 
@@ -469,7 +469,7 @@ struct TemplateReasonProvider: ReasonTextProviding { … }         // determinis
 
 - **Widgets** (`GoWidget`, `ConditionsWidget`) — WidgetKit timeline from the shared `GoDecision` snapshot (App Group). Small/medium sizes. The app's background task refreshes the snapshot; the timeline provider reads it (no network in the widget).
 - **Live Activity + Dynamic Island** (`GoActivityAttributes` + `GoLiveActivityView`) — started from the spot detail ("Surveiller ce spot") and/or Siri. Shows Oui/Non + next window, updates via `Activity.update` driven by background refresh (no backend push, per the on-device constraint). Compact/expanded/minimal presentations.
-- **App Group** `group.com.forgedigitale.estran` shared between app and widget for snapshot + settings.
+- **App Group** `group.com.forgedigitalesolutions.estran` shared between app and widget for snapshot + settings.
 
 ---
 

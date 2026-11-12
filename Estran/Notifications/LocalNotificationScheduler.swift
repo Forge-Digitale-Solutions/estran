@@ -70,7 +70,7 @@ actor LocalNotificationScheduler {
     static let alertsEnabledKey = "alertsEnabled"
 
     private static let logger = Logger(
-        subsystem: "com.forgedigitale.estran",
+        subsystem: "com.forgedigitalesolutions.estran",
         category: "notifications")
 
     private let center: any NotificationCenterProtocol

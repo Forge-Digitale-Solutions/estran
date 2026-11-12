@@ -84,7 +84,7 @@ Blocking checklist:
 1. Repository structure matches `ARCHITECTURE_PLAN.md` §4: `Estran/`, `EstranWidgets/`, `Packages/EstranCore/`, `EstranTests/`, `EstranUITests/`, and `project.yml`.
 2. Exactly two product targets exist: `Estran` and `EstranWidgets`; test bundles are separate test targets. The widget extension includes Live Activity/ActivityKit. Both product targets use the local `EstranCore` package.
 3. XcodeGen generation resolves all source, resource, package, entitlement, and target-membership references.
-4. App Group `group.com.forgedigitale.estran` and entitlements are present; no secret, API key, or private signing value is committed.
+4. App Group `group.com.forgedigitalesolutions.estran` and entitlements are present; no secret, API key, or private signing value is committed.
 5. The M0 `EstranCore` skeleton contains only code supported by the declared Swift/Linux baseline; `swift build` and `swift test` pass with a real installed Swift 6 toolchain.
 6. The SwiftData container baseline and initial theme tokens are present and wired without implementing future feature scope.
 7. Format/lint configuration and CI workflows are present for Linux package checks and macOS `xcodebuild` build/test/archive.

@@ -134,9 +134,9 @@ project.yml             Définition XcodeGen
 
 ## Identifiants
 
-- App : `com.forgedigitale.estran`
-- Extension widget : `com.forgedigitale.estran.widgets`
-- App Group : `group.com.forgedigitale.estran`
+- App : `com.forgedigitalesolutions.estran`
+- Extension widget : `com.forgedigitalesolutions.estran.widgets`
+- App Group : `group.com.forgedigitalesolutions.estran`
 
 Aucun secret, clé d'API, certificat ou profil de provisionnement n'est versionné.
 

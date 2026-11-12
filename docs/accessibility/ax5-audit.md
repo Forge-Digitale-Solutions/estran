@@ -11,7 +11,7 @@ Evidence tour: `EstranUITests/AccessibilityTourUITests.swift` — nine screensho
 cd /Users/anthony/orca/estran && xcodegen generate
 
 # Reset persisted spot (optional; default catalog spot is Pointe de Grave)
-xcrun simctl spawn "iPhone 18 Pro" defaults delete group.com.forgedigitale.estran selectedSpotID
+xcrun simctl spawn "iPhone 18 Pro" defaults delete group.com.forgedigitalesolutions.estran selectedSpotID
 
 # Medium (default Dynamic Type)
 xcrun simctl ui "iPhone 18 Pro" content_size medium

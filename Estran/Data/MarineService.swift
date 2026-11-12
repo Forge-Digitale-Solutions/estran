@@ -16,7 +16,7 @@ import OSLog
 /// service never guesses.
 actor MarineService {
     private static let endpoint = "https://marine-api.open-meteo.com/v1/marine"
-    private static let logger = Logger(subsystem: "com.forgedigitale.estran", category: "marine")
+    private static let logger = Logger(subsystem: "com.forgedigitalesolutions.estran", category: "marine")
 
     private let session: URLSession
     private let cache: MarineCache

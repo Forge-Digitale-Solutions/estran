@@ -16,8 +16,8 @@ Last reviewed: 2026-10-27 (iOS 27 target, Xcode 26/27, paid Apple Developer Prog
 | Apple Developer Program (paid) | ✅ available — required for App Store, TestFlight, App Group, WeatherKit |
 | Mac with Xcode | ✅ available |
 | Development host | Linux — cannot compile the app, the widget or the intents |
-| Bundle IDs | app `com.forgedigitale.estran`, widget `com.forgedigitale.estran.widgets` |
-| App Group | `group.com.forgedigitale.estran` |
+| Bundle IDs | app `com.forgedigitalesolutions.estran`, widget `com.forgedigitalesolutions.estran.widgets` |
+| App Group | `group.com.forgedigitalesolutions.estran` |
 | Deployment target | iOS 27.0, iPhone only (`TARGETED_DEVICE_FAMILY = 1`) |
 | Swift | 6.0, `SWIFT_STRICT_CONCURRENCY = complete` |
 
@@ -47,7 +47,7 @@ has actually run.
 is launched with `-liveData`:
 
 ```sh
-xcrun simctl launch "iPhone 18 Pro" com.forgedigitale.estran -liveData
+xcrun simctl launch "iPhone 18 Pro" com.forgedigitalesolutions.estran -liveData
 ```
 
 The live path needs the WeatherKit capability (§1.3): without it the app stops at
@@ -74,10 +74,10 @@ xcodebuild -downloadPlatform iOS
 Do this **before** the first build, otherwise Xcode cannot register the App Group and the capability checks fail.
 
 1. **Certificates, Identifiers & Profiles → Identifiers → App IDs** — create two explicit App IDs (not a wildcard):
-   - `com.forgedigitale.estran`
-   - `com.forgedigitale.estran.widgets`
-2. On **both** App IDs, enable **App Groups** and create/attach `group.com.forgedigitale.estran`.
-3. On `com.forgedigitale.estran`, enable **WeatherKit**. No push capability is needed: Live Activity is updated locally, not by APNs.
+   - `com.forgedigitalesolutions.estran`
+   - `com.forgedigitalesolutions.estran.widgets`
+2. On **both** App IDs, enable **App Groups** and create/attach `group.com.forgedigitalesolutions.estran`.
+3. On `com.forgedigitalesolutions.estran`, enable **WeatherKit**. No push capability is needed: Live Activity is updated locally, not by APNs.
 4. **Users and Access** — make sure your role is Admin or App Manager (needed to create the App record and upload builds).
 
 ## 2. First clone and build
@@ -93,7 +93,7 @@ open Estran.xcodeproj
 Then, for **each of the four targets** (`Estran`, `EstranWidgets`, `EstranTests`, `EstranUITests`):
 
 - *Signing & Capabilities* → Team = your team, *Automatically manage signing*.
-- `Estran` and `EstranWidgets` → *+ Capability* → App Groups → check `group.com.forgedigitale.estran`.
+- `Estran` and `EstranWidgets` → *+ Capability* → App Groups → check `group.com.forgedigitalesolutions.estran`.
 - `Estran` → *+ Capability* → WeatherKit.
 
 Command line equivalent for a quick compile check:
@@ -164,7 +164,7 @@ These are missing today and are **hard submission blockers**:
   ```
   (`CA92.1` = access to the app's own preferences. The App Group storage counts as the app's own data.)
 - [x] **WeatherKit entitlement** in `Estran/Estran.entitlements` (`com.apple.developer.weatherkit`, `true`) — added 2026-11-02.
-- [ ] **WeatherKit capability on the App ID** (`com.forgedigitale.estran`) in the portal, then sign with the team. Until then WeatherKit fails and the app falls back to Open-Meteo (logged), so it still answers; with neither source reachable it says « La météo n'est pas encore disponible pour ce spot » — the fail-closed path, not a crash.
+- [ ] **WeatherKit capability on the App ID** (`com.forgedigitalesolutions.estran`) in the portal, then sign with the team. Until then WeatherKit fails and the app falls back to Open-Meteo (logged), so it still answers; with neither source reachable it says « La météo n'est pas encore disponible pour ce spot » — the fail-closed path, not a crash.
 
   Note: the **WeatherKit REST API** is the server-side sibling (JWT signed with a private key). The app uses the native `WeatherKit` framework, which needs the capability and no key at all.
 - [ ] **Privacy policy URL** — required even though the app collects nothing. A static French page is enough (GitHub Pages, 0 €). It must say: no account, no analytics, no data collection; attribution REFMAR/Shom — Licence Ouverte 2.0; weather from Apple WeatherKit and Open-Meteo.

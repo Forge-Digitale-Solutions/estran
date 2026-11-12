@@ -130,9 +130,9 @@ project.yml             XcodeGen definition
 
 ## Identifiers
 
-- App: `com.forgedigitale.estran`
-- Widget extension: `com.forgedigitale.estran.widgets`
-- App Group: `group.com.forgedigitale.estran`
+- App: `com.forgedigitalesolutions.estran`
+- Widget extension: `com.forgedigitalesolutions.estran.widgets`
+- App Group: `group.com.forgedigitalesolutions.estran`
 
 No secret, API key, certificate or provisioning profile is committed.
 

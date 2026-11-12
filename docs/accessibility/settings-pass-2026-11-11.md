@@ -76,7 +76,7 @@ disabled`, `EnhancedBackgroundContrastEnabled = 0`, `ReduceMotionEnabled = 0`,
 
 Two notes on the run log, for the next person: one `increase-contrast` run
 failed to launch the app (`Simulator device failed to launch
-com.forgedigitale.estran`) and succeeded unchanged on retry — no assertion
+com.forgedigitalesolutions.estran`) and succeeded unchanged on retry — no assertion
 failed; and an additional dark-appearance baseline was captured before the five
 configurations above and is not used, because it duplicates `baseline` (§2.1).
 
@@ -444,7 +444,7 @@ xcrun xcresulttool export attachments --path build/a11y/baseline.xcresult \
 
 # a settled Spots card: pre-seed the persisted spot, reboot, then run
 plutil -replace selectedSpotID -string pointe-de-grave \
-  ~/Library/Developer/CoreSimulator/Devices/$UDID/data/Containers/Shared/AppGroup/*/Library/Preferences/group.com.forgedigitale.estran.plist
+  ~/Library/Developer/CoreSimulator/Devices/$UDID/data/Containers/Shared/AppGroup/*/Library/Preferences/group.com.forgedigitalesolutions.estran.plist
 xcrun simctl shutdown $UDID && xcrun simctl boot $UDID
 ```
 

@@ -24,7 +24,7 @@ final class LiveActivityController {
     static let staleAfter: TimeInterval = 15 * 60
 
     private static let logger = Logger(
-        subsystem: "com.forgedigitale.estran",
+        subsystem: "com.forgedigitalesolutions.estran",
         category: "live-activity")
 
     /// The one ActivityKit operation in flight.
