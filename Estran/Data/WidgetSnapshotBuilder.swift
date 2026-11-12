@@ -13,45 +13,60 @@ enum WidgetSnapshotBuilder {
         let conditions: Conditions
         let overviews: [ActivityOverview]
         let activity: Activity
-        let decision: GoDecision
+        /// `nil` only when `activity` is not offered at the spot: the snapshot
+        /// then carries the not-offered sentence instead of a decision.
+        let decision: GoDecision?
         let timeZone: TimeZone
         let isSampleData: Bool
     }
 
     static func make(_ input: Input) -> WidgetSnapshot {
         let conditions = input.conditions
-        let overviews = input.overviews
         let activity = input.activity
-        let decision = input.decision
         let timeZone = input.timeZone
         let isSampleData = input.isSampleData
+
+        // The spot's offer is the single source of truth for the lines: an
+        // activity the spot does not offer (surf at Eyrac) never appears, and
+        // nothing renders a blank row in its place.
+        let offeredOverviews = input.overviews.filter { conditions.spot.supports($0.activity) }
+
+        let isNotOffered = !conditions.spot.supports(activity)
+        let decision = input.decision
+
+        let swimmingAdvisory: SwimmingAdvisory? = if activity == .swimming, let decision {
+            SwimmingAdvisory(decision: decision, conditions: conditions)
+        } else {
+            nil
+        }
 
         return WidgetSnapshot(
             updatedAt: conditions.at,
             spotID: conditions.spot.id,
             spotName: conditions.spot.name,
             activity: activity,
-            isGo: activity == .swimming ? false : decision.go,
-            isUnavailable: decision.isDataUnavailable,
-            answer: answer(for: activity, decision: decision, overviews: overviews, timeZone: timeZone),
-            swimmingAdvisory: activity == .swimming
-                ? SwimmingAdvisory(decision: decision, conditions: conditions)
-                : nil,
-            lines: overviews.map { line(for: $0, region: conditions.spot.region, timeZone: timeZone) },
+            isGo: activity == .swimming ? false : (!isNotOffered && (decision?.go ?? false)),
+            isUnavailable: !isNotOffered && (decision?.isDataUnavailable ?? false),
+            answer: isNotOffered
+                ? ActivityOffer.notOfferedSentence(activity: activity, spot: conditions.spot)
+                : answer(for: activity, decision: decision, overviews: offeredOverviews, timeZone: timeZone),
+            swimmingAdvisory: swimmingAdvisory,
+            lines: offeredOverviews.map { line(for: $0, region: conditions.spot.region, timeZone: timeZone) },
             metrics: metrics(for: conditions),
-            isSampleData: isSampleData)
+            isSampleData: isSampleData,
+            isNotOffered: isNotOffered)
     }
 
     // MARK: - Answers
 
     private static func answer(
         for activity: Activity,
-        decision: GoDecision,
+        decision: GoDecision?,
         overviews: [ActivityOverview],
         timeZone: TimeZone) -> String
     {
         guard let overview = overviews.first(where: { $0.activity == activity }) else {
-            return decision.reason
+            return decision?.reason ?? ""
         }
         return lineAnswer(overview, timeZone: timeZone)
     }
@@ -75,7 +90,8 @@ enum WidgetSnapshotBuilder {
             activity: overview.activity,
             isUnavailable: overview.isUnavailable,
             isGo: overview.decision.go,
-            answer: lineAnswer(overview, timeZone: timeZone))
+            answer: lineAnswer(overview, timeZone: timeZone),
+            warning: ActivityCaution.caution(activity: overview.activity, spot: overview.decision.spot))
     }
 
     /// The same words the spot-detail rows use.

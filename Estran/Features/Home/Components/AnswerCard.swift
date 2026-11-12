@@ -54,6 +54,20 @@ struct AnswerCard: View {
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
+            if let caution {
+                HStack(alignment: .top, spacing: OceanSpacing.xxs) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(OceanTypography.smallLabel)
+                        .foregroundStyle(OceanPalette.sand)
+                        .accessibilityHidden(true)
+                    Text(caution)
+                        .font(OceanTypography.caption)
+                        .foregroundStyle(OceanPalette.sand)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
             if let detail {
                 Text(detail)
                     .font(OceanTypography.subtitle)
@@ -88,6 +102,12 @@ struct AnswerCard: View {
         return decision.reason
     }
 
+    /// The permanent caution for this activity at this spot (boating inside the
+    /// Bassin), or `nil`. Copy only: it never changes the verdict.
+    private var caution: String? {
+        ActivityCaution.caution(activity: activity, spot: conditions.spot)
+    }
+
     /// « Indisponible » is a long word: it is displayed smaller than Oui/Non so
     /// it fits without shrinking the Dynamic Type scale of the rest.
     private var wordSize: CGFloat {
@@ -119,12 +139,18 @@ struct AnswerCard: View {
             // Speak exactly the line the card draws, the way `.noGo` does: the
             // reason is part of the answer, not a decorative subtitle.
             var sentence = "Oui, \(activity.displayName). \(displayedReason)"
+            if let caution {
+                sentence += " \(caution)."
+            }
             if let detail {
                 sentence += " \(detail)."
             }
             return sentence
         case .noGo:
             var sentence = "Non, \(activity.displayName). \(displayedReason)"
+            if let caution {
+                sentence += " \(caution)."
+            }
             if let detail {
                 sentence += " \(detail)."
             }

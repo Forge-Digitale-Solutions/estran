@@ -1,0 +1,57 @@
+import Foundation
+
+/// French copy for an activity a spot does **not offer**.
+///
+/// This is not a verdict and not a missing value: surf is simply not possible
+/// at the Eyrac jetty inside the Bassin, and every surface (app, widget, Siri)
+/// says so in the same words instead of turning it into a `Non` or a
+/// « Données indisponibles » (owner decision 2026-11-12).
+public enum ActivityOffer {
+    /// « Pas de surf à Arcachon-Eyrac » — the not-offered headline.
+    public static func notOfferedTitle(activity: Activity, spot: Spot) -> String {
+        switch activity {
+        case .surfing:
+            "Pas de surf à \(spot.name)"
+        case .shoreFishing, .boating, .walking, .swimming:
+            "\(activity.displayName) n'est pas proposé à \(spot.name)"
+        }
+    }
+
+    /// The factual pointer to where the activity does happen, or `nil` when no
+    /// pointer is needed.
+    public static func notOfferedDetail(activity: Activity) -> String? {
+        switch activity {
+        case .surfing:
+            // Surf happens on the ocean side, never inside the Bassin.
+            "Le surf, c'est côté océan : Cap Ferret ou la Salie."
+        case .shoreFishing, .boating, .walking, .swimming:
+            nil
+        }
+    }
+
+    /// One sentence for Siri and the snapshot answer: title, then the detail.
+    public static func notOfferedSentence(activity: Activity, spot: Spot) -> String {
+        let title = notOfferedTitle(activity: activity, spot: spot)
+        guard let detail = notOfferedDetail(activity: activity) else {
+            return title + "."
+        }
+        return "\(title). \(detail)"
+    }
+}
+
+/// Permanent, factual cautions shown next to a verdict. They are copy only:
+/// they never enter the decision engine, so they can never change a verdict.
+public enum ActivityCaution {
+    /// The Bassin's passes are dangerous regardless of the wind or the sea the
+    /// rules read: open-ocean swell and shifting sandbanks.
+    public static let boatingPasses =
+        "Les passes du Bassin restent dangereuses : houle de l'océan et bancs qui bougent."
+
+    /// The caution for `activity` at `spot`, or `nil` when none applies.
+    public static func caution(activity: Activity, spot: Spot) -> String? {
+        if activity == .boating, spot.region == .bassin {
+            return boatingPasses
+        }
+        return nil
+    }
+}

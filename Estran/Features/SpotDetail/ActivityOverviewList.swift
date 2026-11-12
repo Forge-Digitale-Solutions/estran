@@ -142,6 +142,8 @@ private struct ActivityOverviewRow: View {
     /// reads. Colour is never the only signal — every state carries a glyph.
     private var answer: ActivityRowAnswer {
         let name = overview.activity.displayName
+        // The permanent Bassin boating caution, or `nil` for any other row.
+        let caution = ActivityCaution.caution(activity: overview.activity, spot: overview.decision.spot)
 
         // Swimming first: no state may fall through to Oui/Non.
         if overview.activity == .swimming {
@@ -159,8 +161,8 @@ private struct ActivityOverviewRow: View {
                 text: "Données indisponibles",
                 symbolName: "exclamationmark.triangle.fill",
                 color: OceanPalette.unavailable,
-                warning: nil,
-                spoken: Self.spoken([name, "Données indisponibles"]))
+                warning: caution,
+                spoken: spokenWithCaution([name, "Données indisponibles"], caution: caution))
         }
 
         if overview.decision.go {
@@ -169,24 +171,31 @@ private struct ActivityOverviewRow: View {
                     text: "Créneau à confirmer",
                     symbolName: "clock",
                     color: OceanPalette.sand,
-                    warning: nil,
-                    spoken: Self.spoken([name, "Oui", "Créneau à confirmer"]))
+                    warning: caution,
+                    spoken: spokenWithCaution([name, "Oui", "Créneau à confirmer"], caution: caution))
             }
             let range = FrenchFormat.range(window, in: timeZone)
             return ActivityRowAnswer(
                 text: range,
                 symbolName: "checkmark.circle.fill",
                 color: OceanPalette.ouiOnGlass,
-                warning: nil,
-                spoken: Self.spoken([name, "Oui", range]))
+                warning: caution,
+                spoken: spokenWithCaution([name, "Oui", range], caution: caution))
         }
 
         return ActivityRowAnswer(
             text: Self.phrase(overview.decision.reason),
             symbolName: "xmark.circle.fill",
             color: OceanPalette.nonOnGlass,
-            warning: nil,
-            spoken: Self.spoken([name, "Non", Self.phrase(overview.decision.reason)]))
+            warning: caution,
+            spoken: spokenWithCaution([name, "Non", Self.phrase(overview.decision.reason)], caution: caution))
+    }
+
+    /// Joins the parts as one VoiceOver sentence, with the boating caution
+    /// appended when present, and a single closing period.
+    private func spokenWithCaution(_ parts: [String], caution: String?) -> String {
+        let all = caution.map { parts + [$0] } ?? parts
+        return Self.spoken(all)
     }
 
     /// « Marge insuffisante. » → « Marge insuffisante » : the row is a label, not

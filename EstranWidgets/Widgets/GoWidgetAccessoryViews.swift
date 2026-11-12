@@ -27,6 +27,10 @@ struct GoAccessoryInlineView: View {
             }
         } else if entry.isEmpty || entry.isStale {
             Label("Estran : — · Ouvre l'app", systemImage: "water.waves")
+        } else if entry.isNotOffered {
+            Label(
+                "\(entry.shortActivityLabel) : pas proposé",
+                systemImage: entry.activitySymbol)
         } else if entry.isUnavailable {
             Label(
                 "\(entry.shortActivityLabel) : — · Indisponible",
@@ -72,6 +76,8 @@ struct GoAccessoryCircularView: View {
                 swimmingCircular
             } else if entry.isEmpty || entry.isStale {
                 staleOrEmptyCircular
+            } else if entry.isNotOffered {
+                notOfferedCircular
             } else if entry.isUnavailable {
                 unavailableCircular
             } else {
@@ -149,6 +155,28 @@ struct GoAccessoryCircularView: View {
             "\(entry.activityDisplayName) à \(entry.title) : données indisponibles.")
     }
 
+    private var notOfferedCircular: some View {
+        VStack(spacing: 1) {
+            Image(systemName: entry.activitySymbol)
+                .widgetAccentedRenderingMode(.accentedDesaturated)
+                .font(OceanTypography.smallLabel)
+                .widgetAccentable()
+                .accessibilityHidden(true)
+
+            Text("Pas de")
+                .font(OceanTypography.tabLabel)
+                .widgetAccentable()
+                .minimumScaleFactor(0.7)
+
+            Text(entry.shortActivityLabel)
+                .font(OceanTypography.smallLabel)
+                .minimumScaleFactor(0.75)
+        }
+        .padding(4)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(entry.activityDisplayName) non proposé à \(entry.title).")
+    }
+
     private var standardCircular: some View {
         let verdict = entry.isGo ? "Oui" : "Non"
         return VStack(spacing: 1) {
@@ -186,6 +214,8 @@ struct GoAccessoryRectangularView: View {
                 swimmingRectangular
             } else if entry.isEmpty || entry.isStale {
                 staleOrEmptyRectangular
+            } else if entry.isNotOffered {
+                notOfferedRectangular
             } else if entry.isUnavailable {
                 unavailableRectangular
             } else {
@@ -279,6 +309,35 @@ struct GoAccessoryRectangularView: View {
                 Text("Ouvre l'app")
                     .font(OceanTypography.smallLabel)
                     .foregroundStyle(.secondary)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var notOfferedRectangular: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
+                Image(systemName: entry.activitySymbol)
+                    .widgetAccentedRenderingMode(.accentedDesaturated)
+                    .font(OceanTypography.smallLabel)
+                    .accessibilityHidden(true)
+
+                Text("\(entry.shortActivityLabel) · \(entry.title)")
+                    .font(OceanTypography.tabLabel)
+                    .widgetAccentable()
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Text("Pas proposé")
+                .font(OceanTypography.smallLabel)
+                .fontWeight(.semibold)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if levelOfDetail != .simplified {
+                Text(entry.detail)
+                    .font(OceanTypography.smallLabel)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .accessibilityElement(children: .combine)

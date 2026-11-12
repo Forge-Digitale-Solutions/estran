@@ -31,6 +31,9 @@ import SwiftUI
 struct ActivitySegmentedControl: View {
     let selection: Activity
     let unavailable: Set<Activity>
+    /// The activities the selected spot offers, in `Activity.allCases` order.
+    /// Arcachon-Eyrac drops `.surfing`, so the bar shows four chips there.
+    let supported: Set<Activity>
     let onSelect: (Activity) -> Void
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -42,6 +45,10 @@ struct ActivitySegmentedControl: View {
     /// into each other, which is what makes the selection look like one droplet
     /// of water moving along the bar rather than five pills blinking.
     private static let selectionGlassID = "activity-selection"
+
+    private var activities: [Activity] {
+        Activity.allCases.filter { supported.contains($0) }
+    }
 
     var body: some View {
         if dynamicTypeSize >= .accessibility1 {
@@ -57,7 +64,7 @@ struct ActivitySegmentedControl: View {
         ScrollView(.horizontal, showsIndicators: false) {
             GlassEffectContainer(spacing: OceanSpacing.xxs) {
                 HStack(spacing: OceanSpacing.xxs) {
-                    ForEach(Activity.allCases) { activity in
+                    ForEach(activities) { activity in
                         chip(for: activity)
                     }
                 }
@@ -78,7 +85,7 @@ struct ActivitySegmentedControl: View {
 
     private var menu: some View {
         Menu {
-            ForEach(Activity.allCases) { activity in
+            ForEach(activities) { activity in
                 Button {
                     onSelect(activity)
                 } label: {

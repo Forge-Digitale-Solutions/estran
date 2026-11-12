@@ -24,7 +24,12 @@ public enum SpotCatalog {
         tideStation: TideStationRef(id: "15", name: "PORT-BLOC"),
         supportedActivities: Set(Activity.allCases),
         timezone: TimeZone(identifier: "Europe/Paris") ?? .gmt,
-        // West-facing ocean shore. Provisional until checked on a chart.
+        // Ocean shore runs ~N–S with the Atlantic to the west (OSM coastline
+        // way 4543169, seaward normal ≈ 270–288°). Checked 2026-11-12.
+        // NOTE: the catalog coordinate (45.570, -1.062) sits on the Gironde
+        // estuary side, ~1.5 km east of the ocean shore (OSM way 538325189);
+        // the surf decision is kept on the ocean shore, not the coordinate's
+        // estuary — reported to the owner, not changed here.
         coastOrientationDegrees: 270,
         minimumWaterHeight: nil,
         validation: .gauged,
@@ -39,10 +44,15 @@ public enum SpotCatalog {
         region: .bassin,
         coordinate: Coordinate(latitude: 44.661, longitude: -1.169),
         tideStation: TideStationRef(id: "190", name: "ARCACHON_EYRAC"),
-        supportedActivities: Set(Activity.allCases),
+        // Surf is not offered here: the Eyrac jetty is inside the Bassin and
+        // nobody surfs there (owner decision 2026-11-12). The four other
+        // activities keep their rules.
+        supportedActivities: Set(Activity.allCases).subtracting([.surfing]),
         timezone: TimeZone(identifier: "Europe/Paris") ?? .gmt,
-        // The Eyrac jetty looks west-south-west. Provisional until checked.
-        coastOrientationDegrees: 250,
+        // The town shore faces north into the Bassin (OSM coastline way
+        // 516130770, Jetée Thiers: shoreline runs ~E–W, water north, seaward
+        // normal ≈ 2°). Checked 2026-11-12. The previous 250° was wrong.
+        coastOrientationDegrees: 0,
         minimumWaterHeight: nil,
         validation: .gauged,
         correctionStatus: .none,

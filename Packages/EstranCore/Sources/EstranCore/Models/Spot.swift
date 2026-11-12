@@ -165,4 +165,19 @@ public struct Spot: Identifiable, Codable, Hashable, Sendable {
             "estimation — modèle local"
         }
     }
+
+    /// `true` when the spot offers `activity`.
+    ///
+    /// Arcachon-Eyrac does not offer surf: the jetty is inside the Bassin and
+    /// nobody surfs there (`ARCHITECTURE_PLAN.md`, owner decision 2026-11-12).
+    /// A not-offered activity is a distinct state, never a `Non` and never
+    /// missing data.
+    public func supports(_ activity: Activity) -> Bool {
+        supportedActivities.contains(activity)
+    }
+
+    /// The activities offered at this spot, in `Activity.allCases` order.
+    public var offeredActivities: [Activity] {
+        Activity.allCases.filter { supportedActivities.contains($0) }
+    }
 }

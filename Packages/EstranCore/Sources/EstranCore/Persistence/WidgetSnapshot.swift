@@ -21,7 +21,8 @@ public struct WidgetSnapshot: Codable, Hashable, Sendable {
         public let isGo: Bool
         /// The visible answer: a window range, a reason, or a swimming level.
         public let answer: String
-        /// Swimming only: the permanent year-round warning.
+        /// A permanent warning: swimming's year-round baïnes warning, or the
+        /// Bassin boating caution about the passes. Never a verdict.
         public let warning: String?
         /// Swimming only: the level, so the widget colours it like the app.
         public let swimmingLevel: SwimmingRiskLevel?
@@ -78,6 +79,9 @@ public struct WidgetSnapshot: Codable, Hashable, Sendable {
     public let metrics: [Metric]
     /// `true` when the app ran on the DEBUG demo provider.
     public let isSampleData: Bool
+    /// `true` when the selected activity is not offered at the spot (surf inside
+    /// the Bassin). A distinct, visible state: never a `Non`, never missing data.
+    public let isNotOffered: Bool
 
     public init(
         updatedAt: Date,
@@ -90,7 +94,8 @@ public struct WidgetSnapshot: Codable, Hashable, Sendable {
         swimmingAdvisory: SwimmingAdvisory? = nil,
         lines: [ActivityLine] = [],
         metrics: [Metric] = [],
-        isSampleData: Bool = false)
+        isSampleData: Bool = false,
+        isNotOffered: Bool = false)
     {
         self.updatedAt = updatedAt
         self.spotID = spotID
@@ -103,6 +108,41 @@ public struct WidgetSnapshot: Codable, Hashable, Sendable {
         self.lines = lines
         self.metrics = metrics
         self.isSampleData = isSampleData
+        self.isNotOffered = isNotOffered
+    }
+
+    /// Tolerates a snapshot written before `isNotOffered` (and before the
+    /// multi-activity `lines`/`metrics`) existed: an absent flag decodes as
+    /// `false` and an absent list as empty, never as a fabricated state.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        spotID = try container.decode(String.self, forKey: .spotID)
+        spotName = try container.decode(String.self, forKey: .spotName)
+        activity = try container.decode(Activity.self, forKey: .activity)
+        isGo = try container.decode(Bool.self, forKey: .isGo)
+        isUnavailable = try container.decode(Bool.self, forKey: .isUnavailable)
+        answer = try container.decode(String.self, forKey: .answer)
+        swimmingAdvisory = try container.decodeIfPresent(SwimmingAdvisory.self, forKey: .swimmingAdvisory)
+        lines = try container.decodeIfPresent([ActivityLine].self, forKey: .lines) ?? []
+        metrics = try container.decodeIfPresent([Metric].self, forKey: .metrics) ?? []
+        isSampleData = try container.decodeIfPresent(Bool.self, forKey: .isSampleData) ?? false
+        isNotOffered = try container.decodeIfPresent(Bool.self, forKey: .isNotOffered) ?? false
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case updatedAt
+        case spotID
+        case spotName
+        case activity
+        case isGo
+        case isUnavailable
+        case answer
+        case swimmingAdvisory
+        case lines
+        case metrics
+        case isSampleData
+        case isNotOffered
     }
 
     /// How long a snapshot stays usable. Past this the widget says it is waiting

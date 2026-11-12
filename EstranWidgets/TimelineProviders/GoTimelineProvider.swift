@@ -35,28 +35,42 @@ struct GoTimelineProvider: TimelineProvider {
     static func entry(from snapshot: WidgetSnapshot?) -> GoEntry {
         guard let snapshot else { return .placeholder }
 
+        let spot = SpotCatalog.spot(id: snapshot.spotID) ?? SpotCatalog.defaultSpot
+
         // Swimming is a risk level, never a verdict (invariant 1): the answer is
         // the level the app computed, in the same word the small widget shows.
         // `.unknown` is the fallback only when no advisory travelled with the
-        // snapshot — never a made-up « low ».
-        let answer: String = if snapshot.activity == .swimming {
-            snapshot.swimmingAdvisory?.level.shortTitle
+        // snapshot — never a made-up « low ». A not-offered activity (surf inside
+        // the Bassin) is its own neutral state, never a `Non` and never missing
+        // data.
+        let answer: String
+        let detail: String
+        if snapshot.isNotOffered {
+            answer = ActivityOffer.notOfferedTitle(activity: snapshot.activity, spot: spot)
+            detail = ActivityOffer.notOfferedDetail(activity: snapshot.activity)
+                ?? snapshot.answer
+        } else if snapshot.activity == .swimming {
+            answer = snapshot.swimmingAdvisory?.level.shortTitle
                 ?? SwimmingRiskLevel.unknown.shortTitle
+            detail = snapshot.answer
         } else if snapshot.isUnavailable {
-            "Données indisponibles"
+            answer = "Données indisponibles"
+            detail = snapshot.answer
         } else {
-            snapshot.isGo ? "Oui" : "Non"
+            answer = snapshot.isGo ? "Oui" : "Non"
+            detail = snapshot.answer
         }
 
         return GoEntry(
             date: snapshot.updatedAt,
             title: snapshot.spotName,
             answer: answer,
-            detail: snapshot.answer,
+            detail: detail,
             isSwimming: snapshot.activity == .swimming,
             swimmingAdvisory: snapshot.swimmingAdvisory,
             isGo: snapshot.isGo,
             isUnavailable: snapshot.isUnavailable,
+            isNotOffered: snapshot.isNotOffered,
             lines: snapshot.lines,
             metrics: snapshot.metrics,
             isSampleData: snapshot.isSampleData,

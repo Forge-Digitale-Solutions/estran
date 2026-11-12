@@ -193,7 +193,12 @@ struct SpotDetailView: View {
     }
 
     private func windowLine() -> String? {
-        guard !app.unavailableActivities.contains(app.activity) else { return nil }
+        // A not-offered activity has no window, and an unavailable activity has
+        // none to confirm either: no « Aucun créneau » line, which would read as
+        // a verdict the spot cannot make.
+        guard !app.isActivityNotOffered,
+              !app.unavailableActivities.contains(app.activity)
+        else { return nil }
         guard let slot = app.currentSlot ?? app.upcomingSlot else {
             return "Aucun créneau dans les 48 prochaines heures."
         }

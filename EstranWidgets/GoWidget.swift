@@ -15,6 +15,9 @@ struct GoEntry: TimelineEntry {
     var isGo: Bool = true
     /// Missing data: a visible state, never a plain `Non`.
     var isUnavailable: Bool = false
+    /// The activity is not offered at the spot (surf inside the Bassin): a
+    /// neutral state, never a `Non` and never missing data.
+    var isNotOffered: Bool = false
     /// The five answers, for the medium and large widgets (frame 04).
     var lines: [WidgetSnapshot.ActivityLine] = []
     /// Tide, wind, swell, weather, already in French.
@@ -126,7 +129,8 @@ struct GoWidgetView: View {
                 } else {
                     Text(entry.isUnavailable ? "Données indisponibles" : entry.answer)
                         .font(OceanTypography.rounded(
-                            size: entry.isUnavailable ? badgeSize * 0.42 : badgeSize * 0.62))
+                            size: (entry.isUnavailable || entry.isNotOffered)
+                                ? badgeSize * 0.42 : badgeSize * 0.62))
                         .foregroundStyle(entry.verdictColor)
                         .widgetAccentable()
                         .fixedSize(horizontal: false, vertical: true)
@@ -209,7 +213,8 @@ struct GoWidgetView: View {
 
             Text(entry.isUnavailable ? "Données indisponibles" : entry.answer)
                 .font(OceanTypography.rounded(
-                    size: entry.isUnavailable ? badgeSize * 0.44 : badgeSize))
+                    size: (entry.isUnavailable || entry.isNotOffered)
+                        ? badgeSize * 0.44 : badgeSize))
                 .foregroundStyle(entry.verdictColor)
                 .widgetAccentable()
                 .fixedSize(horizontal: false, vertical: true)

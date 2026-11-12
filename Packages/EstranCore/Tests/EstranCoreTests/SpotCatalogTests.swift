@@ -11,11 +11,37 @@ final class SpotCatalogTests: XCTestCase {
         XCTAssertTrue(SpotCatalog.v1.allSatisfy(\.uncertainty.isActive))
     }
 
-    func testEverySpotSupportsTheFiveActivities() {
+    func testPointeDeGraveOffersAllFiveActivities() {
+        let spot = SpotCatalog.pointeDeGrave
+        XCTAssertEqual(spot.supportedActivities, Set(Activity.allCases))
+        XCTAssertEqual(spot.offeredActivities, Activity.allCases)
+        XCTAssertFalse(spot.name.isEmpty)
+        XCTAssertEqual(spot.timezone.identifier, "Europe/Paris")
+    }
+
+    /// Owner decision 2026-11-12: no surf inside the Bassin. The Eyrac jetty
+    /// offers the four other activities only, and `offeredActivities` keeps
+    /// `Activity.allCases` order without a surf entry.
+    func testArcachonEyracDoesNotOfferSurf() {
+        let spot = SpotCatalog.arcachonEyrac
+        XCTAssertEqual(spot.supportedActivities, Set(Activity.allCases).subtracting([.surfing]))
+        XCTAssertEqual(spot.offeredActivities, [.shoreFishing, .boating, .walking, .swimming])
+        XCTAssertFalse(spot.supports(.surfing))
+        for activity in spot.offeredActivities {
+            XCTAssertTrue(spot.supports(activity))
+        }
+        XCTAssertFalse(spot.name.isEmpty)
+        XCTAssertEqual(spot.timezone.identifier, "Europe/Paris")
+    }
+
+    /// Coast orientations checked against OSM coastline geometry (2026-11-12).
+    /// Eyrac's town shore faces north into the Bassin, not 250°; Pointe de
+    /// Grave's ocean shore faces west (~270°).
+    func testCoastOrientationsAreChecked() {
+        XCTAssertEqual(SpotCatalog.arcachonEyrac.coastOrientationDegrees, 0)
+        XCTAssertEqual(SpotCatalog.pointeDeGrave.coastOrientationDegrees, 270)
         for spot in SpotCatalog.v1 {
-            XCTAssertEqual(spot.supportedActivities, Set(Activity.allCases), spot.id)
-            XCTAssertFalse(spot.name.isEmpty)
-            XCTAssertEqual(spot.timezone.identifier, "Europe/Paris")
+            XCTAssertNotNil(spot.coastOrientationDegrees)
         }
     }
 

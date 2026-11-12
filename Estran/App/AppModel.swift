@@ -122,6 +122,12 @@ final class AppModel {
         provider.isSampleData
     }
 
+    /// `true` when the selected activity is not offered at the selected spot
+    /// (surf inside the Bassin): a neutral state, never a `Non` or missing data.
+    var isActivityNotOffered: Bool {
+        !selectedSpot.supports(activity)
+    }
+
     /// The production provider is the live one; DEBUG builds use the demo
     /// provider so the UI can be built before M2, unless the app was launched
     /// with `-liveData` (simulator / device check of the real sources).
@@ -250,10 +256,23 @@ final class AppModel {
             return
         }
 
+        // Overviews cover the offered activities only (never surf inside the
+        // Bassin). They drive the spot detail, the picker and the widget lines.
+        recomputeOverviewAvailability(for: conditions)
+
+        // Not offered (surf at Arcachon-Eyrac): a neutral state, never a
+        // computed verdict, never a fabricated `Non` or missing-data card.
+        guard selectedSpot.supports(activity) else {
+            decision = nil
+            slots = []
+            LiveActivityController.shared.endAll(reason: "activity not offered")
+            publishSnapshot(for: conditions)
+            return
+        }
+
         decision = engine.decide(
             activity: activity, conditions: conditions, forecast: store.forecast)
         slots = engine.windows(activity: activity, over: store.forecast)
-        recomputeOverviewAvailability(for: conditions)
         publishSnapshot(for: conditions)
 
         // M4: the generated sentence replaces the template line only once it
@@ -266,10 +285,15 @@ final class AppModel {
 
     /// Every activity's answer and unavailable flag for the current conditions,
     /// so the spot detail and the activity picker never call the engine.
+    ///
+    /// Iterates `conditions.spot.offeredActivities`, never `Activity.allCases`:
+    /// an activity the spot does not offer (surf at Eyrac) has no decision and
+    /// no window computed for it.
     @MainActor
     private func recomputeOverviewAvailability(for conditions: Conditions) {
+        let offered = conditions.spot.offeredActivities
         var unavailable: Set<Activity> = []
-        for candidate in Activity.allCases {
+        for candidate in offered {
             let candidateDecision = engine.decide(activity: candidate, conditions: conditions)
             if candidateDecision.isDataUnavailable {
                 unavailable.insert(candidate)
@@ -277,7 +301,7 @@ final class AppModel {
         }
         unavailableActivities = unavailable
 
-        overviews = Activity.allCases.map { candidate in
+        overviews = offered.map { candidate in
             let candidateDecision = engine.decide(
                 activity: candidate, conditions: conditions, forecast: store.forecast)
             let candidateSlots = engine.windows(activity: candidate, over: store.forecast)
@@ -299,7 +323,7 @@ final class AppModel {
                 conditions: conditions,
                 overviews: overviews,
                 activity: activity,
-                decision: decision ?? engine.decide(activity: activity, conditions: conditions),
+                decision: decision,
                 timeZone: selectedSpot.timezone,
                 isSampleData: usesSampleData))
         // The notification scheduler reads the same snapshot and the same

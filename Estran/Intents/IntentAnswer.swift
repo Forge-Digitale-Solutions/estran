@@ -14,6 +14,12 @@ enum IntentAnswer {
             return "Ouvre Estran pour charger les conditions."
         }
 
+        // Not offered is a fact, not a verdict and not stale data: it is spoken
+        // as-is, never turned into a `Non`.
+        if snapshot.isNotOffered {
+            return snapshot.answer
+        }
+
         let answer = if snapshot.isUnavailable {
             "Données indisponibles pour \(snapshot.spotName)."
         } else if snapshot.activity == .swimming {

@@ -64,10 +64,14 @@ extension GoEntry {
     }
 
     /// Display colour for the large verdict badge. Never green for swimming,
-    /// `Non`, unavailable, missing or stale states.
+    /// `Non`, unavailable, missing or stale states, and never a verdict colour
+    /// for a not-offered activity.
     var verdictColor: Color {
         if isSwimming {
             return OceanPalette.swimmingRiskText(resolvedSwimmingLevel)
+        }
+        if isNotOffered {
+            return OceanPalette.sand
         }
         if isEmpty || isStale || isUnavailable {
             return OceanPalette.unavailable
@@ -80,6 +84,9 @@ extension GoEntry {
         if isSwimming {
             return OceanPalette.swimmingRiskText(resolvedSwimmingLevel)
         }
+        if isNotOffered {
+            return OceanPalette.sand
+        }
         if isEmpty || isStale || isUnavailable {
             return OceanPalette.unavailable
         }
@@ -89,6 +96,9 @@ extension GoEntry {
     var verdictSymbol: String {
         if isSwimming {
             return "exclamationmark.triangle.fill"
+        }
+        if isNotOffered {
+            return resolvedActivity?.symbolName ?? "figure.surfing"
         }
         if isEmpty || isStale {
             return "clock.badge.exclamationmark"

@@ -152,12 +152,16 @@ struct SpotsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityHint("Ouvre la courbe de marée et les cinq activités")
+        .accessibilityHint("Ouvre la courbe de marée et le détail des activités")
     }
 
     @ViewBuilder
     private func verdictLine(summary: SpotCardSummary?) -> some View {
-        if let summary {
+        // Not offered is known without data: surf at Eyrac shows the neutral
+        // sentence immediately, even while the new spot is loading.
+        if app.isActivityNotOffered {
+            notOfferedVerdictView
+        } else if let summary {
             if app.activity == .swimming {
                 swimmingSummaryView(
                     SwimmingAdvisory(
@@ -176,6 +180,16 @@ struct SpotsView: View {
                 loadingVerdictView
             }
         }
+    }
+
+    /// Surf at Arcachon-Eyrac is not offered: a neutral line, never a `Non`.
+    private var notOfferedVerdictView: some View {
+        Label(
+            ActivityOffer.notOfferedTitle(activity: app.activity, spot: app.selectedSpot),
+            systemImage: app.activity.symbolName)
+            .font(OceanTypography.button)
+            .foregroundStyle(OceanPalette.sand)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     /// The neutral state while the new spot loads. It shows no value at all,

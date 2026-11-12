@@ -39,7 +39,13 @@ final class AccessibilityTourUITests: XCTestCase {
 
     /// The five Home states. The last selection is Surf: a short card keeps the
     /// Spots switcher on screen at AX5.
+    ///
+    /// Surf is not offered at Arcachon-Eyrac (owner decision 2026-11-12), so the
+    /// five-activity capture pins Pointe de Grave first; the persisted spot may
+    /// be Eyrac, whose Home bar has only four chips.
     private func captureActivities(in app: XCUIApplication) {
+        ensureSpot("Pointe de Grave", in: app)
+
         for (index, activity) in activities.enumerated() {
             selectActivity(named: activity.label, in: app)
             // Let the glass selection finish its animation: a mid-transition
@@ -51,6 +57,17 @@ final class AccessibilityTourUITests: XCTestCase {
         }
 
         selectActivity(named: "Surf", in: app)
+        waitForLayout(in: app)
+    }
+
+    /// Selects a spot on the Spots tab, then returns to Home so the activity
+    /// capture runs against a known spot rather than the persisted one.
+    private func ensureSpot(_ name: String, in app: XCUIApplication) {
+        app.tabBars.buttons["Spots"].tap()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 5))
+        selectSpot(named: name, in: app)
+        app.tabBars.buttons["Maintenant"].tap()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 5))
         waitForLayout(in: app)
     }
 

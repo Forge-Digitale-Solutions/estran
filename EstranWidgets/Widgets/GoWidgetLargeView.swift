@@ -162,7 +162,8 @@ extension GoWidgetLargeView {
                     .accessibilityHidden(true)
                 Text(entry.isUnavailable ? "Données indisponibles" : entry.answer)
                     .font(OceanTypography.rounded(
-                        size: entry.isUnavailable ? badgeSize * 0.44 : badgeSize * 0.72))
+                        size: (entry.isUnavailable || entry.isNotOffered)
+                            ? badgeSize * 0.44 : badgeSize * 0.72))
                     .fixedSize(horizontal: false, vertical: true)
             }
             .foregroundStyle(entry.verdictColor)
@@ -239,25 +240,36 @@ extension GoWidgetLargeView {
     private var activityLinesCard: some View {
         VStack(alignment: .leading, spacing: 4) {
             ForEach(entry.lines) { line in
-                HStack(spacing: OceanSpacing.xxs) {
-                    Image(systemName: line.activity.symbolName)
-                        .widgetAccentedRenderingMode(.accentedDesaturated)
-                        .font(OceanTypography.smallLabel)
-                        .foregroundStyle(OceanPalette.sand)
-                        .frame(width: 14, alignment: .center)
-                        .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: OceanSpacing.xxs) {
+                        Image(systemName: line.activity.symbolName)
+                            .widgetAccentedRenderingMode(.accentedDesaturated)
+                            .font(OceanTypography.smallLabel)
+                            .foregroundStyle(OceanPalette.sand)
+                            .frame(width: 14, alignment: .center)
+                            .accessibilityHidden(true)
 
-                    Text(line.activity.shortLabel)
-                        .font(OceanTypography.smallLabel)
-                        .foregroundStyle(OceanPalette.white.opacity(0.9))
+                        Text(line.activity.shortLabel)
+                            .font(OceanTypography.smallLabel)
+                            .foregroundStyle(OceanPalette.white.opacity(0.9))
 
-                    Spacer(minLength: OceanSpacing.xxs)
+                        Spacer(minLength: OceanSpacing.xxs)
 
-                    Text(entry.safeLineAnswer(for: line))
-                        .font(OceanTypography.smallLabel)
-                        .foregroundStyle(entry.lineColor(for: line))
-                        .multilineTextAlignment(.trailing)
-                        .fixedSize(horizontal: false, vertical: true)
+                        Text(entry.safeLineAnswer(for: line))
+                            .font(OceanTypography.smallLabel)
+                            .foregroundStyle(entry.lineColor(for: line))
+                            .multilineTextAlignment(.trailing)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    // Swimming's warning is already folded into `safeLineAnswer`;
+                    // the boating caution is drawn here, never a verdict.
+                    if line.activity != .swimming, let warning = line.warning {
+                        Text(warning)
+                            .font(OceanTypography.smallLabel)
+                            .foregroundStyle(OceanPalette.sand)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 .accessibilityElement(children: .combine)
             }

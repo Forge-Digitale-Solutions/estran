@@ -264,6 +264,22 @@ For pêche à pied / baignade / bateau on the lagoon's north-east and south-east
 - **Short segmented labels** (Home): Pêche, Surf, Bateau, Balade, **Bain** (note: "Bain" is the short form of "Baignade" in the segmented control).
 - Each activity maps to a `case` in the `Activity` enum, with `shortLabel` and `fullLabel`.
 
+### 5.1 Per-spot activities
+
+Not every activity is offered at every spot (`Spot.supportedActivities`).
+**Arcachon-Eyrac does not offer Surf**: the jetty is inside the Bassin and nobody
+surfs there — surfers go to the ocean side (Cap Ferret / la Salie). A not-offered
+activity is a **neutral state**, never a `Non` and never « Données indisponibles »:
+the card says « Pas de surf à Arcachon-Eyrac · Le surf, c'est côté océan : Cap
+Ferret ou la Salie. », and every surface honours it — Home chips and picker (four
+activities at Eyrac), the spot detail list, the widget lines (four lines, no blank
+row) and Siri (« surf à Arcachon-Eyrac » answers the same sentence, never Oui/Non).
+
+Boating inside the Bassin keeps its wind + labelled wind-sea verdict but carries a
+permanent, factual caution on its surfaces: « Les passes du Bassin restent
+dangereuses : houle de l'océan et bancs qui bougent. » It never changes the
+verdict. Owner decision 2026-11-12.
+
 ---
 
 ## 6. Components checklist

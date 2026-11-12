@@ -48,6 +48,13 @@ struct AnswerIntent: AppIntent {
 
     /// Pure dialog mapping used by tests and by `perform`.
     func resolvedText(for snapshot: WidgetSnapshot?) -> String {
+        // Not offered is independent of the snapshot: surf at Arcachon-Eyrac is
+        // answered the same sentence whether or not a snapshot exists, and never
+        // with Oui/Non (owner decision 2026-11-12).
+        if let spot, let activity, !spot.spot.supports(activity.activity) {
+            return ActivityOffer.notOfferedSentence(activity: activity.activity, spot: spot.spot)
+        }
+
         guard let snapshot else {
             return IntentAnswer.text(for: nil)
         }
@@ -69,6 +76,9 @@ struct AnswerIntent: AppIntent {
     /// Snippet shows the snapshot only when it answers the requested combo.
     private func matchingSnapshot(_ snapshot: WidgetSnapshot?) -> WidgetSnapshot? {
         guard let snapshot else { return nil }
+        if let spot, let activity, !spot.spot.supports(activity.activity) {
+            return nil
+        }
         if let spot, spot.id != snapshot.spotID {
             return nil
         }

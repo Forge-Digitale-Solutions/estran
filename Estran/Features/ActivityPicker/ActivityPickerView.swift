@@ -298,8 +298,8 @@ private struct ActivityAnswer {
             return
         }
         primarySymbol = nil
-        secondary = nil
-        secondaryColor = nil
+        secondary = ActivityCaution.caution(activity: overview.activity, spot: overview.decision.spot)
+        secondaryColor = OceanPalette.sand
 
         if overview.isUnavailable {
             primary = "Données indisponibles"

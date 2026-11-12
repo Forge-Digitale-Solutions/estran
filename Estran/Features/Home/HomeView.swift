@@ -34,6 +34,7 @@ struct HomeView: View {
                             ActivitySegmentedControl(
                                 selection: app.activity,
                                 unavailable: app.unavailableActivities,
+                                supported: app.selectedSpot.supportedActivities,
                                 onSelect: { app.select(activity: $0) })
                             answerSection
                                 .glassEffectID(Self.answerGlassID, in: glassNamespace)
@@ -50,7 +51,10 @@ struct HomeView: View {
                         }
                     }
                     // Swimming has no "good window": it is a risk level, not a verdict.
-                    if case .ready = app.store.phase, app.activity != .swimming {
+                    // A not-offered activity has none either: it is not a verdict.
+                    if case .ready = app.store.phase, app.activity != .swimming,
+                       !app.isActivityNotOffered
+                    {
                         NextWindowCard(
                             current: app.currentSlot,
                             upcoming: app.upcomingSlot,
@@ -61,8 +65,9 @@ struct HomeView: View {
                     if let conditions = app.store.conditions {
                         ConditionsGrid(conditions: conditions)
                         // The swimming advisory card already carries the full
-                        // warning; a second tip would duplicate it.
-                        if app.activity != .swimming {
+                        // warning; a second tip would duplicate it, and a
+                        // not-offered activity has no tip either.
+                        if app.activity != .swimming, !app.isActivityNotOffered {
                             TipCard(activity: app.activity)
                         }
                     }
@@ -154,7 +159,12 @@ struct HomeView: View {
         case .idle, .loading:
             LoadingCard()
         case .ready:
-            if let decision = app.decision, let conditions = app.store.conditions {
+            if app.isActivityNotOffered {
+                NotOfferedCard(
+                    activity: app.activity,
+                    spot: app.selectedSpot,
+                    onSwitchSpot: { app.select(tab: .spots) })
+            } else if let decision = app.decision, let conditions = app.store.conditions {
                 if app.activity == .swimming {
                     SwimmingAdvisoryCard(
                         advisory: SwimmingAdvisory(
@@ -203,6 +213,62 @@ private struct LoadingCard: View {
                 .font(OceanTypography.body)
                 .foregroundStyle(OceanPalette.white)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(OceanSpacing.lg)
+        .oceanGlassCard(cornerRadius: OceanGlass.answerCornerRadius)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// An activity the spot does not offer (surf inside the Bassin). A distinct,
+/// neutral state: never a `Non`, never « Données indisponibles » — the data can
+/// answer, the spot simply does not offer the activity. The segmented control
+/// above still lets the user pick another activity; the button switches spot.
+private struct NotOfferedCard: View {
+    let activity: Activity
+    let spot: Spot
+    let onSwitchSpot: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: OceanSpacing.sm) {
+            HStack(alignment: .top, spacing: OceanSpacing.xs) {
+                Image(systemName: "figure.surfing")
+                    .font(OceanTypography.body)
+                    .foregroundStyle(OceanPalette.sand)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
+                    Text(ActivityOffer.notOfferedTitle(activity: activity, spot: spot))
+                        .font(OceanTypography.bodyEmphasized)
+                        .foregroundStyle(OceanPalette.white)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let detail = ActivityOffer.notOfferedDetail(activity: activity) {
+                        Text(detail)
+                            .font(OceanTypography.subtitle)
+                            .foregroundStyle(OceanPalette.white.opacity(0.85))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+
+            Button(action: onSwitchSpot) {
+                HStack(spacing: OceanSpacing.xxs) {
+                    Text("Changer de spot")
+                        .font(OceanTypography.button)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Image(systemName: "chevron.right")
+                        .font(OceanTypography.smallLabel)
+                        .accessibilityHidden(true)
+                }
+                .foregroundStyle(OceanPalette.turquoiseOnGlass)
+                .padding(.horizontal, OceanSpacing.sm)
+                .padding(.vertical, OceanSpacing.xs)
+                .frame(maxWidth: .infinity, minHeight: OceanGlass.minimumTapHeight)
+                .oceanGlassCapsule(interactive: true)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Ouvre la carte pour choisir un autre spot")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(OceanSpacing.lg)
