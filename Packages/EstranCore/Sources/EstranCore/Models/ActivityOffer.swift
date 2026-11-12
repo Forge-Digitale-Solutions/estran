@@ -47,11 +47,33 @@ public enum ActivityCaution {
     public static let boatingPasses =
         "Les passes du Bassin restent dangereuses : houle de l'océan et bancs qui bougent."
 
+    /// Light-rain reminder for the two rain-gated activities that tolerate a
+    /// drizzle (owner decision 2026-11-12).
+    public static let rainJacket = "Prévois une veste : petite pluie possible."
+
     /// The caution for `activity` at `spot`, or `nil` when none applies.
     public static func caution(activity: Activity, spot: Spot) -> String? {
         if activity == .boating, spot.region == .bassin {
             return boatingPasses
         }
         return nil
+    }
+
+    /// The light-rain caution for `activity`, or `nil` when the weather is not
+    /// a light rain or the activity is not rain-gated (fishing and walking).
+    public static func rainCaution(activity: Activity, weather: WeatherNow) -> String? {
+        guard activity == .shoreFishing || activity == .walking,
+              RuleSignals.isLightRain(weather)
+        else {
+            return nil
+        }
+        return rainJacket
+    }
+
+    /// The permanent spot caution plus the decision's conditional rain reminder,
+    /// or `nil`. The two are mutually exclusive by activity, so the first
+    /// non-nil wins.
+    public static func combined(_ decision: GoDecision) -> String? {
+        caution(activity: decision.activity, spot: decision.spot) ?? decision.caution
     }
 }

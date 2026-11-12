@@ -83,7 +83,7 @@ final class RulesTests: XCTestCase {
         let rainy = DecisionFixtures.conditions(
             at: noon,
             tide: DecisionFixtures.tide(at: noon),
-            weather: DecisionFixtures.weather(precipitationChance: 0.6))
+            weather: DecisionFixtures.weather(precipitationChance: 0.8))
         XCTAssertTrue(rule.blockers(rainy).contains(.rain))
     }
 

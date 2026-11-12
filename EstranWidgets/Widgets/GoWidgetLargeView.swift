@@ -304,7 +304,7 @@ extension GoWidgetLargeView {
                 .padding(.horizontal, OceanSpacing.xs)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .widgetGlassCard(minimumRadius: 10)
+                .widgetGlassTile(cornerRadius: 10)
                 .accessibilityElement(children: .combine)
             }
         }

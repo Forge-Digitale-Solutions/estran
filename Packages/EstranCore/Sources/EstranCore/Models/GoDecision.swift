@@ -25,6 +25,9 @@ public struct GoDecision: Codable, Hashable, Sendable {
     /// Live Activity, Siri) on the same reason instead of re-deriving it from
     /// the rule.
     public let blockers: [ActivityBlocker]
+    /// A conditional caution to show beside the verdict (e.g. the light-rain
+    /// jacket reminder). Copy only: it never changes the verdict.
+    public let caution: String?
 
     public init(
         activity: Activity,
@@ -35,7 +38,8 @@ public struct GoDecision: Codable, Hashable, Sendable {
         reasonSource: ReasonSource,
         nextGoodWindow: DateInterval?,
         computedAt: Date,
-        blockers: [ActivityBlocker] = [])
+        blockers: [ActivityBlocker] = [],
+        caution: String? = nil)
     {
         self.activity = activity
         self.spot = spot
@@ -46,6 +50,7 @@ public struct GoDecision: Codable, Hashable, Sendable {
         self.nextGoodWindow = nextGoodWindow
         self.computedAt = computedAt
         self.blockers = blockers
+        self.caution = caution
     }
 
     /// `true` when the verdict is blocked by missing data rather than by the

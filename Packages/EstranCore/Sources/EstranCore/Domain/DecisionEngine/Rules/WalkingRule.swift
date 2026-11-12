@@ -3,14 +3,15 @@ import Foundation
 /// Balade: dry, not too windy, comfortable temperature.
 ///
 /// The §7.1 "Go when" conditions are comfort gates: wind at or above 30 km/h, a
-/// temperature outside 8...30 °C or likely rain force a `Non`.
+/// temperature outside 8...30 °C or franc rain force a `Non`. Light rain or
+/// drizzle is a small score penalty, never a blocker (owner decision
+/// 2026-11-12).
 public struct WalkingRule: ActivityRule {
     public let activity = Activity.walking
     public let threshold = 0.6
 
     public static let maximumWindSpeed: Double = 30
     public static let temperatureRange = 8.0 ... 30.0
-    public static let maximumPrecipitationChance: Double = 0.6
 
     public init() {}
 
@@ -19,9 +20,7 @@ public struct WalkingRule: ActivityRule {
         if RuleSignals.isStormy(conditions.weather) {
             blockers.append(.storm)
         }
-        if conditions.weather.precipitationChance >= Self.maximumPrecipitationChance
-            || RuleSignals.isRaining(conditions.weather)
-        {
+        if RuleSignals.isRaining(conditions.weather) {
             blockers.append(.rain)
         }
         if conditions.weather.wind.speed >= Self.maximumWindSpeed {

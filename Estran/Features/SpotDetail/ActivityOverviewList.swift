@@ -142,8 +142,11 @@ private struct ActivityOverviewRow: View {
     /// reads. Colour is never the only signal — every state carries a glyph.
     private var answer: ActivityRowAnswer {
         let name = overview.activity.displayName
-        // The permanent Bassin boating caution, or `nil` for any other row.
+        // The permanent Bassin boating caution, plus the conditional light-rain
+        // reminder when it applies, or `nil` for any other row. The two are
+        // mutually exclusive by activity, so the first non-nil wins.
         let caution = ActivityCaution.caution(activity: overview.activity, spot: overview.decision.spot)
+            ?? overview.decision.caution
 
         // Swimming first: no state may fall through to Oui/Non.
         if overview.activity == .swimming {
@@ -174,7 +177,7 @@ private struct ActivityOverviewRow: View {
                     warning: caution,
                     spoken: spokenWithCaution([name, "Oui", "Créneau à confirmer"], caution: caution))
             }
-            let range = FrenchFormat.range(window, in: timeZone)
+            let range = FrenchFormat.range(window, in: timeZone, reference: overview.decision.computedAt)
             return ActivityRowAnswer(
                 text: range,
                 symbolName: "checkmark.circle.fill",

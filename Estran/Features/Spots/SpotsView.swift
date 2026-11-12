@@ -118,7 +118,8 @@ struct SpotsView: View {
                         .foregroundStyle(OceanPalette.unavailable)
                         .fixedSize(horizontal: false, vertical: true)
                 } else if let window = summary.window {
-                    Text(FrenchFormat.range(window, in: app.selectedSpot.timezone))
+                    Text(FrenchFormat.range(
+                        window, in: app.selectedSpot.timezone, reference: summary.conditions.at))
                         .font(OceanTypography.caption)
                         .foregroundStyle(OceanPalette.white.opacity(0.85))
                         .fixedSize(horizontal: false, vertical: true)

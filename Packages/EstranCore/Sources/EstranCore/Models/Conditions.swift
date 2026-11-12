@@ -67,6 +67,9 @@ public enum WeatherCondition: String, Codable, Hashable, Sendable {
     case clear
     case partlyCloudy
     case cloudy
+    /// Light rain or drizzle: annoying but not a reason to stay home.
+    case drizzle
+    /// Franc rain: a real blocker for the rain-gated activities.
     case rain
     case showers
     case thunderstorm

@@ -298,7 +298,7 @@ private struct ActivityAnswer {
             return
         }
         primarySymbol = nil
-        secondary = ActivityCaution.caution(activity: overview.activity, spot: overview.decision.spot)
+        secondary = ActivityCaution.combined(overview.decision)
         secondaryColor = OceanPalette.sand
 
         if overview.isUnavailable {
@@ -311,7 +311,7 @@ private struct ActivityAnswer {
                 ?? overview.upcoming?.window
                 ?? overview.decision.nextGoodWindow
             {
-                primary = "Oui, \(FrenchFormat.range(window, in: timeZone))"
+                primary = "Oui, \(FrenchFormat.range(window, in: timeZone, reference: overview.decision.computedAt))"
             } else {
                 // A `Oui` with no window is still a `Oui`: never invent a time.
                 primary = "Oui"

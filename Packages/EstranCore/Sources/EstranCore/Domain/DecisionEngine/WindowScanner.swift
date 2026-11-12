@@ -86,4 +86,28 @@ public enum WindowScanner {
         guard !gaps.isEmpty else { return nil }
         return gaps[gaps.count / 2]
     }
+
+    /// The most frequent blocker over a horizon, or `nil` when there is none.
+    ///
+    /// A windowless forecast is explained by the blocker that fires the most
+    /// across the scanned samples. Ties break deterministically on the blocker's
+    /// raw value, so the same input always yields the same answer.
+    public static func dominantBlocker(
+        in forecast: [Conditions],
+        blockers: (Conditions) -> [ActivityBlocker]) -> ActivityBlocker?
+    {
+        var counts: [ActivityBlocker: Int] = [:]
+        for sample in forecast {
+            for blocker in blockers(sample) {
+                counts[blocker, default: 0] += 1
+            }
+        }
+        guard !counts.isEmpty else { return nil }
+        return counts.max { lhs, rhs in
+            if lhs.value != rhs.value {
+                return lhs.value < rhs.value
+            }
+            return lhs.key.rawValue > rhs.key.rawValue
+        }?.key
+    }
 }

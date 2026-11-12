@@ -59,6 +59,7 @@ struct HomeView: View {
                             current: app.currentSlot,
                             upcoming: app.upcomingSlot,
                             isUnavailable: app.unavailableActivities.contains(app.activity),
+                            noWindowReason: FrenchFormat.emptyWindowReason(app.emptyWindowBlocker),
                             timeZone: app.selectedSpot.timezone,
                             reference: referenceDate)
                     }

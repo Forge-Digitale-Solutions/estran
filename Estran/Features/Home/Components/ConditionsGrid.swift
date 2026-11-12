@@ -28,7 +28,7 @@ struct ConditionsGrid: View {
     var body: some View {
         LazyVGrid(columns: columns, spacing: OceanSpacing.sm) {
             ConditionTile(
-                icon: "water.waves",
+                icon: FrenchFormat.tideSymbol(conditions.tide),
                 value: tideHeight,
                 label: FrenchFormat.tideTrendShort(conditions.tide),
                 spoken: "Marée : \(tideHeight), \(FrenchFormat.tideTrend(conditions.tide))")
@@ -39,11 +39,9 @@ struct ConditionsGrid: View {
                 spoken: "Vent : \(FrenchFormat.wind(conditions.weather.wind)), "
                     + "direction \(FrenchFormat.windDirection(conditions.weather.wind))")
             ConditionTile(
-                icon: "wave.3.right",
+                icon: "water.waves",
                 value: FrenchFormat.swellHeight(conditions.swell),
-                label: conditions.swell.isEstimated
-                    ? "estimée · \(FrenchFormat.swellPeriod(conditions.swell))"
-                    : FrenchFormat.swellPeriod(conditions.swell),
+                label: FrenchFormat.swellTileLabel(conditions.swell),
                 spoken: "Houle\(conditions.swell.isEstimated ? " estimée à partir du vent" : "") : "
                     + "\(FrenchFormat.swellHeight(conditions.swell)), "
                     + "période \(FrenchFormat.swellPeriod(conditions.swell))")

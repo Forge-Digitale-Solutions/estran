@@ -33,12 +33,30 @@
                 throw ConditionsProviderError.tideUnavailable
             }
 
+            let weather = DemoWeather.weather(for: spot, at: date)
             return Conditions(
                 spot: spot,
                 at: date,
                 tide: tide,
-                weather: DemoWeather.weather(for: spot, at: date),
-                swell: DemoWeather.swell(for: spot, at: date))
+                weather: weather,
+                swell: Self.swell(for: spot, at: date, weather: weather))
+        }
+
+        /// The same provenance decision as the live provider: the Bassin's sea is
+        /// a wind-sea estimate (and says so), the ocean coast uses the model.
+        private static func swell(
+            for spot: Spot,
+            at date: Date,
+            weather: WeatherNow) -> Swell
+        {
+            switch MarinePolicy.source(for: spot) {
+            case .offshoreModel:
+                DemoWeather.swell(for: spot, at: date)
+            case .windSeaEstimate:
+                WindSeaEstimator.estimate(
+                    wind: weather.wind,
+                    fetchMeters: MarinePolicy.fetchMeters(for: spot))
+            }
         }
 
         func forecast(for spot: Spot, from date: Date, hours: Int) async throws -> [Conditions] {

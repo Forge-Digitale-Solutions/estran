@@ -150,10 +150,12 @@ struct OpenMeteoWeatherService: WeatherSource {
             && hourly.visibility.count >= count
     }
 
-    /// WMO 4677 weather code → the domain's nine conditions.
+    /// WMO 4677 weather code → the domain's ten conditions.
     ///
     /// Every branch is explicit; an unmapped code is `.unknown`, which the rules
-    /// treat as ordinary weather, never as a favourable signal.
+    /// treat as ordinary weather, never as a favourable signal. Drizzle (51–57)
+    /// and slight rain (61) are light; moderate/heavy rain (63/65) is franc;
+    /// showers (80–82) are averses (owner decision 2026-11-12).
     static func condition(forWMO code: Int) -> EstranCore.WeatherCondition {
         switch code {
         case 0, 1:
@@ -164,8 +166,12 @@ struct OpenMeteoWeatherService: WeatherSource {
             .cloudy
         case 45, 48:
             .fog
-        case 51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82:
+        case 51, 53, 55, 56, 57, 61:
+            .drizzle
+        case 63, 65, 66, 67:
             .rain
+        case 80, 81, 82:
+            .showers
         case 71, 73, 75, 77, 85, 86:
             .snow
         case 95, 96, 99:

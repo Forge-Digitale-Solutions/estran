@@ -117,7 +117,7 @@ struct SpotDetailView: View {
                     events: conditions.tide.allEvents,
                     goodWindows: goodWindows,
                     nextEventLine: nextEventLine(conditions),
-                    windowLine: windowLine(),
+                    windowLine: windowLine(conditions),
                     timeZone: app.selectedSpot.timezone,
                     now: conditions.at,
                     accessibilitySentence: chartSentence(conditions))
@@ -144,11 +144,9 @@ struct SpotDetailView: View {
                 spoken: "Vent : \(FrenchFormat.wind(conditions.weather.wind)), "
                     + "direction \(FrenchFormat.windDirection(conditions.weather.wind))")
             ConditionTile(
-                icon: "wave.3.right",
+                icon: "water.waves",
                 value: FrenchFormat.swellHeight(conditions.swell),
-                label: conditions.swell.isEstimated
-                    ? "estimée · \(FrenchFormat.swellPeriod(conditions.swell))"
-                    : FrenchFormat.swellPeriod(conditions.swell),
+                label: FrenchFormat.swellTileLabel(conditions.swell),
                 spoken: "Houle\(conditions.swell.isEstimated ? " estimée à partir du vent" : "") : "
                     + "\(FrenchFormat.swellHeight(conditions.swell)), "
                     + "période \(FrenchFormat.swellPeriod(conditions.swell))")
@@ -192,7 +190,7 @@ struct SpotDetailView: View {
         }
     }
 
-    private func windowLine() -> String? {
+    private func windowLine(_ conditions: Conditions) -> String? {
         // A not-offered activity has no window, and an unavailable activity has
         // none to confirm either: no « Aucun créneau » line, which would read as
         // a verdict the spot cannot make.
@@ -200,12 +198,13 @@ struct SpotDetailView: View {
               !app.unavailableActivities.contains(app.activity)
         else { return nil }
         guard let slot = app.currentSlot ?? app.upcomingSlot else {
-            return "Aucun créneau dans les 48 prochaines heures."
+            return FrenchFormat.emptyWindowReason(app.emptyWindowBlocker)
+                ?? "Aucun créneau dans les 48 prochaines heures."
         }
         // Name the activity: the curve and the bands belong to the activity
         // selected on Home, while the list below covers all five.
         return "Bon créneau \(app.activity.displayName.lowercased()) · "
-            + FrenchFormat.range(slot.window, in: app.selectedSpot.timezone)
+            + FrenchFormat.range(slot.window, in: app.selectedSpot.timezone, reference: conditions.at)
     }
 
     /// Spoken value of the chart: the same two lines the card draws, plus the
@@ -221,7 +220,7 @@ struct SpotDetailView: View {
         } else {
             parts.append("prochaine marée indisponible")
         }
-        if let line = windowLine() {
+        if let line = windowLine(conditions) {
             parts.append(line)
         }
         return parts.joined(separator: ". ") + "."

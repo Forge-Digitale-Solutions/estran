@@ -201,7 +201,7 @@ final class SafetyGatesTests: XCTestCase {
         let tooWindy = conditions(at: noon, weather: DecisionFixtures.weather(windSpeed: 30))
         XCTAssertTrue(rule.blockers(tooWindy).contains(.wind))
 
-        let rainy = conditions(at: noon, weather: DecisionFixtures.weather(precipitationChance: 0.6))
+        let rainy = conditions(at: noon, weather: DecisionFixtures.weather(precipitationChance: 0.8))
         XCTAssertTrue(rule.blockers(rainy).contains(.rain))
     }
 

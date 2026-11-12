@@ -18,8 +18,69 @@ enum FrenchFormat {
         return "\(hour) h \(String(format: "%02d", minute))"
     }
 
-    static func range(_ interval: DateInterval, in timeZone: TimeZone) -> String {
-        "\(time(interval.start, in: timeZone)) à \(time(interval.end, in: timeZone))"
+    /// « 15 h 30 à 17 h 30 » today, « demain 8 h 30 à 10 h 30 » later, or
+    /// « ce soir 19 h 21 → demain 17 h 21 » across local midnight.
+    ///
+    /// The day is named whenever the window does not start and end on the same
+    /// local day as today, so a range that crosses midnight can never read as a
+    /// same-day window.
+    static func range(
+        _ interval: DateInterval,
+        in timeZone: TimeZone,
+        reference: Date) -> String
+    {
+        let start = interval.start
+        let end = interval.end
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+
+        if calendar.isDate(start, inSameDayAs: end) {
+            if calendar.isDate(start, inSameDayAs: reference) {
+                return "\(time(start, in: timeZone)) à \(time(end, in: timeZone))"
+            }
+            return "\(dayPrefix(start, in: timeZone, reference: reference)) "
+                + "\(time(start, in: timeZone)) à \(time(end, in: timeZone))"
+        }
+
+        let startPrefix = calendar.isDate(start, inSameDayAs: reference)
+            ? (isEvening(start, in: timeZone) ? "ce soir" : "aujourd'hui")
+            : dayPrefix(start, in: timeZone, reference: reference)
+        let endPrefix = dayPrefix(end, in: timeZone, reference: reference)
+        return "\(startPrefix) \(time(start, in: timeZone)) → "
+            + "\(endPrefix) \(time(end, in: timeZone))"
+    }
+
+    /// « demain », « après-demain », or « aujourd'hui ». A window lives inside a
+    /// 48 h horizon, so anything further is unreachable and falls back to the
+    /// weekday name.
+    private static func dayPrefix(_ date: Date, in timeZone: TimeZone, reference: Date) -> String {
+        if let relative = relativeDay(date, in: timeZone, reference: reference) {
+            return relative
+        }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        if calendar.isDate(date, inSameDayAs: reference) {
+            return "aujourd'hui"
+        }
+        return weekdayOnly(date, in: timeZone)
+    }
+
+    /// Whether the local hour is 17 h or later, when « ce soir » reads better
+    /// than « aujourd'hui ».
+    private static func isEvening(_ date: Date, in timeZone: TimeZone) -> Bool {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        return (calendar.component(.hour, from: date)) >= 17
+    }
+
+    /// The weekday alone, for a window past « après-demain » (unreachable in a
+    /// 48 h horizon, but kept so the formatter never prints an empty day).
+    private static func weekdayOnly(_ date: Date, in timeZone: TimeZone) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "fr_FR")
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "EEEE"
+        return formatter.string(from: date)
     }
 
     /// « lundi 26 oct. » in the spot's time zone, for the spot detail subtitle.
@@ -118,11 +179,19 @@ enum FrenchFormat {
     }
 
     static func swellHeight(_ swell: Swell) -> String {
-        "\(height(swell.waveHeight)) m"
+        let prefix = swell.isEstimated ? "≈ " : ""
+        return "\(prefix)\(height(swell.waveHeight)) m"
     }
 
     static func swellPeriod(_ swell: Swell) -> String {
         "\(Int(swell.period.rounded())) s"
+    }
+
+    /// Short caption for the swell tile: the period, or « estimée » when the
+    /// sea is a local wind-sea estimate and the period is itself an estimate,
+    /// not an observation. Keeps the tile the same visual weight as the others.
+    static func swellTileLabel(_ swell: Swell) -> String {
+        swell.isEstimated ? "estimée" : swellPeriod(swell)
     }
 
     static func percent(_ fraction: Double) -> String {
@@ -136,6 +205,7 @@ enum FrenchFormat {
         case .clear: "ensoleillé"
         case .partlyCloudy: "éclaircies"
         case .cloudy: "nuageux"
+        case .drizzle: "bruine"
         case .rain: "pluie"
         case .showers: "averses"
         case .thunderstorm: "orage"
@@ -150,8 +220,9 @@ enum FrenchFormat {
         case .clear: "sun.max"
         case .partlyCloudy: "cloud.sun"
         case .cloudy: "cloud"
+        case .drizzle: "cloud.drizzle"
         case .rain: "cloud.rain"
-        case .showers: "cloud.drizzle"
+        case .showers: "cloud.heavyrain"
         case .thunderstorm: "cloud.bolt"
         case .fog: "cloud.fog"
         case .snow: "cloud.snow"
@@ -160,6 +231,16 @@ enum FrenchFormat {
     }
 
     // MARK: - Tide
+
+    /// SF Symbol for the tide tile, chosen from the trend: a wave with an
+    /// up/down arrow when rising/falling, plain waves when the trend is unknown.
+    static func tideSymbol(_ state: TideState) -> String {
+        switch state.isRising {
+        case .some(true): "water.waves.and.arrow.trianglehead.up"
+        case .some(false): "water.waves.and.arrow.trianglehead.down"
+        case .none: "water.waves"
+        }
+    }
 
     static func tideTrend(_ state: TideState) -> String {
         switch state.isRising {
@@ -185,5 +266,30 @@ enum FrenchFormat {
         case .high: "Marée haute"
         case .low: "Marée basse"
         }
+    }
+
+    // MARK: - Empty window
+
+    /// The short French reason for a windowless 48 h horizon, from its dominant
+    /// blocker, or `nil` when there is nothing precise to say (keep the generic
+    /// sentence then).
+    static func emptyWindowReason(_ blocker: ActivityBlocker?) -> String? {
+        guard let blocker else { return nil }
+        switch blocker {
+        case .night:
+            return "Pas de créneau de jour d'ici 48 h : les marées basses tombent la nuit."
+        case .dataUnavailable, .currentDataUnavailable:
+            // These are handled by the « Créneaux indisponibles » state, never by
+            // the no-window sentence.
+            return nil
+        default:
+            return "Pas de créneau d'ici 48 h : \(firstLowercased(blocker.shortLabel))."
+        }
+    }
+
+    /// « Coefficient trop faible » → « coefficient trop faible ».
+    private static func firstLowercased(_ text: String) -> String {
+        guard let first = text.first else { return text }
+        return String(first).lowercased() + String(text.dropFirst())
     }
 }

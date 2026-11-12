@@ -177,7 +177,7 @@ extension GoEntry {
     static let sampleMetrics: [WidgetSnapshot.Metric] = [
         WidgetSnapshot.Metric(
             id: "tide",
-            symbol: "water.waves",
+            symbol: "water.waves.and.arrow.trianglehead.down",
             value: "1,8 m",
             caption: "baisse"),
         WidgetSnapshot.Metric(
@@ -187,7 +187,7 @@ extension GoEntry {
             caption: "km/h NO"),
         WidgetSnapshot.Metric(
             id: "swell",
-            symbol: "wave.3.right",
+            symbol: "water.waves",
             value: "1,2 m",
             caption: "11 s"),
         WidgetSnapshot.Metric(

@@ -76,7 +76,8 @@ public struct DecisionEngine: Sendable {
             reasonSource: .template,
             nextGoodWindow: nextWindow,
             computedAt: conditions.at,
-            blockers: blockers)
+            blockers: blockers,
+            caution: ActivityCaution.rainCaution(activity: activity, weather: conditions.weather))
     }
 
     /// Every good window of `activity` over `forecast`, sorted by start date.
@@ -100,5 +101,20 @@ public struct DecisionEngine: Sendable {
             let go = !inside.isEmpty && inside.allSatisfy { rule.isGo($0) }
             return ActivitySlot(activity: activity, window: window, score: mean, go: go)
         }
+    }
+
+    /// The blocker that dominates a windowless horizon, or `nil`.
+    ///
+    /// Used to explain *why* there is no window in the 48 h ahead: the most
+    /// frequent blocker the rule emits across the forecast. `nil` when the
+    /// forecast is empty or no sample carries a blocker.
+    public func dominantBlocker(
+        activity: Activity,
+        over forecast: [Conditions]) -> ActivityBlocker?
+    {
+        guard let rule = rulesByActivity[activity] else { return nil }
+        return WindowScanner.dominantBlocker(
+            in: forecast,
+            blockers: { rule.blockers($0) })
     }
 }

@@ -49,17 +49,15 @@ struct WidgetOceanBackground: View {
     }
 }
 
-/// Concentric glass sub-card for widget sections and metric tiles.
-private struct WidgetGlassCardModifier: ViewModifier {
-    let minimumRadius: CGFloat
+/// Glass sub-card for widget sections and metric tiles, drawn on a caller-chosen
+/// shape so a full-width card can stay concentric with the widget container
+/// while a row of metric pills shares one uniform radius.
+private struct WidgetGlassSurfaceModifier<Surface: Shape>: ViewModifier {
+    let shape: Surface
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.widgetRenderingMode) private var renderingMode
-
-    private var shape: ConcentricRectangle {
-        .rect(corners: .concentric(minimum: .fixed(minimumRadius)), isUniform: true)
-    }
 
     private var fillStyle: Color {
         if renderingMode != .fullColor {
@@ -100,8 +98,20 @@ private struct WidgetGlassCardModifier: ViewModifier {
 }
 
 extension View {
-    /// Applies a concentric glass card background suited for widget sub-surfaces.
+    /// A full-width glass card whose corners stay concentric with the widget
+    /// container (the Liquid Glass look for sections).
     func widgetGlassCard(minimumRadius: CGFloat = 10) -> some View {
-        modifier(WidgetGlassCardModifier(minimumRadius: minimumRadius))
+        modifier(WidgetGlassSurfaceModifier(
+            shape: ConcentricRectangle.rect(
+                corners: .concentric(minimum: .fixed(minimumRadius)),
+                isUniform: true)))
+    }
+
+    /// A glass sub-surface with one fixed radius on all four corners, for a row
+    /// of metric pills where a concentric radius collapses the middle tiles to
+    /// squares (owner feedback 2026-11-12).
+    func widgetGlassTile(cornerRadius: CGFloat = 10) -> some View {
+        modifier(WidgetGlassSurfaceModifier(
+            shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)))
     }
 }

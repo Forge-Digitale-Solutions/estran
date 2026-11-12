@@ -103,7 +103,8 @@ enum NotificationPolicy {
                     activity: input.activity,
                     spotName: input.spotName,
                     window: slot.window,
-                    timeZone: input.timeZone)))
+                    timeZone: input.timeZone,
+                    reference: input.now)))
         }
 
         return Array(planned.prefix(maximumCount))
@@ -128,9 +129,10 @@ enum NotificationPolicy {
         activity: Activity,
         spotName: String,
         window: DateInterval,
-        timeZone: TimeZone) -> String
+        timeZone: TimeZone,
+        reference: Date) -> String
     {
-        let range = FrenchFormat.range(window, in: timeZone)
+        let range = FrenchFormat.range(window, in: timeZone, reference: reference)
         return "\(activity.displayName) à \(spotName) : \(range)."
     }
 

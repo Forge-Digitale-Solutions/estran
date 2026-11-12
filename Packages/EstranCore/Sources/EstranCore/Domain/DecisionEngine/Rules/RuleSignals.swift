@@ -2,13 +2,31 @@ import Foundation
 
 /// Shared signal interpretation used by several rules.
 enum RuleSignals {
-    /// Rain, showers, thunderstorm, or a high enough precipitation chance.
+    /// Rain that forces a `Non` (owner decision 2026-11-12): franc rain or
+    /// showers, or a high precipitation chance with an otherwise dry/unknown
+    /// condition. Light rain (`.drizzle`) never blocks on its own.
     static func isRaining(_ weather: WeatherNow) -> Bool {
         switch weather.condition {
-        case .rain, .showers, .thunderstorm:
+        case .rain, .showers:
             true
-        default:
-            weather.precipitationChance >= 0.6
+        case .thunderstorm:
+            // Storm is its own blocker; a thunderstorm is never "just rain".
+            false
+        case .drizzle, .clear, .partlyCloudy, .cloudy, .fog, .snow, .unknown:
+            weather.precipitationChance >= 0.8
+        }
+    }
+
+    /// Light rain that lowers the score and adds a caution, without forcing a
+    /// `Non`: drizzle, or a middling chance under a dry condition.
+    static func isLightRain(_ weather: WeatherNow) -> Bool {
+        switch weather.condition {
+        case .drizzle:
+            true
+        case .rain, .showers, .thunderstorm:
+            false
+        case .clear, .partlyCloudy, .cloudy, .fog, .snow, .unknown:
+            weather.precipitationChance >= 0.4 && weather.precipitationChance < 0.8
         }
     }
 
@@ -17,13 +35,16 @@ enum RuleSignals {
         weather.condition == .thunderstorm || weather.wind.gust >= 70
     }
 
-    /// `1` for a dry forecast, `0` when rain is likely.
+    /// `1` for a dry forecast, `0` when rain is likely. Drizzle is a small
+    /// penalty, not a zero (owner decision 2026-11-12).
     static func precipitationScore(_ weather: WeatherNow) -> Double {
         switch weather.condition {
         case .rain, .showers, .thunderstorm:
             0
-        default:
-            ScoreMath.linear(weather.precipitationChance, zeroAt: 0.6, fullAt: 0.1)
+        case .drizzle:
+            0.6
+        case .clear, .partlyCloudy, .cloudy, .fog, .snow, .unknown:
+            ScoreMath.linear(weather.precipitationChance, zeroAt: 0.8, fullAt: 0.1)
         }
     }
 

@@ -280,6 +280,11 @@ permanent, factual caution on its surfaces: « Les passes du Bassin restent
 dangereuses : houle de l'océan et bancs qui bougent. » It never changes the
 verdict. Owner decision 2026-11-12.
 
+Rain (Pêche à pied and Balade only): light rain / drizzle is **not** a blocker —
+it lowers the score a little and adds the caution « Prévois une veste : petite
+pluie possible. »; franc rain, showers and thunderstorms still force a `Non`
+(thunderstorm stays `.storm`). Owner decision 2026-11-12.
+
 ---
 
 ## 6. Components checklist

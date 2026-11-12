@@ -95,7 +95,10 @@ enum WidgetSnapshotBuilder {
     }
 
     /// The same words the spot-detail rows use.
-    private static func lineAnswer(_ overview: ActivityOverview, timeZone: TimeZone) -> String {
+    private static func lineAnswer(
+        _ overview: ActivityOverview,
+        timeZone: TimeZone) -> String
+    {
         if overview.isUnavailable {
             return "Données indisponibles"
         }
@@ -103,7 +106,7 @@ enum WidgetSnapshotBuilder {
             guard let window = overview.current?.window ?? overview.upcoming?.window else {
                 return "Créneau à confirmer"
             }
-            return FrenchFormat.range(window, in: timeZone)
+            return FrenchFormat.range(window, in: timeZone, reference: overview.decision.computedAt)
         }
         return phrase(overview.decision.reason)
     }
@@ -121,13 +124,10 @@ enum WidgetSnapshotBuilder {
 
     static func metrics(for conditions: Conditions) -> [WidgetSnapshot.Metric] {
         let swell = conditions.swell
-        let swellCaption = swell.isEstimated
-            ? "estimée · \(FrenchFormat.swellPeriod(swell))"
-            : FrenchFormat.swellPeriod(swell)
         return [
             WidgetSnapshot.Metric(
                 id: "tide",
-                symbol: "water.waves",
+                symbol: FrenchFormat.tideSymbol(conditions.tide),
                 value: conditions.tide.current.map { "\(FrenchFormat.height($0.height)) m" } ?? "—",
                 caption: FrenchFormat.tideTrendShort(conditions.tide)),
             WidgetSnapshot.Metric(
@@ -137,9 +137,9 @@ enum WidgetSnapshotBuilder {
                 caption: "km/h \(FrenchFormat.windDirection(conditions.weather.wind))"),
             WidgetSnapshot.Metric(
                 id: "swell",
-                symbol: "wave.3.right",
+                symbol: "water.waves",
                 value: FrenchFormat.swellHeight(swell),
-                caption: swellCaption),
+                caption: FrenchFormat.swellTileLabel(swell)),
             WidgetSnapshot.Metric(
                 id: "weather",
                 symbol: FrenchFormat.weatherSymbol(conditions.weather.condition),

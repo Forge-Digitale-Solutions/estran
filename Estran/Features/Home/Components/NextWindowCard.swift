@@ -14,6 +14,9 @@ struct NextWindowCard: View {
     let current: ActivitySlot?
     let upcoming: ActivitySlot?
     let isUnavailable: Bool
+    /// Why there is no window in the 48 h horizon, or `nil` to keep the generic
+    /// sentence.
+    let noWindowReason: String?
     let timeZone: TimeZone
     let reference: Date
 
@@ -51,7 +54,7 @@ struct NextWindowCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .animation(windowAnimation(primary), value: primary)
                 } else {
-                    Text("Aucun créneau dans les 48 prochaines heures.")
+                    Text(noWindowReason ?? "Aucun créneau dans les 48 prochaines heures.")
                         .font(OceanTypography.body)
                         .foregroundStyle(OceanPalette.white)
                         .fixedSize(horizontal: false, vertical: true)
@@ -102,17 +105,11 @@ struct NextWindowCard: View {
 
     private var primary: String? {
         guard let slot = current ?? upcoming else { return nil }
-        return FrenchFormat.range(slot.window, in: timeZone)
+        return FrenchFormat.range(slot.window, in: timeZone, reference: reference)
     }
 
     private var secondary: String? {
         guard current != nil, let slot = upcoming else { return nil }
-        let range = FrenchFormat.range(slot.window, in: timeZone)
-        if let day = FrenchFormat.relativeDay(
-            slot.window.start, in: timeZone, reference: reference)
-        {
-            return "Puis \(day), \(range)"
-        }
-        return "Puis \(range)"
+        return "Puis \(FrenchFormat.range(slot.window, in: timeZone, reference: reference))"
     }
 }

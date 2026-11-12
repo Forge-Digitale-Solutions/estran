@@ -103,9 +103,11 @@ struct AnswerCard: View {
     }
 
     /// The permanent caution for this activity at this spot (boating inside the
-    /// Bassin), or `nil`. Copy only: it never changes the verdict.
+    /// Bassin), plus the conditional light-rain reminder when it applies, or
+    /// `nil`. Copy only: it never changes the verdict.
     private var caution: String? {
         ActivityCaution.caution(activity: activity, spot: conditions.spot)
+            ?? decision.caution
     }
 
     /// « Indisponible » is a long word: it is displayed smaller than Oui/Non so

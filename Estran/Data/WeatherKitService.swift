@@ -107,10 +107,12 @@ public actor WeatherKitService: WeatherSource {
             }
         }
 
-        /// WeatherKit has 33 conditions, the domain has 9. Every mapping is
+        /// WeatherKit has 33 conditions, the domain has 10. Every mapping is
         /// explicit; anything not listed becomes `.unknown`, which the rules
-        /// treat as ordinary weather, never as a favourable signal.
-        private static func map(_ condition: WeatherKit.WeatherCondition) -> EstranCore.WeatherCondition {
+        /// treat as ordinary weather, never as a favourable signal. Light rain
+        /// (`.drizzle`) is distinct from franc rain so the rain-gated activities
+        /// can tolerate a drizzle (owner decision 2026-11-12).
+        static func map(_ condition: WeatherKit.WeatherCondition) -> EstranCore.WeatherCondition {
             switch condition {
             case .clear, .hot, .frigid, .blowingDust, .smoky:
                 .clear
@@ -118,9 +120,12 @@ public actor WeatherKitService: WeatherSource {
                 .partlyCloudy
             case .cloudy, .mostlyCloudy, .haze:
                 .cloudy
-            case .rain, .heavyRain, .freezingRain, .sunShowers, .drizzle,
-                 .freezingDrizzle, .wintryMix:
+            case .rain, .heavyRain, .freezingRain, .wintryMix:
                 .rain
+            case .drizzle, .freezingDrizzle:
+                .drizzle
+            case .sunShowers:
+                .showers
             case .scatteredThunderstorms, .isolatedThunderstorms,
                  .thunderstorms, .strongStorms, .tropicalStorm, .hurricane:
                 .thunderstorm
