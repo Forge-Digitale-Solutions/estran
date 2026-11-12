@@ -18,7 +18,9 @@ struct EstranControl: ControlWidget {
 
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: kind) {
-            let state = EstranControlState(snapshot: WidgetSnapshot.load())
+            let snapshot = WidgetSnapshot.load(
+                forSpotID: SpotSelectionStorage().load() ?? SpotCatalog.defaultSpot.id)
+            let state = EstranControlState(snapshot: snapshot)
             ControlWidgetButton(action: OpenEstranIntent()) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(state.spotName)

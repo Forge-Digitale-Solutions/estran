@@ -80,6 +80,15 @@ struct RootView: View {
             .environment(app)
             .preferredColorScheme(.dark)
         }
+        // A widget tap carries a spot + activity deep link; the URL scheme is
+        // the same one the widget builds, so the app opens exactly the place the
+        // widget was showing.
+        .onOpenURL { url in
+            guard let target = WidgetDeepLink.parse(url) else { return }
+            Task {
+                await app.openWidget(spotID: target.spotID, activity: target.activity)
+            }
+        }
     }
 
     /// Simulator screenshot helpers (`-estranTab`, `-estranOpenDetail`). No-ops

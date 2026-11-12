@@ -23,6 +23,8 @@ struct GoEntry: TimelineEntry {
     /// Tide, wind, swell, weather, already in French.
     var metrics: [WidgetSnapshot.Metric] = []
     var isSampleData: Bool = false
+    /// Stable catalog identifier for the spot, so a tap can open the right place.
+    var spotID: String = ""
     /// Optional explicit activity for previews; inferred from `lines`/`isSwimming` when nil.
     var selectedActivity: Activity?
 }
@@ -75,6 +77,7 @@ struct GoWidgetView: View {
                 WidgetOceanBackground()
             }
         }
+        .widgetURL(entry.openURL)
     }
 
     @ViewBuilder
@@ -323,7 +326,7 @@ struct GoWidget: Widget {
     let kind = "GoWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: GoTimelineProvider()) { entry in
+        AppIntentConfiguration(kind: kind, provider: GoTimelineProvider()) { entry in
             GoWidgetView(entry: entry)
         }
         .configurationDisplayName("Estran")

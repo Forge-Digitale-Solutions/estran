@@ -39,7 +39,10 @@ struct AnswerIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
-        let snapshot = WidgetSnapshot.load()
+        let spotID = spot?.id
+            ?? SpotSelectionStorage().load()
+            ?? SpotCatalog.defaultSpot.id
+        let snapshot = WidgetSnapshot.load(forSpotID: spotID)
         let text = resolvedText(for: snapshot)
         return .result(
             dialog: IntentDialog(stringLiteral: text),

@@ -204,6 +204,65 @@ public struct WidgetSnapshot: Codable, Hashable, Sendable {
         decoder.dateDecodingStrategy = .secondsSince1970
         return try? decoder.decode(WidgetSnapshot.self, from: data)
     }
+
+    // MARK: - Per-spot collection
+
+    /// The file that holds one snapshot per spot, keyed by spot identifier.
+    public static let collectionFileName = "widget-snapshots.json"
+
+    /// Writes one snapshot per spot. The app refreshes both spots so a widget
+    /// configured to either one has data without the app being open on it.
+    public static func saveCollection(
+        _ snapshots: [WidgetSnapshot],
+        in containerURL: URL? = WidgetSnapshot.containerURL()) throws
+    {
+        guard let containerURL else {
+            throw WidgetSnapshotError.containerUnavailable
+        }
+        try FileManager.default.createDirectory(
+            at: containerURL,
+            withIntermediateDirectories: true)
+        let bySpot = Dictionary(
+            snapshots.map { ($0.spotID, $0) },
+            uniquingKeysWith: { _, newest in newest })
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .secondsSince1970
+        let data = try encoder.encode(bySpot)
+        try data.write(
+            to: containerURL.appendingPathComponent(collectionFileName),
+            options: .atomic)
+    }
+
+    public static func loadCollection(
+        from containerURL: URL? = WidgetSnapshot.containerURL()) -> [String: WidgetSnapshot]?
+    {
+        guard let url = containerURL?.appendingPathComponent(collectionFileName),
+              let data = try? Data(contentsOf: url)
+        else {
+            return nil
+        }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+        return try? decoder.decode([String: WidgetSnapshot].self, from: data)
+    }
+
+    /// The snapshot for `spotID`, from the per-spot collection when present.
+    ///
+    /// Backward compatibility: an older app wrote a single `widget-snapshot.json`
+    /// for the selected spot only. That file is still honoured, but only for its
+    /// own spot — it is never treated as a value for the other spot.
+    public static func load(
+        forSpotID spotID: String,
+        from containerURL: URL? = WidgetSnapshot.containerURL()) -> WidgetSnapshot?
+    {
+        if let collection = loadCollection(from: containerURL) {
+            return collection[spotID]
+        }
+        guard let single = load(from: containerURL), single.spotID == spotID else {
+            return nil
+        }
+        return single
+    }
 }
 
 public enum WidgetSnapshotError: Error, Equatable {

@@ -164,6 +164,29 @@ final class AppModel {
         refreshDecision()
     }
 
+    /// Opens the app on a specific spot and activity (a widget tap).
+    ///
+    /// The activity is applied before the spot reload so `refreshDecision`
+    /// computes the requested activity against the freshly loaded conditions; a
+    /// same-spot tap still refreshes the decision. This is the one entry point
+    /// for widget deep links, so there is no second selection path.
+    @MainActor
+    func openWidget(spotID: String, activity: Activity) async {
+        let target = SpotCatalog.spot(id: spotID) ?? SpotCatalog.defaultSpot
+        let activityChanged = self.activity != activity
+        let spotChanged = target.id != selectedSpot.id
+
+        if activityChanged {
+            self.activity = activity
+        }
+
+        if spotChanged {
+            await select(spot: target)
+        } else if activityChanged {
+            refreshDecision()
+        }
+    }
+
     /// Applies a spot (and, when it set one, an activity) chosen in Spotlight or
     /// an App Intent while the app was already running.
     ///
@@ -300,58 +323,7 @@ final class AppModel {
             }
         }
         unavailableActivities = unavailable
-
-        overviews = offered.map { candidate in
-            let candidateDecision = engine.decide(
-                activity: candidate, conditions: conditions, forecast: store.forecast)
-            let candidateSlots = engine.windows(activity: candidate, over: store.forecast)
-            return ActivityOverview(
-                activity: candidate,
-                decision: candidateDecision,
-                current: candidateSlots.first { $0.window.contains(conditions.at) },
-                upcoming: candidateSlots.first { $0.window.start > conditions.at })
-        }
-    }
-
-    /// M5: the widgets and the Live Activity read this snapshot. Written off the
-    /// main actor; a failure only means the widget keeps the previous one, never
-    /// a fabricated value.
-    @MainActor
-    private func publishSnapshot(for conditions: Conditions) {
-        let snapshot = WidgetSnapshotBuilder.make(
-            WidgetSnapshotBuilder.Input(
-                conditions: conditions,
-                overviews: overviews,
-                activity: activity,
-                decision: decision,
-                timeZone: selectedSpot.timezone,
-                isSampleData: usesSampleData))
-        // The notification scheduler reads the same snapshot and the same
-        // windows, off the main actor: a refused or failed notification never
-        // delays a refresh.
-        let windows = slots
-        Task.detached(priority: .utility) {
-            do {
-                try snapshot.save()
-                // The widget reads the file; WidgetKit still needs a nudge to
-                // rebuild its timeline from it.
-                WidgetCenter.shared.reloadAllTimelines()
-            } catch {
-                // No App Group container: the widget keeps its previous
-                // snapshot rather than showing a value we could not persist.
-            }
-            // M4: one notification per good window, rescheduled from scratch on
-            // every refresh. The policy drops the ones already too close.
-            await LocalNotificationScheduler.shared.reschedule(
-                for: snapshot, windows: windows, now: Date())
-        }
-
-        // The Live Activity reads that same snapshot, so the lock screen and the
-        // widgets can never disagree on the verdict or the window.
-        LiveActivityController.shared.sync(
-            snapshot: snapshot,
-            current: currentSlot,
-            upcoming: upcomingSlot)
+        overviews = Self.overviews(for: conditions, forecast: store.forecast, engine: engine)
     }
 
     /// Asks `reasonProvider` for one sentence, and keeps the answer only while

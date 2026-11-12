@@ -45,6 +45,7 @@ struct ConditionsWidgetView: View {
         .containerBackground(for: .widget) {
             WidgetOceanBackground()
         }
+        .widgetURL(entry.openURL)
     }
 
     private var staleOrEmptyMetrics: some View {
@@ -122,7 +123,7 @@ struct ConditionsWidget: Widget {
     let kind = "ConditionsWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: GoTimelineProvider()) { entry in
+        AppIntentConfiguration(kind: kind, provider: ConditionsTimelineProvider()) { entry in
             ConditionsWidgetView(entry: entry)
         }
         .configurationDisplayName("Conditions")

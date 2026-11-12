@@ -179,6 +179,13 @@ enum FrenchFormat {
     }
 
     static func swellHeight(_ swell: Swell) -> String {
+        // A near-zero estimated sea is « Calme », never « ≈ 0,0 m »: zero is a
+        // real measurement, not a neutral placeholder (invariant 3). The label
+        // still says it is an estimate, so the word never pretends to be a
+        // measured calm.
+        if swell.isEstimated, swell.waveHeight < 0.1 {
+            return "Calme"
+        }
         let prefix = swell.isEstimated ? "≈ " : ""
         return "\(prefix)\(height(swell.waveHeight)) m"
     }

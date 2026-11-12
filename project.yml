@@ -91,6 +91,21 @@ targets:
     platform: iOS
     sources:
       - path: EstranTests
+      # W-WIDGETCONF: the widget views and theme are compiled here too so a
+      # render test can draw a configured widget with ImageRenderer. The widget
+      # extension still compiles the same files for its own target.
+      - path: Estran/Theme/OceanPalette.swift
+      - path: Estran/Theme/OceanTypography.swift
+      - path: Estran/Theme/OceanSpacing.swift
+      - path: EstranWidgets/GoWidget.swift
+      - path: EstranWidgets/ConditionsWidget.swift
+      - path: EstranWidgets/Configuration/WidgetConfiguration.swift
+      - path: EstranWidgets/TimelineProviders/GoTimelineProvider.swift
+      - path: EstranWidgets/TimelineProviders/ConditionsTimelineProvider.swift
+      - path: EstranWidgets/Widgets/GoEntryFixtures.swift
+      - path: EstranWidgets/Widgets/WidgetTheme.swift
+      - path: EstranWidgets/Widgets/GoWidgetAccessoryViews.swift
+      - path: EstranWidgets/Widgets/GoWidgetLargeView.swift
     dependencies:
       - target: Estran
       - package: EstranCore

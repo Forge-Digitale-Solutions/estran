@@ -35,6 +35,13 @@ extension GoEntry {
         return lines.first { $0.answer == detail }?.activity
     }
 
+    /// The deep link a tap opens: the configured spot + activity, so the app
+    /// lands on exactly what the widget shows. `nil` for the bare placeholder.
+    var openURL: URL? {
+        guard !spotID.isEmpty, let activity = resolvedActivity else { return nil }
+        return WidgetDeepLink.url(spotID: spotID, activity: activity)
+    }
+
     var shortActivityLabel: String {
         resolvedActivity?.shortLabel ?? (isSwimming ? Activity.swimming.shortLabel : "Pêche")
     }
