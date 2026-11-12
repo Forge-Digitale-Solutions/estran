@@ -154,6 +154,21 @@ public struct WidgetSnapshot: Codable, Hashable, Sendable {
         Date().timeIntervalSince(updatedAt) > Self.staleAfter
     }
 
+    /// The selected activity's caution, taken from its own line: the composed
+    /// night/light-rain reminder plus the permanent spot caution (the Bassin
+    /// passes), exactly as the app's answer card shows it. `nil` for swimming
+    /// (its advisory already carries the baïnes warning), when the activity has
+    /// no line, or when that line has no caution — never invented copy.
+    public var caution: String? {
+        guard activity != .swimming,
+              let warning = lines.first(where: { $0.activity == activity })?.warning
+        else {
+            return nil
+        }
+        let text = warning.trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? nil : text
+    }
+
     // MARK: - App Group storage
 
     public static let fileName = "widget-snapshot.json"

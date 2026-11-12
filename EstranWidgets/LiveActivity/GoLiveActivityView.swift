@@ -5,160 +5,25 @@ import WidgetKit
 
 // MARK: - Lock screen
 
-/// The lock-screen banner: a glass panel over the ocean tint, the verdict as a
-/// word + icon + colour, the spot, the window, and — for swimming — the warning
-/// first, the disclaimer last, and never « Oui ».
+/// The lock-screen banner: a thin ActivityKit wrapper around `LiveActivityCard`,
+/// which draws the verdict as a word + icon + colour, the spot, the window, the
+/// app's own caution, and — for swimming — the warning first, the disclaimer
+/// last, and never « Oui ».
 struct GoLiveActivityView: View {
     let context: ActivityViewContext<GoActivityAttributes>
 
-    @ScaledMetric(relativeTo: .largeTitle) private var badgeSize: CGFloat =
-        OceanTypography.widgetGoBadgeBaseSize
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.levelOfDetail) private var levelOfDetail
-
     var body: some View {
-        Group {
-            if context.isSwimmingActivity {
-                swimmingBody
-            } else {
-                standardBody
-            }
-        }
-        .padding(OceanSpacing.md)
-        .modifier(LiveActivityBanner())
-        .padding(OceanSpacing.xs)
-        .activityBackgroundTint(OceanPalette.oceanDeepBottom)
-        .activitySystemActionForegroundColor(OceanPalette.turquoise)
+        LiveActivityCard(
+            activityName: context.state.activityName,
+            spotName: context.attributes.spotName,
+            timeZone: context.spotTimeZone,
+            isSwimmingFlag: context.state.isSwimming,
+            isUnavailable: context.state.isUnavailable,
+            isGo: context.state.isGo,
+            nextWindowStart: context.state.nextWindowStart,
+            swimmingAdvisory: context.state.swimmingAdvisory,
+            caution: context.state.caution)
     }
-
-    /// The verdict keeps its full width; the spot name column yields, and the
-    /// window gets its own full-width line. At accessibility sizes, and for the
-    /// long « Données indisponibles » word, everything stacks instead — the
-    /// verdict word never wraps and never breaks mid-word.
-    private var standardBody: some View {
-        VStack(alignment: .leading, spacing: OceanSpacing.xs) {
-            header
-            if dynamicTypeSize.isAccessibilitySize || context.state.isUnavailable {
-                verdictBadge
-                details
-            } else {
-                HStack(alignment: .firstTextBaseline, spacing: OceanSpacing.sm) {
-                    verdictBadge
-                    spotName
-                    Spacer(minLength: 0)
-                }
-                windowLine
-            }
-        }
-    }
-
-    /// Activity first, then the local-model line: it says what the app is and
-    /// never implies an official source (invariant 2).
-    private var header: some View {
-        HStack(alignment: .firstTextBaseline, spacing: OceanSpacing.xs) {
-            Text(context.state.activityName)
-                .font(OceanTypography.caption)
-                .foregroundStyle(OceanPalette.sand)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-            if levelOfDetail != .simplified {
-                Text("Modèle local")
-                    .font(OceanTypography.smallLabel)
-                    .foregroundStyle(OceanPalette.white.opacity(0.6))
-            }
-        }
-    }
-
-    /// The verdict: an icon, a word and a colour, never colour alone. A missing
-    /// answer is its own state, never a `Non`, and it is never green. The word
-    /// is one token (`fixedSize` horizontal): at 370 pt it used to break into
-    /// « No » / « n ».
-    private var verdictBadge: some View {
-        let verdict = context.liveVerdict
-        let isUnavailable = verdict == .unavailable
-        return Label(verdict.word, systemImage: verdict.symbol)
-            .font(OceanTypography.rounded(size: isUnavailable ? badgeSize * 0.5 : badgeSize))
-            .foregroundStyle(verdict.color)
-            .labelStyle(.titleAndIcon)
-            .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
-            .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: false)
-            .layoutPriority(1)
-            .accessibilityLabel(verdict.accessibilityLabel)
-    }
-
-    private var spotName: some View {
-        Text(context.attributes.spotName)
-            .font(OceanTypography.bodyEmphasized)
-            .foregroundStyle(OceanPalette.white)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-
-    private var details: some View {
-        VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
-            spotName
-            windowLine
-        }
-    }
-
-    @ViewBuilder
-    private var windowLine: some View {
-        if context.state.isUnavailable {
-            Text("Créneaux indisponibles")
-                .font(OceanTypography.caption)
-                .foregroundStyle(OceanPalette.unavailable)
-                .fixedSize(horizontal: false, vertical: true)
-        } else if let start = context.state.nextWindowStart {
-            LiveActivityWindowLine(
-                start: start,
-                timeZone: context.spotTimeZone,
-                color: OceanPalette.sand,
-                reduceMotion: reduceMotion)
-        }
-    }
-
-    /// No « Oui », no green. The system caps the lock-screen card at roughly
-    /// 160 pt, so this is the short form of the warning — hazard first, then the
-    /// level, then the permanent disclaimer — not the full paragraph the app
-    /// card shows. The expanded island carries the same short copy.
-    private var swimmingBody: some View {
-        let advisory = context.swimmingAdvisoryOrUnknown
-        return VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
-            header
-
-            Text(LiveActivitySwimming.danger)
-                .font(OceanTypography.smallLabel)
-                .foregroundStyle(OceanPalette.white)
-                .fixedSize(horizontal: false, vertical: true)
-
-            // Small text on the translucent banner: the on-glass token, never
-            // the vivid Figma hue (which stays for large glyphs). `non`
-            // #FF6B5B measured under 4.5:1 there; `nonOnGlass` #FFBAB2 clears
-            // it (docs/accessibility/contrast-audit.md, A20/B21/B23/B50).
-            Text("Courants : \(advisory.level.shortTitle)")
-                .font(OceanTypography.smallLabel)
-                .foregroundStyle(OceanPalette.swimmingRiskText(advisory.level))
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text(SwimmingRiskLevel.disclaimer)
-                .font(OceanTypography.smallLabel)
-                .foregroundStyle(OceanPalette.white.opacity(0.7))
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text(context.attributes.spotName)
-                .font(OceanTypography.smallLabel)
-                .foregroundStyle(OceanPalette.white.opacity(0.8))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-}
-
-/// The short swimming warning shared by the lock screen and the expanded
-/// island. It keeps the hazard and « même par temps calme »; the full paragraph
-/// lives in the app card, the widget and VoiceOver's advisory sentence.
-private enum LiveActivitySwimming {
-    static let danger = "Danger baïnes toute l'année, même par temps calme."
 }
 
 // MARK: - Dynamic Island
@@ -218,7 +83,8 @@ private struct ExpandedLeading: View {
 }
 
 /// Expanded bottom: the window when there is one, the swimming dossier when
-/// the activity is swimming, and a visible unavailable state otherwise.
+/// the activity is swimming, the app's caution, and a visible unavailable state
+/// otherwise.
 private struct ExpandedBottom: View {
     let context: ActivityViewContext<GoActivityAttributes>
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -249,6 +115,7 @@ private struct ExpandedBottom: View {
                 Text(context.state.activityName)
                     .font(OceanTypography.smallLabel)
                     .foregroundStyle(OceanPalette.white.opacity(0.8))
+                ExpandedCaution(caution: context.state.caution)
             }
         } else {
             VStack(alignment: .leading, spacing: 1) {
@@ -262,7 +129,20 @@ private struct ExpandedBottom: View {
                         color: OceanPalette.white.opacity(0.8),
                         reduceMotion: reduceMotion)
                 }
+                ExpandedCaution(caution: context.state.caution)
             }
+        }
+    }
+}
+
+/// The caution row of the expanded island. It reuses the lock-screen line so the
+/// two surfaces can never word it differently; no caution, no row.
+private struct ExpandedCaution: View {
+    let caution: String?
+
+    var body: some View {
+        if let caution {
+            LiveActivityCautionLine(caution: caution)
         }
     }
 }

@@ -136,7 +136,11 @@ final class LiveActivityController {
             updatedAt: now,
             isSwimming: isSwimming,
             swimmingAdvisory: isSwimming ? snapshot.swimmingAdvisory : nil,
-            isUnavailable: isUnavailable)
+            isUnavailable: isUnavailable,
+            // The app's own composed caution (night, light rain, the Bassin
+            // passes), read from the snapshot so no wording is duplicated here.
+            // Swimming is nil by construction: its advisory carries the warning.
+            caution: snapshot.caution)
     }
 
     // MARK: - ActivityKit

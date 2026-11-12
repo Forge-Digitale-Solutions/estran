@@ -16,6 +16,11 @@ public struct GoActivityAttributes: ActivityAttributes, Sendable {
         /// `true` when the data cannot answer: « Données indisponibles », never
         /// a `Non`. Defaulted so a state written by a previous build decodes.
         public var isUnavailable: Bool
+        /// The caution the app's answer card shows for this verdict — night,
+        /// light rain or the Bassin passes — verbatim, or `nil`. Copy only: it
+        /// never becomes a verdict. Defaulted so a state written by a previous
+        /// build decodes.
+        public var caution: String?
 
         public init(
             isGo: Bool,
@@ -24,7 +29,8 @@ public struct GoActivityAttributes: ActivityAttributes, Sendable {
             updatedAt: Date,
             isSwimming: Bool = false,
             swimmingAdvisory: SwimmingAdvisory? = nil,
-            isUnavailable: Bool = false)
+            isUnavailable: Bool = false,
+            caution: String? = nil)
         {
             self.isGo = isGo
             self.activityName = activityName
@@ -33,10 +39,12 @@ public struct GoActivityAttributes: ActivityAttributes, Sendable {
             self.isSwimming = isSwimming
             self.swimmingAdvisory = swimmingAdvisory
             self.isUnavailable = isUnavailable
+            self.caution = caution
         }
 
-        /// Tolerates a state written before `isUnavailable` existed: an absent
-        /// flag is a readable verdict, never an unavailable one.
+        /// Tolerates a state written before `isUnavailable` and `caution`
+        /// existed: an absent flag is a readable verdict, an absent caution is
+        /// no caution — never an unavailable card and never invented copy.
         public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             isGo = try container.decode(Bool.self, forKey: .isGo)
@@ -48,6 +56,7 @@ public struct GoActivityAttributes: ActivityAttributes, Sendable {
             swimmingAdvisory = try container.decodeIfPresent(
                 SwimmingAdvisory.self, forKey: .swimmingAdvisory)
             isUnavailable = try container.decodeIfPresent(Bool.self, forKey: .isUnavailable) ?? false
+            caution = try container.decodeIfPresent(String.self, forKey: .caution)
         }
     }
 

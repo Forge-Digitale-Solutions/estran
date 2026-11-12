@@ -5,8 +5,9 @@ import SwiftUI
 import WidgetKit
 
 #if DEBUG
-    /// Xcode previews for the four agreed Live Activity states, on all four
-    /// surfaces (lock screen, expanded, compact, minimal).
+    /// Xcode previews for the agreed Live Activity states, on all four surfaces
+    /// (lock screen, expanded, compact, minimal): plain go, go with the night
+    /// caution, go with the Bassin-passes caution, no go, swimming, unavailable.
     ///
     /// The swimming fixture is deliberately hostile: it carries `isGo: true`
     /// and a window, so the preview is also the visual proof that the view
@@ -19,6 +20,20 @@ import WidgetKit
         static let now = Date(timeIntervalSinceReferenceDate: 800_000_000)
 
         static let go = state(activity: .shoreFishing, isGo: true, nextWindow: 1500)
+
+        /// The night caution on a `Oui` — the case the lock screen used to drop.
+        static let goNight = state(
+            activity: .shoreFishing,
+            isGo: true,
+            nextWindow: 1500,
+            caution: ActivityCaution.nightFishing)
+
+        /// The long Bassin-passes caution, the worst case for the ~160 pt card.
+        static let goPasses = state(
+            activity: .boating,
+            isGo: true,
+            nextWindow: 1500,
+            caution: ActivityCaution.boatingPasses)
 
         static let noGo = state(activity: .surfing, isGo: false)
 
@@ -40,14 +55,16 @@ import WidgetKit
             activity: EstranCore.Activity,
             isGo: Bool,
             nextWindow: TimeInterval? = nil,
-            isUnavailable: Bool = false) -> GoActivityAttributes.ContentState
+            isUnavailable: Bool = false,
+            caution: String? = nil) -> GoActivityAttributes.ContentState
         {
             GoActivityAttributes.ContentState(
                 isGo: isGo,
                 activityName: activity.displayName,
                 nextWindowStart: nextWindow.map(now.addingTimeInterval),
                 updatedAt: now,
-                isUnavailable: isUnavailable)
+                isUnavailable: isUnavailable,
+                caution: caution)
         }
     }
 
@@ -55,6 +72,8 @@ import WidgetKit
         GoLiveActivityWidget()
     } contentStates: {
         LiveActivityPreview.go
+        LiveActivityPreview.goNight
+        LiveActivityPreview.goPasses
         LiveActivityPreview.noGo
         LiveActivityPreview.swimming
         LiveActivityPreview.unavailable
@@ -68,6 +87,8 @@ import WidgetKit
         GoLiveActivityWidget()
     } contentStates: {
         LiveActivityPreview.go
+        LiveActivityPreview.goNight
+        LiveActivityPreview.goPasses
         LiveActivityPreview.noGo
         LiveActivityPreview.swimming
         LiveActivityPreview.unavailable
@@ -81,6 +102,8 @@ import WidgetKit
         GoLiveActivityWidget()
     } contentStates: {
         LiveActivityPreview.go
+        LiveActivityPreview.goNight
+        LiveActivityPreview.goPasses
         LiveActivityPreview.noGo
         LiveActivityPreview.swimming
         LiveActivityPreview.unavailable
@@ -94,6 +117,8 @@ import WidgetKit
         GoLiveActivityWidget()
     } contentStates: {
         LiveActivityPreview.go
+        LiveActivityPreview.goNight
+        LiveActivityPreview.goPasses
         LiveActivityPreview.noGo
         LiveActivityPreview.swimming
         LiveActivityPreview.unavailable

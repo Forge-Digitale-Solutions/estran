@@ -171,6 +171,8 @@ Multiple mockups in one frame:
 4. **Home-screen widget (medium 364×170)** — « Cap Ferret » + « Oui » (48 bold green) + « Jusqu'à 15 h 40 » + « pêche à pied ».
 5. **Multi-activity widget** — 5 rows: Surf, Lacanau « Dès 17 h » (coral) · Balade, Pyla « Oui » · Bateau, passes « Non » · Bain, Le Porge « Non ».
 
+**Live Activity caution.** The lock screen and the expanded island carry the verdict's caution — night, light rain, the Bassin passes — with the same composed sentence as the answer card, never reworded: a warning glyph and the text in `sand` on glass, allowed to wrap and never truncated. Baignade shows none: its advisory already carries the baïnes warning. The card stays inside the ~160 pt lock-screen height: with a caution the verdict yields a quarter of its size (36 pt at the default scale, still the largest element) and the window sits under the spot name, so the full caution keeps its own full-width lines.
+
 ### 3.5 — 05 Carte focus (2 spots)
 
 The map is a **focus map**, not a browsing map (`ARCHITECTURE_PLAN.md` §12.1). It is the only place where a spot is chosen, and it shows exactly two.

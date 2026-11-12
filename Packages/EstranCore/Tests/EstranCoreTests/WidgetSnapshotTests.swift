@@ -71,6 +71,79 @@ final class WidgetSnapshotTests: XCTestCase {
         XCTAssertEqual(unavailable.answer, "Données indisponibles")
     }
 
+    // MARK: - Caution
+
+    /// The Live Activity and Siri read the selected activity's caution through
+    /// this property: the line the app already composed, never a new string.
+    func testTheSelectedActivitysCautionComesFromItsOwnLine() {
+        let snapshot = WidgetSnapshot(
+            updatedAt: Date(),
+            spotID: "arcachon-eyrac",
+            spotName: "Arcachon-Eyrac",
+            activity: .boating,
+            isGo: true,
+            isUnavailable: false,
+            answer: "13 h 10 à 15 h 40",
+            lines: [
+                WidgetSnapshot.ActivityLine(
+                    activity: .boating, isUnavailable: false, isGo: true,
+                    answer: "13 h 10 à 15 h 40",
+                    warning: ActivityCaution.boatingPasses)
+            ])
+
+        XCTAssertEqual(snapshot.caution, ActivityCaution.boatingPasses)
+    }
+
+    /// Swimming's advisory already carries the baïnes warning: doubling it on
+    /// the card or in Siri would bury the risk level.
+    func testSwimmingNeverExposesACaution() {
+        let snapshot = WidgetSnapshot(
+            updatedAt: Date(),
+            spotID: "arcachon-eyrac",
+            spotName: "Arcachon-Eyrac",
+            activity: .swimming,
+            isGo: false,
+            isUnavailable: false,
+            answer: "Courants de marée estimés : modérés",
+            lines: [
+                WidgetSnapshot.ActivityLine(
+                    activity: .swimming, isUnavailable: false, isGo: false,
+                    answer: "Courants de marée estimés : modérés",
+                    warning: "Baïnes et courants dangereux toute l'année.",
+                    swimmingLevel: .moderate)
+            ])
+
+        XCTAssertNil(snapshot.caution)
+    }
+
+    func testNoLineOrAnEmptyWarningMeansNoCaution() {
+        let withoutLine = WidgetSnapshot(
+            updatedAt: Date(),
+            spotID: "arcachon-eyrac",
+            spotName: "Arcachon-Eyrac",
+            activity: .shoreFishing,
+            isGo: true,
+            isUnavailable: false,
+            answer: "13 h 10 à 15 h 40")
+        XCTAssertNil(withoutLine.caution, "no line, no caution invented")
+
+        let emptyWarning = WidgetSnapshot(
+            updatedAt: Date(),
+            spotID: "arcachon-eyrac",
+            spotName: "Arcachon-Eyrac",
+            activity: .shoreFishing,
+            isGo: true,
+            isUnavailable: false,
+            answer: "13 h 10 à 15 h 40",
+            lines: [
+                WidgetSnapshot.ActivityLine(
+                    activity: .shoreFishing, isUnavailable: false, isGo: true,
+                    answer: "13 h 10 à 15 h 40",
+                    warning: "   ")
+            ])
+        XCTAssertNil(emptyWarning.caution, "blank copy is not a caution")
+    }
+
     // MARK: - Fixtures
 
     private static func snapshot() -> WidgetSnapshot {

@@ -68,18 +68,14 @@ enum IntentAnswer {
     }
 
     /// Appends the selected activity's caution (night, light rain, the Bassin
-    /// passes) from the snapshot's own line, so Siri never drops a caution the
-    /// widget and the app show. Swimming already speaks its baïnes warning, so
-    /// it is never doubled. No line, no caution invented.
+    /// passes), read from the snapshot's own line through `WidgetSnapshot.caution`
+    /// — the same string the app card, the widget and the Live Activity show, so
+    /// Siri never drops one. Swimming already speaks its baïnes warning, so it is
+    /// never doubled. No line, no caution invented.
     private static func withCaution(_ sentence: String, for snapshot: WidgetSnapshot) -> String {
-        guard snapshot.activity != .swimming,
-              let warning = snapshot.lines
-                  .first(where: { $0.activity == snapshot.activity })?
-                  .warning,
-              !warning.isEmpty
-        else {
+        guard let caution = snapshot.caution else {
             return sentence
         }
-        return "\(sentence) \(warning)"
+        return "\(sentence) \(caution)"
     }
 }
