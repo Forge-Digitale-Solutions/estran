@@ -50,13 +50,14 @@ struct SwimmingAdvisoryCard: View {
                 }
             }
 
-            Divider()
-                .overlay(OceanPalette.white.opacity(0.2))
-
             Label(advisory.level.label, systemImage: advisory.level.symbolName)
                 .font(OceanTypography.caption)
                 .foregroundStyle(OceanPalette.swimmingRiskText(advisory.level))
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, OceanSpacing.sm)
+                .padding(.vertical, OceanSpacing.xs)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .oceanConcentricInset(minimumRadius: 12)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(OceanSpacing.lg)

@@ -95,6 +95,9 @@ final class AppModel {
     /// eligible device.
     let reasonProvider: any ReasonTextProviding
     private let selectionStorage: SpotSelectionStorage
+    /// The activity an `OpenIntent` asked for, one-shot: the intent runs inside
+    /// this process, but a warm `AppModel` does not see the App Group write.
+    private let intentSelection: IntentSelectionStorage
     /// The one generation in flight. Cancelled when the decision it describes
     /// is replaced, and never awaited, so a slow model cannot delay a refresh.
     @ObservationIgnored private var reasonTask: Task<Void, Never>?
@@ -104,10 +107,12 @@ final class AppModel {
     init(
         provider: any ConditionsProviding = AppModel.defaultProvider(),
         selectionStorage: SpotSelectionStorage = SpotSelectionStorage(),
+        intentSelection: IntentSelectionStorage = IntentSelectionStorage(),
         reasonProvider: any ReasonTextProviding = FoundationModelReasonProvider())
     {
         self.provider = provider
         self.selectionStorage = selectionStorage
+        self.intentSelection = intentSelection
         self.reasonProvider = reasonProvider
         selectedSpot = SpotCatalog.spot(id: selectionStorage.load())
     }
@@ -153,6 +158,30 @@ final class AppModel {
         refreshDecision()
     }
 
+    /// Applies a spot (and, when it set one, an activity) chosen in Spotlight or
+    /// an App Intent while the app was already running.
+    ///
+    /// `OpenSpotIntent` writes `SpotSelectionStorage`, `OpenActivityIntent`
+    /// writes the one-shot activity key; a warm `AppModel` never re-reads either
+    /// on its own, so the card kept describing the previous place. This is the
+    /// only intent-specific code here: the work goes through `select(spot:)` and
+    /// `select(activity:)`, so there is no second selection or decision path.
+    /// Called on launch and every time the scene becomes active.
+    @MainActor
+    func applyIntentSelectionIfNeeded() async {
+        // Read the activity before the spot reload: `select(activity:)` then
+        // refreshes the decision against the freshly loaded conditions instead
+        // of the previous spot's.
+        let pendingActivity = intentSelection.consumeActivity()
+        let storedSpot = SpotCatalog.spot(id: selectionStorage.load())
+        if storedSpot.id != selectedSpot.id {
+            await select(spot: storedSpot)
+        }
+        if let pendingActivity {
+            select(activity: pendingActivity)
+        }
+    }
+
     // MARK: - Data
 
     @MainActor
@@ -180,6 +209,19 @@ final class AppModel {
     func prewarmReasonSessionIfNeeded() {
         guard !hasPrewarmedReasonSession else { return }
         hasPrewarmedReasonSession = true
+        prewarmReasonSession()
+    }
+
+    /// Re-warms the on-device session when the app comes back to the
+    /// foreground: the system may have evicted it while backgrounded, and the
+    /// first sentence after a return should not pay for the reload.
+    ///
+    /// A no-op when Apple Intelligence is unavailable
+    /// (`FoundationModelReasonProvider.prewarm()` checks availability itself), when
+    /// the build has no FoundationModels, and when a test or preview injected the
+    /// template provider. Nothing is shown and nothing is awaited.
+    @MainActor
+    func prewarmReasonSession() {
         // A test or preview that injected the template provider has no model to
         // warm; `prewarm()` itself also checks availability.
         guard reasonProvider is FoundationModelReasonProvider else { return }

@@ -18,37 +18,52 @@ struct NextWindowCard: View {
     let reference: Date
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ScaledMetric(relativeTo: .body) private var iconWellSize: CGFloat = 32
+
+    private var iconWellSide: CGFloat {
+        min(iconWellSize, 48)
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: OceanSpacing.xs) {
-            Label(headline, systemImage: isUnavailable ? "exclamationmark.triangle" : "clock")
-                .font(OceanTypography.smallLabel)
+        HStack(alignment: .top, spacing: OceanSpacing.sm) {
+            Image(systemName: isUnavailable ? "exclamationmark.triangle" : "clock")
+                .font(OceanTypography.body)
                 .foregroundStyle(isUnavailable ? OceanPalette.unavailable : OceanPalette.sand)
+                .frame(width: iconWellSide, height: iconWellSide)
+                .oceanConcentricInset(minimumRadius: 10)
+                .accessibilityHidden(true)
 
-            if isUnavailable {
-                Text("Les données nécessaires ne sont pas disponibles pour cette activité.")
-                    .font(OceanTypography.body)
-                    .foregroundStyle(OceanPalette.white)
+            VStack(alignment: .leading, spacing: OceanSpacing.xs) {
+                Text(headline)
+                    .font(OceanTypography.smallLabel)
+                    .foregroundStyle(isUnavailable ? OceanPalette.unavailable : OceanPalette.sand)
                     .fixedSize(horizontal: false, vertical: true)
-            } else if let primary {
-                windowText(primary)
-                    .font(OceanTypography.bodyEmphasized)
-                    .foregroundStyle(OceanPalette.white)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .animation(windowAnimation(primary), value: primary)
-            } else {
-                Text("Aucun créneau dans les 48 prochaines heures.")
-                    .font(OceanTypography.body)
-                    .foregroundStyle(OceanPalette.white)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
 
-            if !isUnavailable, let secondary {
-                windowText(secondary)
-                    .font(OceanTypography.caption)
-                    .foregroundStyle(OceanPalette.white.opacity(0.8))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .animation(windowAnimation(secondary), value: secondary)
+                if isUnavailable {
+                    Text("Les données nécessaires ne sont pas disponibles pour cette activité.")
+                        .font(OceanTypography.body)
+                        .foregroundStyle(OceanPalette.white)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if let primary {
+                    windowText(primary)
+                        .font(OceanTypography.bodyEmphasized)
+                        .foregroundStyle(OceanPalette.white)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .animation(windowAnimation(primary), value: primary)
+                } else {
+                    Text("Aucun créneau dans les 48 prochaines heures.")
+                        .font(OceanTypography.body)
+                        .foregroundStyle(OceanPalette.white)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if !isUnavailable, let secondary {
+                    windowText(secondary)
+                        .font(OceanTypography.caption)
+                        .foregroundStyle(OceanPalette.white.opacity(0.8))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .animation(windowAnimation(secondary), value: secondary)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

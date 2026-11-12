@@ -9,11 +9,19 @@ import SwiftUI
 struct TipCard: View {
     let activity: Activity
 
+    @ScaledMetric(relativeTo: .body) private var iconWellSize: CGFloat = 32
+
+    private var iconWellSide: CGFloat {
+        min(iconWellSize, 48)
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: OceanSpacing.sm) {
             Image(systemName: "sparkles")
                 .font(OceanTypography.body)
                 .foregroundStyle(OceanPalette.turquoise)
+                .frame(width: iconWellSide, height: iconWellSide)
+                .oceanConcentricInset(minimumRadius: 8)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: OceanSpacing.xxs) {

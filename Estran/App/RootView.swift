@@ -7,6 +7,7 @@ struct RootView: View {
     @State private var showsActivityPicker = false
     @State private var showsScreenshotDetail = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
 
     /// First launch only: the activity picker introduces the five activities
     /// (Figma frame 03). Dismissing it without choosing is allowed — the Home
@@ -41,7 +42,22 @@ struct RootView: View {
         .preferredColorScheme(.dark)
         .task {
             await app.reload()
+            // A cold launch from a Spotlight hit: the spot was already read by
+            // `AppModel.init`, the activity was not.
+            await app.applyIntentSelectionIfNeeded()
             applyScreenshotLaunchArguments()
+        }
+        // A warm launch: an `OpenIntent` runs in this process while the app is
+        // in the background, so the App Group write only lands here, on the way
+        // back to the foreground. The same activation re-warms the on-device
+        // session, which the system may have evicted while backgrounded (no-op
+        // without Apple Intelligence).
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task {
+                await app.applyIntentSelectionIfNeeded()
+                app.prewarmReasonSession()
+            }
         }
         // `onChange` rather than the line after `await app.reload()`: the picker
         // needs the loaded overviews, and a phase change is the reliable signal

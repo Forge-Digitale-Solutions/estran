@@ -260,15 +260,30 @@ private struct LoadingDetailCard: View {
 private struct UnavailableDetailCard: View {
     let message: String
 
+    @ScaledMetric(relativeTo: .body) private var iconWellSize: CGFloat = 32
+
+    private var iconWellSide: CGFloat {
+        min(iconWellSize, 48)
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: OceanSpacing.sm) {
-            Label("Données indisponibles", systemImage: "exclamationmark.triangle.fill")
-                .font(OceanTypography.bodyEmphasized)
+        HStack(alignment: .top, spacing: OceanSpacing.sm) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(OceanTypography.body)
                 .foregroundStyle(OceanPalette.unavailable)
-            Text(message)
-                .font(OceanTypography.caption)
-                .foregroundStyle(OceanPalette.white.opacity(0.85))
-                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: iconWellSide, height: iconWellSide)
+                .oceanConcentricInset(minimumRadius: 10)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: OceanSpacing.xs) {
+                Text("Données indisponibles")
+                    .font(OceanTypography.bodyEmphasized)
+                    .foregroundStyle(OceanPalette.unavailable)
+                Text(message)
+                    .font(OceanTypography.caption)
+                    .foregroundStyle(OceanPalette.white.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(OceanSpacing.lg)

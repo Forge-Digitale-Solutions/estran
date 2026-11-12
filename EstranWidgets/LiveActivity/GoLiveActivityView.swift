@@ -132,9 +132,13 @@ struct GoLiveActivityView: View {
                 .foregroundStyle(OceanPalette.white)
                 .fixedSize(horizontal: false, vertical: true)
 
+            // Small text on the translucent banner: the on-glass token, never
+            // the vivid Figma hue (which stays for large glyphs). `non`
+            // #FF6B5B measured under 4.5:1 there; `nonOnGlass` #FFBAB2 clears
+            // it (docs/accessibility/contrast-audit.md, A20/B21/B23/B50).
             Text("Courants : \(advisory.level.shortTitle)")
                 .font(OceanTypography.smallLabel)
-                .foregroundStyle(OceanPalette.swimmingRisk(advisory.level))
+                .foregroundStyle(OceanPalette.swimmingRiskText(advisory.level))
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(SwimmingRiskLevel.disclaimer)

@@ -103,6 +103,65 @@ final class FoundationModelReasonGuardrailTests: XCTestCase {
         XCTAssertEqual(text, "Reste à terre, le vent est trop fort.")
     }
 
+    func testUngrammaticalPossessiveFragmentIsRejected() {
+        let decision = Fixtures.decision(
+            activity: .shoreFishing,
+            go: false,
+            blockers: [.insufficientMargin],
+            reason: "Marge insuffisante.")
+        let bad = "Ta marge insuffisante pour la pêche à pied à Arcachon-Eyrac."
+
+        XCTAssertFalse(
+            FoundationModelReasonProvider.isAcceptable(
+                bad,
+                for: decision,
+                conditions: Fixtures.conditions()),
+            "a possessive noun+adjective fragment without a verb must fail closed")
+    }
+
+    func testUngrammaticalPossessiveFragmentFallsBackToTheTemplate() async {
+        let decision = Fixtures.decision(
+            activity: .shoreFishing,
+            go: false,
+            blockers: [.insufficientMargin],
+            reason: "Marge insuffisante.")
+        let provider = FoundationModelReasonProvider(
+            isModelAvailable: { true },
+            generator: { _ in "Ta marge insuffisante pour la pêche à pied à Arcachon-Eyrac." })
+
+        let text = await provider.reason(for: decision, conditions: Fixtures.conditions())
+
+        XCTAssertEqual(text, decision.reason, "broken French never replaces the deterministic reason")
+    }
+
+    func testCompleteSentenceWithConjugatedVerbIsAcceptable() {
+        let decision = Fixtures.decision(
+            activity: .shoreFishing,
+            go: false,
+            blockers: [.insufficientMargin],
+            reason: "Marge insuffisante.")
+        let good = "Ta marge est trop faible pour la pêche à pied ce soir."
+
+        XCTAssertTrue(
+            FoundationModelReasonProvider.isAcceptable(
+                good,
+                for: decision,
+                conditions: Fixtures.conditions()),
+            "a short complete sentence with a conjugated verb must pass")
+    }
+
+    func testSentenceLongerThanMaximumCharactersIsRejected() {
+        let decision = Fixtures.decision(activity: .walking, go: false, blockers: [.wind])
+        let long = String(repeating: "Le vent est trop fort pour marcher aujourd'hui ici. ", count: 4)
+
+        XCTAssertGreaterThan(long.count, FoundationModelReasonProvider.maximumCharacters)
+        XCTAssertFalse(
+            FoundationModelReasonProvider.isAcceptable(
+                long,
+                for: decision,
+                conditions: Fixtures.conditions()))
+    }
+
     func testPrewarmIsSafeWithoutRequiringAppleIntelligence() {
         // Must not throw or hang: no-op when unavailable, session reuse when ready.
         FoundationModelReasonProvider.prewarm()

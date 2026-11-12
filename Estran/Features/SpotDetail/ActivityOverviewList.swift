@@ -22,12 +22,8 @@ struct ActivityOverviewList: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: OceanSpacing.xs) {
-            ForEach(Array(overviews.enumerated()), id: \.element.id) { item in
-                ActivityOverviewRow(overview: item.element, timeZone: timeZone)
-                if item.offset < overviews.count - 1 {
-                    Divider()
-                        .overlay(OceanPalette.white.opacity(0.12))
-                }
+            ForEach(overviews) { overview in
+                ActivityOverviewRow(overview: overview, timeZone: timeZone)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -52,8 +48,11 @@ private struct ActivityOverviewRow: View {
 
     var body: some View {
         content
+            .padding(.horizontal, OceanSpacing.sm)
+            .padding(.vertical, OceanSpacing.xs)
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(minHeight: OceanGlass.minimumTapHeight, alignment: .leading)
+            .oceanConcentricInset(minimumRadius: 10)
             .accessibilityElement(children: .combine)
             .accessibilityLabel(answer.spoken)
             .animation(
@@ -63,21 +62,30 @@ private struct ActivityOverviewRow: View {
 
     @ViewBuilder
     private var content: some View {
-        if dynamicTypeSize >= .xxxLarge {
-            VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
-                activityName
-                answerLabel
-                warningLine
-            }
+        if reflowed {
+            stackedContent
         } else {
-            VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
-                HStack(alignment: .firstTextBaseline, spacing: OceanSpacing.sm) {
-                    activityName
-                    Spacer(minLength: 0)
-                    answerLabel
+            ViewThatFits(in: .horizontal) {
+                VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
+                    HStack(alignment: .firstTextBaseline, spacing: OceanSpacing.sm) {
+                        activityName
+                            .fixedSize(horizontal: true, vertical: false)
+                        Spacer(minLength: OceanSpacing.xs)
+                        answerLabel(alignment: .trailing)
+                            .fixedSize(horizontal: true, vertical: false)
+                    }
+                    warningLine
                 }
-                warningLine
+                stackedContent
             }
+        }
+    }
+
+    private var stackedContent: some View {
+        VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
+            activityName
+            answerLabel(alignment: .leading)
+            warningLine
         }
     }
 
@@ -96,10 +104,10 @@ private struct ActivityOverviewRow: View {
         }
     }
 
-    private var answerLabel: some View {
+    private func answerLabel(alignment: TextAlignment) -> some View {
         Label {
             Text(answer.text)
-                .multilineTextAlignment(reflowed ? .leading : .trailing)
+                .multilineTextAlignment(alignment)
                 .fixedSize(horizontal: false, vertical: true)
                 .contentTransition(reduceMotion ? .identity : .numericText())
         } icon: {
@@ -109,7 +117,6 @@ private struct ActivityOverviewRow: View {
         }
         .font(OceanTypography.body)
         .foregroundStyle(answer.color)
-        .layoutPriority(1)
     }
 
     /// The swimming warning is permanent, so it is drawn under the answer on

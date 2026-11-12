@@ -38,8 +38,18 @@ enum OceanGlass {
     static let cardCornerRadius: CGFloat = 26
     static let tileCornerRadius: CGFloat = 22
     static let capsuleRadius: CGFloat = 24
+    /// Default minimum corner radius for concentric inner shapes nested inside a
+    /// glass card, so deep padding never collapses an inner corner to a sharp square.
+    static let innerCornerMinimum: CGFloat = 10
     /// Minimum tappable height (HIG: 44 × 44 pt).
     static let minimumTapHeight: CGFloat = 44
+
+    /// Uniform concentric rectangle aligned with the enclosing `.containerShape(...)`.
+    static func concentricShape(
+        minimumRadius: CGFloat = innerCornerMinimum) -> ConcentricRectangle
+    {
+        .rect(corners: .concentric(minimum: .fixed(minimumRadius)), isUniform: true)
+    }
 
     /// Animation to use for a surface, or `nil` when Reduce Motion is on.
     ///
@@ -118,7 +128,7 @@ struct GlassAppearance: Equatable, Sendable {
     }
 }
 
-private struct OceanGlassSurfaceModifier<Surface: InsettableShape>: ViewModifier {
+private struct OceanGlassSurfaceModifier<Surface: Shape>: ViewModifier {
     let shape: Surface
     let permanentBacking: Bool
     let tint: Color?
@@ -161,11 +171,70 @@ private struct OceanGlassSurfaceModifier<Surface: InsettableShape>: ViewModifier
         }
         .overlay {
             if state.drawsBorder {
-                shape.strokeBorder(
+                shape.stroke(
                     OceanPalette.white.opacity(state.borderOpacity),
                     lineWidth: state.borderWidth)
             }
         }
+    }
+}
+
+/// Nested concentric well or callout row inside an `oceanGlassCard` surface.
+///
+/// Uses `ConcentricRectangle` so its corners match the enclosing card's
+/// `containerShape` minus padding, and routes through `GlassAppearance` so
+/// Reduce Transparency (opaque `navyInk` + 1 pt border) and Increase Contrast
+/// (45 % `navyInk` backing + 1.5 pt border) draw the border along the same
+/// concentric shape.
+private struct OceanConcentricInsetModifier: ViewModifier {
+    let minimumRadius: CGFloat
+
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+
+    private static let defaultBackingOpacity: Double = 0.26
+    private static let defaultBorderOpacity: Double = 0.12
+
+    private var shape: ConcentricRectangle {
+        OceanGlass.concentricShape(minimumRadius: minimumRadius)
+    }
+
+    private var appearance: GlassAppearance {
+        GlassAppearance(
+            reduceTransparency: reduceTransparency,
+            increaseContrast: colorSchemeContrast == .increased)
+    }
+
+    private var fillStyle: Color {
+        let state = appearance
+        if state.usesSolidFill {
+            return OceanPalette.navyInk
+        }
+        if state.backingOpacity > 0 {
+            return OceanPalette.navyInk.opacity(state.backingOpacity)
+        }
+        return OceanPalette.navyInk.opacity(Self.defaultBackingOpacity)
+    }
+
+    private var borderWidth: CGFloat {
+        let state = appearance
+        return state.drawsBorder ? state.borderWidth : 1
+    }
+
+    private var borderOpacity: Double {
+        let state = appearance
+        return state.drawsBorder ? state.borderOpacity : Self.defaultBorderOpacity
+    }
+
+    func body(content: Content) -> some View {
+        let concentric = shape
+        content
+            .background(fillStyle, in: concentric)
+            .overlay {
+                concentric.stroke(
+                    OceanPalette.white.opacity(borderOpacity),
+                    lineWidth: borderWidth)
+            }
     }
 }
 
@@ -174,24 +243,49 @@ extension View {
         cornerRadius: CGFloat = OceanGlass.cardCornerRadius,
         permanentBacking: Bool = false) -> some View
     {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        return containerShape(shape)
+            .modifier(
+                OceanGlassSurfaceModifier(
+                    shape: shape,
+                    permanentBacking: permanentBacking,
+                    tint: nil,
+                    isInteractive: false))
+    }
+
+    /// Liquid Glass surface whose corners are concentric with an enclosing
+    /// `containerShape`, keeping all four `GlassAppearance` accessibility states.
+    func oceanGlassConcentricCard(
+        minimumRadius: CGFloat = OceanGlass.innerCornerMinimum,
+        permanentBacking: Bool = false) -> some View
+    {
         modifier(
             OceanGlassSurfaceModifier(
-                shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous),
+                shape: OceanGlass.concentricShape(minimumRadius: minimumRadius),
                 permanentBacking: permanentBacking,
                 tint: nil,
                 isInteractive: false))
+    }
+
+    /// Nested concentric well, row or callout inside an `oceanGlassCard`.
+    func oceanConcentricInset(
+        minimumRadius: CGFloat = OceanGlass.innerCornerMinimum) -> some View
+    {
+        modifier(OceanConcentricInsetModifier(minimumRadius: minimumRadius))
     }
 
     func oceanGlassCapsule(
         tinting tint: Color? = nil,
         interactive isInteractive: Bool = false) -> some View
     {
-        modifier(
-            OceanGlassSurfaceModifier(
-                shape: Capsule(style: .continuous),
-                permanentBacking: false,
-                tint: tint,
-                isInteractive: isInteractive))
+        let shape = Capsule(style: .continuous)
+        return containerShape(shape)
+            .modifier(
+                OceanGlassSurfaceModifier(
+                    shape: shape,
+                    permanentBacking: false,
+                    tint: tint,
+                    isInteractive: isInteractive))
     }
 
     /// Shared Liquid Glass capsule styling for interactive segmented chips
@@ -218,11 +312,13 @@ extension View {
     /// the surface only deflects and never travels, so Reduce Motion leaves it
     /// on in every configuration.
     func oceanGlassCircle(interactive isInteractive: Bool = false) -> some View {
-        modifier(
-            OceanGlassSurfaceModifier(
-                shape: Circle(),
-                permanentBacking: false,
-                tint: nil,
-                isInteractive: isInteractive))
+        let shape = Circle()
+        return containerShape(shape)
+            .modifier(
+                OceanGlassSurfaceModifier(
+                    shape: shape,
+                    permanentBacking: false,
+                    tint: nil,
+                    isInteractive: isInteractive))
     }
 }

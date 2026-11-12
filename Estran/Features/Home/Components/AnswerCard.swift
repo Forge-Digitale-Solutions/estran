@@ -60,6 +60,10 @@ struct AnswerCard: View {
                     .foregroundStyle(OceanPalette.white.opacity(0.85))
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, OceanSpacing.sm)
+                    .padding(.vertical, OceanSpacing.xs)
+                    .frame(maxWidth: .infinity)
+                    .oceanConcentricInset(minimumRadius: 12)
             }
         }
         .frame(maxWidth: .infinity, alignment: .center)

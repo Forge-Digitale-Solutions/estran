@@ -15,14 +15,18 @@ import Foundation
     /// `GenerationSchema(name:…)` call that does not match the on-disk SDK
     /// (`type:description:properties:`), so the named form is skipped.
     @available(iOS 26.0, *)
-    @Generable(description: "Explication courte du verdict Estran en français (tutoiement).")
+    @Generable(description: "Phrase complète du verdict Estran en français, avec verbe conjugué.")
     struct ReasonDraft {
         /// One short French sentence; length and voice are guided, then re-checked.
         @Guide(
             description: """
-            Une seule phrase factuelle en français, tutoiement, 12 mots maximum, \
-            160 caractères maximum. Pas de salutation, pas d'emoji, pas d'exclamation. \
-            N'invente aucun chiffre. Ne dis jamais que la donnée est officielle.
+            Une seule phrase complète en français avec un verbe conjugué \
+            (est, reste, manque, souffle…). Tutoiement seulement pour parler \
+            à l'utilisateur (« Ta marge est trop faible… »), sinon neutre \
+            (« La marge est trop faible… »). 12 mots maximum, 140 caractères \
+            maximum. Pas de fragment possessif sans verbe, pas de salutation, \
+            pas d'emoji, pas d'exclamation. N'invente aucun chiffre. Ne cite \
+            jamais SHOM ni une donnée officielle. Jamais « Oui » pour la baignade.
             """)
         var sentence: String
     }

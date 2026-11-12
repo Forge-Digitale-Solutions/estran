@@ -12,6 +12,7 @@ import SwiftUI
 struct ConditionsGrid: View {
     let conditions: Conditions
 
+    @Environment(AppModel.self) private var app
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var columns: [GridItem] {
@@ -53,6 +54,11 @@ struct ConditionsGrid: View {
                 spoken: "Météo : \(FrenchFormat.temperature(conditions.weather.temperature)), "
                     + FrenchFormat.weatherLabel(conditions.weather.condition))
         }
+        .task {
+            guard ProcessInfo.processInfo.arguments.contains("-estranBaignade") else { return }
+            try? await Task.sleep(for: .milliseconds(300))
+            app.select(activity: .swimming)
+        }
     }
 
     /// A missing tide event is not 0.0 m: zero is a real height (the chart
@@ -73,12 +79,19 @@ struct ConditionTile: View {
     let spoken: String
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ScaledMetric(relativeTo: .body) private var iconWellSize: CGFloat = 28
+
+    private var iconWellSide: CGFloat {
+        min(iconWellSize, 44)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
             Image(systemName: icon)
                 .font(OceanTypography.body)
                 .foregroundStyle(OceanPalette.sand)
+                .frame(width: iconWellSide, height: iconWellSide)
+                .oceanConcentricInset(minimumRadius: 8)
                 .accessibilityHidden(true)
             valueText
             Text(label)

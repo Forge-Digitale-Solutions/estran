@@ -27,7 +27,7 @@ struct FoundationModelReasonProvider: ReasonTextProviding {
     static let defaultTimeout: Duration = .seconds(2)
 
     /// Upper bound on an accepted sentence, in characters.
-    static let maximumCharacters = 160
+    static let maximumCharacters = 140
 
     /// Upper bound on an accepted sentence, in words. The prompt asks for 12;
     /// the slack absorbs French elisions without letting a paragraph through.
@@ -132,10 +132,29 @@ struct FoundationModelReasonProvider: ReasonTextProviding {
         #endif
     }
 
-    /// System instructions: the same voice as the prompt, kept short.
+    /// System instructions: voice, grammar, and the examples the model must match.
     static let instructions = """
-    Tu écris des phrases courtes, factuelles et tutoyantes en français pour \
-    une app de conditions côtières. Tu n'inventes aucune donnée.
+    Tu écris une seule phrase courte, complète et factuelle en français pour \
+    Estran, une app de conditions côtières. La phrase a un verbe conjugué \
+    (est, reste, manque, souffle, monte, descend, empêche, permet…). \
+    Tutoiement seulement pour parler à l'utilisateur (« Ta marge est trop \
+    faible… ») ; le neutre (« La marge est trop faible… ») est aussi correct. \
+    12 mots maximum, 140 caractères maximum. Pas de salutation, pas d'emoji, \
+    pas d'exclamation. N'invente aucun chiffre. Ne cite jamais SHOM, ni une \
+    donnée officielle, ni une mesure locale. Pour la baignade, n'écris jamais \
+    « Oui ».
+
+    Exemples corrects :
+    - Ta marge est trop faible pour la pêche à pied ce soir.
+    - La marge est trop faible pour la pêche à pied ce soir.
+    - Le vent souffle trop fort pour marcher à Arcachon.
+    - Reste à terre, la houle monte trop.
+
+    Exemples incorrects (à ne jamais produire) :
+    - Ta marge insuffisante pour la pêche à pied à Arcachon-Eyrac.
+    - Données officielles SHOM : sors maintenant.
+    - Vent 42 km/h, reste à terre.
+    - Oui, tu peux te baigner.
     """
 
     // MARK: - Timeout
@@ -207,11 +226,12 @@ struct FoundationModelReasonProvider: ReasonTextProviding {
     /// Constraints, including the ones that depend on the activity.
     private static func rules(for decision: GoDecision) -> [String] {
         var rules = [
-            "Une seule phrase, 12 mots maximum.",
-            "Tutoiement, ton direct et factuel.",
+            "Une seule phrase complète avec un verbe conjugué, 12 mots maximum, 140 caractères maximum.",
+            "Tutoiement seulement pour parler à l'utilisateur ; le neutre est aussi correct.",
             "Pas de salutation, pas de formule d'IA, pas d'emoji, pas d'exclamation.",
             "N'invente aucun chiffre ni aucune donnée absente du contexte.",
-            "Ne dis jamais que la donnée est officielle ni mesurée sur place."
+            "Ne dis jamais que la donnée est officielle ni mesurée sur place.",
+            "Jamais un fragment possessif sans verbe (« Ta marge insuffisante… »)."
         ]
         if decision.activity == .swimming {
             rules.append(

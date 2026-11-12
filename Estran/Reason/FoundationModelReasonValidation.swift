@@ -10,12 +10,13 @@ extension FoundationModelReasonProvider {
     /// costs nothing. This is where the invariants are enforced on generated
     /// text. Both checks below compare sets, never substrings: a number must be
     /// one the prompt carried (« 2 » cannot pass on « 1,2 m »), and a swimming
-    /// sentence may not offer the water at all.
+    /// sentence may not offer the water at all. A fragment without a conjugated
+    /// verb (« Ta marge insuffisante… ») also fails closed to the template.
     static func isAcceptable(_ text: String, for decision: GoDecision, conditions: Conditions) -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.count <= maximumCharacters,
               trimmed.split(whereSeparator: \.isWhitespace).count <= maximumWords, !containsEmoji(trimmed),
-              !claimsOfficiality(trimmed)
+              !claimsOfficiality(trimmed), hasConjugatedVerb(trimmed)
         else {
             return false
         }
@@ -33,6 +34,25 @@ extension FoundationModelReasonProvider {
         // invention. Set comparison: « 2 » is not « 1,2 ».
         let allowed = promptNumbers(for: decision, conditions: conditions)
         return numericValues(in: trimmed).isSubset(of: allowed)
+    }
+
+    /// Cheap grammar gate: at least one common conjugated French verb.
+    ///
+    /// Catches possessive fragments such as « Ta marge insuffisante… » that
+    /// lack a verb. Over-rejection only costs the deterministic template.
+    private static let conjugatedVerbForms = [
+        "est", "sont", "reste", "restent", "manque", "dépasse", "empêche",
+        "faut", "peux", "permet", "souffle", "monte", "descend"
+    ]
+
+    private static func hasConjugatedVerb(_ text: String) -> Bool {
+        let lowered = text
+            .replacingOccurrences(of: "\u{2019}", with: "'")
+            .lowercased()
+        return conjugatedVerbForms.contains { verb in
+            let pattern = "\\b\(NSRegularExpression.escapedPattern(for: verb))\\b"
+            return lowered.range(of: pattern, options: .regularExpression) != nil
+        }
     }
 
     /// Invariant 1, wording: a swimming sentence never invites you into the

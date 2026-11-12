@@ -87,8 +87,10 @@ struct AlertsView: View {
             }
             .font(OceanTypography.button)
             .foregroundStyle(OceanPalette.turquoiseOnGlass)
-            .frame(minHeight: OceanGlass.minimumTapHeight, alignment: .leading)
-            .contentShape(Rectangle())
+            .padding(.horizontal, OceanSpacing.sm)
+            .frame(maxWidth: .infinity, minHeight: OceanGlass.minimumTapHeight, alignment: .leading)
+            .oceanConcentricInset(minimumRadius: 10)
+            .contentShape(OceanGlass.concentricShape(minimumRadius: 10))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(OceanSpacing.md)

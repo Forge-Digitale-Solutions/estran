@@ -30,9 +30,10 @@ struct OpenSpotIntent: OpenIntent, TargetContentProvidingIntent {
 
 /// Opens Estran from a Spotlight activity hit (e.g. « surf »).
 ///
-/// Persisting the activity into `AppModel` is out of scope for the intents
-/// folder: there is no App Group activity key today. The intent opens the app
-/// and reports the chosen activity id in `contentIdentifier`.
+/// `AppModel.applyIntentSelectionIfNeeded()` consumes the persisted activity
+/// when the app comes to the foreground, so a warm app applies the choice
+/// without relaunching; the language-model and the decision stay in the app, no
+/// second path is introduced here.
 struct OpenActivityIntent: OpenIntent, TargetContentProvidingIntent {
     static var title: LocalizedStringResource {
         "Ouvrir l'activité"
@@ -46,6 +47,50 @@ struct OpenActivityIntent: OpenIntent, TargetContentProvidingIntent {
     var target: ActivityEntity
 
     func perform() async throws -> some IntentResult {
-        .result()
+        IntentSelectionStorage().save(activity: target.activity)
+        return .result()
+    }
+}
+
+/// The one-shot App Group channel an `OpenIntent` uses to tell the running app
+/// which activity it opened.
+///
+/// The spot has a durable home (`SpotSelectionStorage`, shared with the widget
+/// and Siri). The activity does not: a Spotlight hit is an instruction for this
+/// launch, not a new default, so the value is written here and **consumed and
+/// cleared** by `AppModel.applyIntentSelectionIfNeeded()`. Coming back to the
+/// foreground later therefore never re-applies an old hit over the user's chip.
+struct IntentSelectionStorage {
+    /// Key inside the App Group defaults.
+    static let activityKey = "pendingIntentActivityID"
+
+    private let defaults: UserDefaults?
+
+    /// Production storage, backed by the shared App Group.
+    init(suiteName: String = EstranAppGroup.identifier) {
+        defaults = UserDefaults(suiteName: suiteName)
+    }
+
+    /// Injectable storage for tests and previews.
+    init(defaults: UserDefaults?) {
+        self.defaults = defaults
+    }
+
+    /// Records the activity an intent asked for. A later write replaces it: the
+    /// last hit is the one the user meant.
+    func save(activity: Activity) {
+        defaults?.set(activity.rawValue, forKey: Self.activityKey)
+    }
+
+    /// Reads and removes the pending activity, so it is applied exactly once.
+    /// An unknown raw value is dropped rather than mapped to a default activity:
+    /// the app keeps the user's current choice (`Activity.allCases` may shrink
+    /// between builds).
+    func consumeActivity() -> Activity? {
+        guard let raw = defaults?.string(forKey: Self.activityKey) else {
+            return nil
+        }
+        defaults?.removeObject(forKey: Self.activityKey)
+        return Activity(rawValue: raw)
     }
 }
