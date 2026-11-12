@@ -49,9 +49,27 @@ jobs:
       HOMEBREW_NO_INSTALL_CLEANUP: 1
     steps:
       - uses: actions/checkout@v4
+      # The app targets iOS 27. Use an Xcode 27+ if the image has one; otherwise
+      # skip the Xcode steps with a notice instead of failing on an older SDK.
+      # The local gate stays ./scripts/check-macos.sh (Xcode 27.2, 2026-11-12).
+      - name: Select Xcode 27 or skip
+        id: xcode
+        run: |
+          candidate=$(ls -d /Applications/Xcode_27*.app /Applications/Xcode-27*.app 2>/dev/null | sort -V | tail -1 || true)
+          if [ -n "$candidate" ]; then sudo xcode-select -s "$candidate/Contents/Developer"; fi
+          major=$(xcodebuild -version | awk 'NR==1{split($2,v,"."); print v[1]}')
+          echo "Xcode major: $major"
+          if [ "$major" -ge 27 ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Xcode 27 unavailable::This runner has Xcode $major; the iOS 27 build is skipped. Run ./scripts/check-macos.sh locally."
+          fi
       - name: Install XcodeGen
+        if: steps.xcode.outputs.ok == 'true'
         run: brew install xcodegen
       - name: Generate project
+        if: steps.xcode.outputs.ok == 'true'
         run: xcodegen generate
       # Compile check only. GitHub-hosted macOS images still run Xcode 26.6
       # (verified 2026-11-02): they have no iOS simulator runtime, and
@@ -60,6 +78,7 @@ jobs:
       # Unit and UI tests are the local gate: ./scripts/check-macos.sh.
       # Restore the test step the day a runner image ships Xcode 27.
       - name: Build
+        if: steps.xcode.outputs.ok == 'true'
         run: |
           set -x
           xcodebuild -project Estran.xcodeproj -scheme Estran -configuration Debug \
@@ -68,13 +87,34 @@ jobs:
   macos-archive:
     name: Unsigned archive compile check
     runs-on: macos-26
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
       - uses: actions/checkout@v4
+      # The app targets iOS 27. Use an Xcode 27+ if the image has one; otherwise
+      # skip the Xcode steps with a notice instead of failing on an older SDK.
+      # The local gate stays ./scripts/check-macos.sh (Xcode 27.2, 2026-11-12).
+      - name: Select Xcode 27 or skip
+        id: xcode
+        run: |
+          candidate=$(ls -d /Applications/Xcode_27*.app /Applications/Xcode-27*.app 2>/dev/null | sort -V | tail -1 || true)
+          if [ -n "$candidate" ]; then sudo xcode-select -s "$candidate/Contents/Developer"; fi
+          major=$(xcodebuild -version | awk 'NR==1{split($2,v,"."); print v[1]}')
+          echo "Xcode major: $major"
+          if [ "$major" -ge 27 ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Xcode 27 unavailable::This runner has Xcode $major; the iOS 27 build is skipped. Run ./scripts/check-macos.sh locally."
+          fi
       - name: Install XcodeGen
+        if: steps.xcode.outputs.ok == 'true'
         run: brew install xcodegen
       - name: Generate project
+        if: steps.xcode.outputs.ok == 'true'
         run: xcodegen generate
       - name: Archive without signing
+        if: steps.xcode.outputs.ok == 'true'
         run: |
           xcodebuild \
             -project Estran.xcodeproj \
