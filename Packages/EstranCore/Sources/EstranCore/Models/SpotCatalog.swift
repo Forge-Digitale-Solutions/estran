@@ -20,17 +20,21 @@ public enum SpotCatalog {
         id: "pointe-de-grave",
         name: "Pointe de Grave",
         region: .medoc,
+        // The catalog coordinate is the PORT-BLOC tide station, on the Gironde
+        // estuary shore. Surf, swell and sea temperature describe the ocean
+        // (Atlantic) beach just west of the point, so they are sampled at
+        // `marineCoordinate`, ~500 m offshore of that beach (open water).
         coordinate: Coordinate(latitude: 45.570, longitude: -1.062),
+        marineCoordinate: Coordinate(latitude: 45.570, longitude: -1.083),
         tideStation: TideStationRef(id: "15", name: "PORT-BLOC"),
         supportedActivities: Set(Activity.allCases),
         timezone: TimeZone(identifier: "Europe/Paris") ?? .gmt,
-        // Ocean shore runs ~N–S with the Atlantic to the west (OSM coastline
-        // way 4543169, seaward normal ≈ 270–288°). Checked 2026-11-12.
-        // NOTE: the catalog coordinate (45.570, -1.062) sits on the Gironde
-        // estuary side, ~1.5 km east of the ocean shore (OSM way 538325189);
-        // the surf decision is kept on the ocean shore, not the coordinate's
-        // estuary — reported to the owner, not changed here.
-        coastOrientationDegrees: 270,
+        // Ocean beach just west of the point: OSM coastline way 4543169 runs
+        // ~SW (bearing ≈ 235°) there, with the Atlantic to the north-west, so
+        // the seaward normal is ≈ 325°. Verified 2026-11-12 with a live
+        // Open-Meteo Marine request at (45.570, -1.083): returns waves
+        // (H ≈ 0.84 m, 11 s, dir 267°, SST 14.8 °C) — the grid cell is water.
+        coastOrientationDegrees: 325,
         minimumWaterHeight: nil,
         validation: .gauged,
         correctionStatus: .none,

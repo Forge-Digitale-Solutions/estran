@@ -2,6 +2,12 @@
 import EstranCore
 import XCTest
 
+private extension [URLQueryItem] {
+    func value(for name: String) -> String? {
+        first { $0.name == name }?.value
+    }
+}
+
 /// M2 — Open-Meteo Marine decoder, cache and per-spot policy.
 ///
 /// The payloads below are trimmed from a real `marine-api.open-meteo.com`
@@ -104,6 +110,44 @@ final class MarineServiceTests: XCTestCase {
     func testOnlyTheOceanSpotUsesTheOffshoreModel() {
         XCTAssertEqual(MarinePolicy.source(for: SpotCatalog.pointeDeGrave), .offshoreModel)
         XCTAssertEqual(MarinePolicy.source(for: SpotCatalog.arcachonEyrac), .windSeaEstimate)
+    }
+
+    // MARK: - Marine point
+
+    /// Pointe de Grave samples its swell on the ocean beach, not at the
+    /// PORT-BLOC estuary coordinate that carries the tide.
+    func testMarineRequestSamplesTheOceanBeachForPointeDeGrave() throws {
+        let spot = SpotCatalog.pointeDeGrave
+        let marine = try XCTUnwrap(spot.marineCoordinate)
+        let url = try XCTUnwrap(MarineService.requestURL(for: spot))
+        let items = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems)
+
+        XCTAssertEqual(items.value(for: "latitude"), String(marine.latitude))
+        XCTAssertEqual(items.value(for: "longitude"), String(marine.longitude))
+        XCTAssertNotEqual(
+            items.value(for: "longitude"),
+            String(spot.coordinate.longitude),
+            "the marine request must not sample the estuary coordinate")
+    }
+
+    /// Eyrac has no dedicated marine point: the request falls back to its own
+    /// coordinate (which `MarinePolicy` then routes to the wind-sea estimate).
+    func testMarineRequestFallsBackToTheSpotCoordinateForEyrac() throws {
+        let spot = SpotCatalog.arcachonEyrac
+        let url = try XCTUnwrap(MarineService.requestURL(for: spot))
+        let items = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems)
+
+        XCTAssertEqual(items.value(for: "latitude"), String(spot.coordinate.latitude))
+        XCTAssertEqual(items.value(for: "longitude"), String(spot.coordinate.longitude))
+    }
+
+    func testMarineCoordinateFallsBackWhenNil() {
+        XCTAssertEqual(
+            MarineService.marineCoordinate(for: SpotCatalog.arcachonEyrac),
+            SpotCatalog.arcachonEyrac.coordinate)
+        XCTAssertEqual(
+            MarineService.marineCoordinate(for: SpotCatalog.pointeDeGrave),
+            SpotCatalog.pointeDeGrave.marineCoordinate)
     }
 
     func testNearestSwellRejectsASampleOutsideTheTolerance() throws {

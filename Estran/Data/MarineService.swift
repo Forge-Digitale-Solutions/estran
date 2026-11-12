@@ -40,11 +40,21 @@ actor MarineService {
         return samples
     }
 
-    private func fetch(_ spot: Spot) async throws -> Data {
-        var components = URLComponents(string: Self.endpoint)
+    /// The point the marine grid is sampled at: the spot's dedicated marine point
+    /// when it has one (Pointe de Grave samples the ocean beach, not its estuary
+    /// coordinate), otherwise the spot's own coordinate.
+    static func marineCoordinate(for spot: Spot) -> Coordinate {
+        spot.marineCoordinate ?? spot.coordinate
+    }
+
+    /// The Open-Meteo Marine request URL for a spot, extracted so the coordinate
+    /// selection is unit-testable without a network call.
+    static func requestURL(for spot: Spot) -> URL? {
+        let point = marineCoordinate(for: spot)
+        var components = URLComponents(string: endpoint)
         components?.queryItems = [
-            URLQueryItem(name: "latitude", value: String(spot.coordinate.latitude)),
-            URLQueryItem(name: "longitude", value: String(spot.coordinate.longitude)),
+            URLQueryItem(name: "latitude", value: String(point.latitude)),
+            URLQueryItem(name: "longitude", value: String(point.longitude)),
             URLQueryItem(
                 name: "hourly",
                 value: "wave_height,wave_period,wave_direction,sea_surface_temperature"),
@@ -53,7 +63,11 @@ actor MarineService {
             URLQueryItem(name: "timezone", value: "UTC"),
             URLQueryItem(name: "forecast_days", value: "2")
         ]
-        guard let url = components?.url else {
+        return components?.url
+    }
+
+    private func fetch(_ spot: Spot) async throws -> Data {
+        guard let url = Self.requestURL(for: spot) else {
             throw ConditionsProviderError.marineUnavailable
         }
 

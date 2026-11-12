@@ -86,6 +86,15 @@ public struct Spot: Identifiable, Codable, Hashable, Sendable {
     public let name: String
     public let region: Region
     public let coordinate: Coordinate
+    /// Optional point where the marine (swell / sea-surface temperature) data is
+    /// sampled, distinct from `coordinate`. `nil` means sample at `coordinate`.
+    ///
+    /// Pointe de Grave's `coordinate` is the PORT-BLOC tide station on the
+    /// Gironde estuary shore, but its surf and swell describe the ocean beach
+    /// just west of the point, so the marine fetch samples that offshore point
+    /// instead. Eyrac keeps `nil`: its sea is the wind-sea estimate, not the
+    /// marine grid (`MarinePolicy`).
+    public let marineCoordinate: Coordinate?
     public let tideStation: TideStationRef
     public let supportedActivities: Set<Activity>
     public let timezone: TimeZone
@@ -110,6 +119,7 @@ public struct Spot: Identifiable, Codable, Hashable, Sendable {
         name: String,
         region: Region,
         coordinate: Coordinate,
+        marineCoordinate: Coordinate? = nil,
         tideStation: TideStationRef,
         supportedActivities: Set<Activity>,
         timezone: TimeZone,
@@ -124,6 +134,7 @@ public struct Spot: Identifiable, Codable, Hashable, Sendable {
         self.name = name
         self.region = region
         self.coordinate = coordinate
+        self.marineCoordinate = marineCoordinate
         self.tideStation = tideStation
         self.supportedActivities = supportedActivities
         self.timezone = timezone
@@ -142,6 +153,7 @@ public struct Spot: Identifiable, Codable, Hashable, Sendable {
             name: name,
             region: region,
             coordinate: coordinate,
+            marineCoordinate: marineCoordinate,
             tideStation: tideStation,
             supportedActivities: supportedActivities,
             timezone: timezone,

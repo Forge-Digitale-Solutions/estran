@@ -35,14 +35,27 @@ final class SpotCatalogTests: XCTestCase {
     }
 
     /// Coast orientations checked against OSM coastline geometry (2026-11-12).
-    /// Eyrac's town shore faces north into the Bassin, not 250°; Pointe de
-    /// Grave's ocean shore faces west (~270°).
+    /// Eyrac's town shore faces north into the Bassin; Pointe de Grave's ocean
+    /// beach (not its estuary coordinate) faces north-west (~325°).
     func testCoastOrientationsAreChecked() {
         XCTAssertEqual(SpotCatalog.arcachonEyrac.coastOrientationDegrees, 0)
-        XCTAssertEqual(SpotCatalog.pointeDeGrave.coastOrientationDegrees, 270)
+        XCTAssertEqual(SpotCatalog.pointeDeGrave.coastOrientationDegrees, 325)
         for spot in SpotCatalog.v1 {
             XCTAssertNotNil(spot.coastOrientationDegrees)
         }
+    }
+
+    /// Pointe de Grave samples its marine data on the ocean beach, not at the
+    /// PORT-BLOC estuary coordinate; Eyrac keeps `nil` (wind-sea estimate).
+    func testMarineCoordinateIsSetOnlyForTheOceanSpot() {
+        XCTAssertEqual(
+            SpotCatalog.pointeDeGrave.marineCoordinate,
+            Coordinate(latitude: 45.570, longitude: -1.083))
+        XCTAssertNotEqual(
+            SpotCatalog.pointeDeGrave.marineCoordinate,
+            SpotCatalog.pointeDeGrave.coordinate,
+            "the marine point must not be the estuary-side tide coordinate")
+        XCTAssertNil(SpotCatalog.arcachonEyrac.marineCoordinate)
     }
 
     func testSpotsReferenceTheShippedStations() {
