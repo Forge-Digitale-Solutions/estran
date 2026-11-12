@@ -18,6 +18,9 @@ settings:
     SWIFT_STRICT_CONCURRENCY: complete
     IPHONEOS_DEPLOYMENT_TARGET: "27.0"
     CODE_SIGN_STYLE: Automatic
+    # Apple Developer Program team of the owner. Not a secret; it is the same
+    # value Xcode writes when signing is chosen in Signing & Capabilities.
+    DEVELOPMENT_TEAM: D3UKXNVT3D
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"

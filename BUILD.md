@@ -141,7 +141,7 @@ the normal signing settings (`check-macos.sh` does). Keep
 These are missing today and are **hard submission blockers**:
 
 - [ ] **Final app icon.** An interim 1024×1024 `AppIcon.appiconset` was generated on 2026-10-28 so the build and archive can run (night-sea gradient, no alpha, no rounded corners). It is a placeholder: replace it with the final Figma export before TestFlight. App Store Connect rejects a build without a 1024×1024 icon.
-- [ ] **Privacy manifest.** Add `Estran/PrivacyInfo.xcprivacy`:
+- [x] **Privacy manifest.** Add `Estran/PrivacyInfo.xcprivacy` — added 2026-11-12, app + widget extension (identical file at `EstranWidgets/PrivacyInfo.xcprivacy`, since the extension also reads the App Group container):
   ```xml
   <?xml version="1.0" encoding="UTF-8"?>
   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
