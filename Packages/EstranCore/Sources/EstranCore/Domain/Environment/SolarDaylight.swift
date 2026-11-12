@@ -39,4 +39,22 @@ public enum SolarDaylight {
     public static func isDaylight(at date: Date, coordinate: Coordinate) -> Bool {
         solarElevationDegrees(at: date, coordinate: coordinate) > horizonElevation
     }
+
+    /// `true` when any part of the uncertainty envelope around `date` is below
+    /// the horizon.
+    ///
+    /// The conservative reading: a decision whose envelope could straddle
+    /// sunset/sunrise is treated as night. Swimming already reads daylight this
+    /// way; the pêche à pied and boating cautions use the same rule so a single
+    /// notion of « nuit » drives every surface.
+    public static func isNight(
+        at date: Date,
+        coordinate: Coordinate,
+        uncertainty: TimeInterval = 0) -> Bool
+    {
+        let start = date.addingTimeInterval(-uncertainty)
+        let end = date.addingTimeInterval(uncertainty)
+        return !(isDaylight(at: start, coordinate: coordinate)
+            && isDaylight(at: end, coordinate: coordinate))
+    }
 }

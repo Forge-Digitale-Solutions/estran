@@ -19,6 +19,9 @@ struct NextWindowCard: View {
     let noWindowReason: String?
     let timeZone: TimeZone
     let reference: Date
+    /// Every caution the answer carries (night, light rain, the Bassin passes),
+    /// or `nil`. Copy only: it never changes the window.
+    let caution: String?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ScaledMetric(relativeTo: .body) private var iconWellSize: CGFloat = 32
@@ -66,6 +69,20 @@ struct NextWindowCard: View {
                         .foregroundStyle(OceanPalette.white.opacity(0.8))
                         .fixedSize(horizontal: false, vertical: true)
                         .animation(windowAnimation(secondary), value: secondary)
+                }
+
+                if let caution {
+                    HStack(alignment: .top, spacing: OceanSpacing.xxs) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(OceanTypography.smallLabel)
+                            .foregroundStyle(OceanPalette.sand)
+                            .accessibilityHidden(true)
+                        Text(caution)
+                            .font(OceanTypography.caption)
+                            .foregroundStyle(OceanPalette.sand)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
         }

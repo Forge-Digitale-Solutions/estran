@@ -21,8 +21,9 @@ public struct WidgetSnapshot: Codable, Hashable, Sendable {
         public let isGo: Bool
         /// The visible answer: a window range, a reason, or a swimming level.
         public let answer: String
-        /// A permanent warning: swimming's year-round baïnes warning, or the
-        /// Bassin boating caution about the passes. Never a verdict.
+        /// A caution shown beside the answer: swimming's year-round baïnes
+        /// warning, the Bassin boating caution about the passes, or the
+        /// conditional night/light-rain reminder. Never a verdict.
         public let warning: String?
         /// Swimming only: the level, so the widget colours it like the app.
         public let swimmingLevel: SwimmingRiskLevel?

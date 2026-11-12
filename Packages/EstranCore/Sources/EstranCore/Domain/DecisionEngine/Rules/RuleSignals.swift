@@ -61,6 +61,20 @@ enum RuleSignals {
             coastOrientation: orientation)
     }
 
+    /// Score multiplier applied at night by the two activities that remain open
+    /// after dark (owner decision 2026-11-12). Night never blocks pêche à pied
+    /// or boating; it lowers the score a little and adds a caution.
+    static let nightScorePenalty = 0.85
+
+    /// `nightScorePenalty` when the uncertainty envelope is dark, `1` by day.
+    static func nightScoreMultiplier(_ conditions: Conditions) -> Double {
+        let isNight = SolarDaylight.isNight(
+            at: conditions.at,
+            coordinate: conditions.spot.coordinate,
+            uncertainty: conditions.spot.uncertainty.timeInterval)
+        return isNight ? nightScorePenalty : 1
+    }
+
     /// `true` when the uncertainty interval reaches past the station's declared
     /// validity horizon.
     ///

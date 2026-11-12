@@ -77,7 +77,7 @@ public struct DecisionEngine: Sendable {
             nextGoodWindow: nextWindow,
             computedAt: conditions.at,
             blockers: blockers,
-            caution: ActivityCaution.rainCaution(activity: activity, weather: conditions.weather))
+            caution: ActivityCaution.conditionalCaution(activity: activity, conditions: conditions))
     }
 
     /// Every good window of `activity` over `forecast`, sorted by start date.

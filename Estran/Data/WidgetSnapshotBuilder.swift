@@ -91,7 +91,7 @@ enum WidgetSnapshotBuilder {
             isUnavailable: overview.isUnavailable,
             isGo: overview.decision.go,
             answer: lineAnswer(overview, timeZone: timeZone),
-            warning: ActivityCaution.caution(activity: overview.activity, spot: overview.decision.spot))
+            warning: ActivityCaution.combined(overview.decision))
     }
 
     /// The same words the spot-detail rows use.

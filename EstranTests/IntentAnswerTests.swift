@@ -166,6 +166,31 @@ final class IntentAnswerTests: XCTestCase {
         XCTAssertTrue(text.contains(SwimmingRiskLevel.disclaimer))
     }
 
+    // MARK: - Cautions
+
+    func testTheSelectedActivitysCautionIsSpoken() {
+        let caution = WidgetSnapshot.ActivityLine(
+            activity: .shoreFishing,
+            isUnavailable: false,
+            isGo: true,
+            answer: "13 h 10 à 15 h 40",
+            warning: ActivityCaution.nightFishing)
+        let snapshot = WidgetSnapshot(
+            updatedAt: Date(),
+            spotID: "pointe-de-grave",
+            spotName: "Pointe de Grave",
+            activity: .shoreFishing,
+            isGo: true,
+            isUnavailable: false,
+            answer: "13 h 10 à 15 h 40",
+            lines: [caution])
+
+        XCTAssertEqual(
+            IntentAnswer.text(for: snapshot),
+            "Oui à Pointe de Grave : 13 h 10 à 15 h 40. "
+                + ActivityCaution.nightFishing)
+    }
+
     // MARK: - Wrong combination
 
     func testACombinationTheSnapshotDoesNotCoverIsAnnouncedNotAnswered() {

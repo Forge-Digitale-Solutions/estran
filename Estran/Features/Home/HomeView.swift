@@ -61,7 +61,8 @@ struct HomeView: View {
                             isUnavailable: app.unavailableActivities.contains(app.activity),
                             noWindowReason: FrenchFormat.emptyWindowReason(app.emptyWindowBlocker),
                             timeZone: app.selectedSpot.timezone,
-                            reference: referenceDate)
+                            reference: referenceDate,
+                            caution: app.decision.flatMap { ActivityCaution.combined($0) })
                     }
                     if let conditions = app.store.conditions {
                         ConditionsGrid(conditions: conditions)

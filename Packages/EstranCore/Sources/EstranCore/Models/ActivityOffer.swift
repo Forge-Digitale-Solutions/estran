@@ -51,6 +51,14 @@ public enum ActivityCaution {
     /// drizzle (owner decision 2026-11-12).
     public static let rainJacket = "Prévois une veste : petite pluie possible."
 
+    /// Night is not forbidden for pêche à pied: the caution replaces a `Non`
+    /// (owner decision 2026-11-12).
+    public static let nightFishing =
+        "De nuit : lampe frontale, et surveille la marée qui remonte."
+
+    /// Boating at night is a legal activity with its own lights.
+    public static let nightBoating = "De nuit : feux de navigation obligatoires."
+
     /// The caution for `activity` at `spot`, or `nil` when none applies.
     public static func caution(activity: Activity, spot: Spot) -> String? {
         if activity == .boating, spot.region == .bassin {
@@ -70,10 +78,58 @@ public enum ActivityCaution {
         return rainJacket
     }
 
-    /// The permanent spot caution plus the decision's conditional rain reminder,
-    /// or `nil`. The two are mutually exclusive by activity, so the first
-    /// non-nil wins.
+    /// The night caution for `activity`, or `nil` when it is not night or the
+    /// activity is not one of the two night-tolerant ones.
+    ///
+    /// Night never blocks pêche à pied or boating (owner decision 2026-11-12):
+    /// it lowers the score a little and adds a caution. Balade, surf and
+    /// baignade are untouched — swimming keeps its own `.night` blocker.
+    public static func nightCaution(
+        activity: Activity,
+        at date: Date,
+        coordinate: Coordinate,
+        uncertainty: TimeInterval = 0) -> String?
+    {
+        guard activity == .shoreFishing || activity == .boating,
+              SolarDaylight.isNight(
+                  at: date,
+                  coordinate: coordinate,
+                  uncertainty: uncertainty)
+        else {
+            return nil
+        }
+        return activity == .shoreFishing ? nightFishing : nightBoating
+    }
+
+    /// The conditional cautions of a decision: night first, then the light-rain
+    /// reminder, kept as short sentences. `nil` when neither applies.
+    public static func conditionalCaution(
+        activity: Activity,
+        conditions: Conditions) -> String?
+    {
+        joined([
+            nightCaution(
+                activity: activity,
+                at: conditions.at,
+                coordinate: conditions.spot.coordinate,
+                uncertainty: conditions.spot.uncertainty.timeInterval),
+            rainCaution(activity: activity, weather: conditions.weather)
+        ])
+    }
+
+    /// Every caution a decision's surfaces show, in reading order: the
+    /// conditional part (night, then rain) followed by the permanent spot
+    /// caution (the Bassin passes). `nil` when none applies.
     public static func combined(_ decision: GoDecision) -> String? {
-        caution(activity: decision.activity, spot: decision.spot) ?? decision.caution
+        joined([
+            decision.caution,
+            caution(activity: decision.activity, spot: decision.spot)
+        ])
+    }
+
+    /// Joins the non-nil parts with a single space; `nil` when all are absent.
+    private static func joined(_ parts: [String?]) -> String? {
+        let text = parts.compactMap(\.self).joined(separator: " ")
+        return text.isEmpty ? nil : text
     }
 }

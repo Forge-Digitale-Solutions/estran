@@ -4,6 +4,10 @@ import Foundation
 ///
 /// The §7.1 "Go when" conditions are hard gates: swell at or above 1 m, wind at
 /// or above 20 km/h, missing water height or insufficient draught force a `Non`.
+///
+/// **Night never blocks** (owner decision 2026-11-12). The score is multiplied
+/// by `RuleSignals.nightScorePenalty` after dark and the verdict carries the
+/// « feux de navigation » caution.
 public struct BoatingRule: ActivityRule {
     public let activity = Activity.boating
     public let threshold = 0.6
@@ -89,7 +93,7 @@ public struct BoatingRule: ActivityRule {
             (swell, 0.30),
             (water, 0.20),
             (visibility, 0.15)
-        ])
+        ]) * RuleSignals.nightScoreMultiplier(conditions)
     }
 
     private func minimumWaterHeight(_ conditions: Conditions) -> Double {

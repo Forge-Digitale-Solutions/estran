@@ -285,6 +285,12 @@ it lowers the score a little and adds the caution « Prévois une veste : petite
 pluie possible. »; franc rain, showers and thunderstorms still force a `Non`
 (thunderstorm stays `.storm`). Owner decision 2026-11-12.
 
+Night (Pêche à pied and Bateau only) is **not** forbidden and never a blocker: it
+lowers the score a little and adds « De nuit : lampe frontale, et surveille la
+marée qui remonte. » or « De nuit : feux de navigation obligatoires. », night
+first when the rain caution also applies. Balade, Surf and Baignade are
+untouched; swimming keeps its `.night` gate. Owner decision 2026-11-12.
+
 ---
 
 ## 6. Components checklist

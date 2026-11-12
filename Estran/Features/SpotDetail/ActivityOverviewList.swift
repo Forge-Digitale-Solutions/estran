@@ -142,11 +142,11 @@ private struct ActivityOverviewRow: View {
     /// reads. Colour is never the only signal — every state carries a glyph.
     private var answer: ActivityRowAnswer {
         let name = overview.activity.displayName
-        // The permanent Bassin boating caution, plus the conditional light-rain
-        // reminder when it applies, or `nil` for any other row. The two are
-        // mutually exclusive by activity, so the first non-nil wins.
-        let caution = ActivityCaution.caution(activity: overview.activity, spot: overview.decision.spot)
-            ?? overview.decision.caution
+        // Every caution this row carries: the conditional night/rain reminder
+        // plus the permanent Bassin boating caution, or `nil` for any other row.
+        // They compose (night first), so a night boat inside the Bassin keeps
+        // both facts instead of the permanent one hiding the night one.
+        let caution = ActivityCaution.combined(overview.decision)
 
         // Swimming first: no state may fall through to Oui/Non.
         if overview.activity == .swimming {

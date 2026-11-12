@@ -30,10 +30,10 @@ enum IntentAnswer {
             "Non à \(snapshot.spotName) : \(sentenceAnswer(snapshot.answer))."
         }
 
-        if snapshot.isStale {
-            return "Ces données datent de plus de deux heures. " + answer
-        }
-        return answer
+        let spoken = snapshot.isStale
+            ? "Ces données datent de plus de deux heures. " + answer
+            : answer
+        return withCaution(spoken, for: snapshot)
     }
 
     /// The sentence for a requested spot/activity the snapshot does not cover.
@@ -65,5 +65,21 @@ enum IntentAnswer {
             text.removeLast()
         }
         return text
+    }
+
+    /// Appends the selected activity's caution (night, light rain, the Bassin
+    /// passes) from the snapshot's own line, so Siri never drops a caution the
+    /// widget and the app show. Swimming already speaks its baïnes warning, so
+    /// it is never doubled. No line, no caution invented.
+    private static func withCaution(_ sentence: String, for snapshot: WidgetSnapshot) -> String {
+        guard snapshot.activity != .swimming,
+              let warning = snapshot.lines
+                  .first(where: { $0.activity == snapshot.activity })?
+                  .warning,
+              !warning.isEmpty
+        else {
+            return sentence
+        }
+        return "\(sentence) \(warning)"
     }
 }

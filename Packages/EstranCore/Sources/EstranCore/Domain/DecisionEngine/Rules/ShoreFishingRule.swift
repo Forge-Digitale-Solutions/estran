@@ -5,6 +5,11 @@ import Foundation
 /// The §7.1 "Go when" conditions are hard gates: a high score cannot outvote a
 /// coefficient below 72, a tide far from low water or a wind above 15 km/h.
 ///
+/// **Night never blocks** (owner decision 2026-11-12). The score is multiplied
+/// by `RuleSignals.nightScorePenalty` after dark and the verdict carries the
+/// « lampe frontale » caution; a night high tide is still a `Non` from the
+/// ordinary gates.
+///
 /// **Coefficient scale (review Z23).** The gate reads the *national* coefficient
 /// computed at Brest (`range / 6.10 × 100`). The local proxy ran ≈ 17 % high on
 /// 2025 (median 85.0 against a national 72.5), so a threshold of 70 on that
@@ -97,6 +102,6 @@ public struct ShoreFishingRule: ActivityRule {
             (lowWater, 0.30),
             (wind, 0.20),
             (rain, 0.15)
-        ])
+        ]) * RuleSignals.nightScoreMultiplier(conditions)
     }
 }

@@ -114,11 +114,10 @@ public struct SwimmingRule: ActivityRule {
     }
 
     private func isDaylight(_ conditions: Conditions) -> Bool {
-        let uncertainty = conditions.spot.uncertainty
-        let start = conditions.at.addingTimeInterval(-uncertainty.timeInterval)
-        let end = conditions.at.addingTimeInterval(uncertainty.timeInterval)
-        return SolarDaylight.isDaylight(at: start, coordinate: conditions.spot.coordinate)
-            && SolarDaylight.isDaylight(at: end, coordinate: conditions.spot.coordinate)
+        !SolarDaylight.isNight(
+            at: conditions.at,
+            coordinate: conditions.spot.coordinate,
+            uncertainty: conditions.spot.uncertainty.timeInterval)
     }
 
     /// Pass-current level from the local predicted range and the tide phase.
