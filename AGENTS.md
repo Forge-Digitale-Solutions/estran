@@ -53,16 +53,18 @@ Violating one of these is a regression, even if the code is cleaner afterwards.
 python3 scripts/tides/refresh   # regenerate the tide dataset (free, cached)
 ```
 
-## Current state — 2026-10-28
+## Current state — 2026-11-12
 
 | Milestone | State |
 |---|---|
-| M0 Setup | done |
-| M1 Domain + tide dataset | done — schema 6, 165 tests |
-| M2 Weather (WeatherKit + Open-Meteo Marine) | **live sources operational** — WeatherKit adapter + Open-Meteo fallback, marine model at Pointe de Grave, wind-sea estimate (labelled) inside the Bassin; 17 app tests. WeatherKit capability still to enable in the portal |
-| M3 UI | **Frames 01/02/03 built and matched** — first build 2026-10-28 (Xcode 27.1, iOS 27 simulator); accessibility findings fixed; device VoiceOver open |
-| M4 Foundation Models / Siri / notifications | not started |
-| M5 Widgets / Live Activity | **widget data path wired** — the app writes an App Group snapshot, the widget renders it (small answer + medium five-row list, conditions widget with real values); **Live Activity still to wire** |
+| M0 Setup | done — rebuilt on the new Mac (Xcode 27.2, iOS 27.2 sim); DerivedData lives in `build/` |
+| M1 Domain + tide dataset | done — schema 6, 172 package tests |
+| M2 Weather (WeatherKit + Open-Meteo Marine) | **live sources operational** — WeatherKit capability still to enable in the portal; lagoon sea decision open |
+| M3 UI | **iOS 27 visual pass shipped** — living `OceanBackdrop`, interactive morphing Liquid Glass, zoom transition, tide scrub, concentric corners; settings pass (IC/RT/RM) done, map-card contrast B1/B2 fixed (`docs/accessibility/settings-pass-2026-11-11.md`); **device VoiceOver open** |
+| M4 Foundation Models / Siri / notifications | **in progress** — `@Generable` reason with guardrails (verb + length checks, engine fallback), prewarm; Spotlight entities, App Shortcuts, Siri snippet; local notifications scheduled |
+| M5 Widgets / Live Activity | **built** — small/medium/large + Lock Screen families, real swimming level fed; Live Activity with no go case for swimming, rendered at 370/393 pt; on-device check of widgets and Live Activity open |
+
+iOS 27 SDK opportunities and what is already used: `docs/design/ios27-opportunities.md`.
 
 **Next action: close M3, then M2.** `check-macos.sh` is green (build, tests,
 lint, archive), the app runs in the simulator, and the three mockup screens that
