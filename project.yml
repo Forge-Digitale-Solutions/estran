@@ -52,6 +52,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.forgedigitalesolutions.estran
+        TARGETED_DEVICE_FAMILY: "1"
         PRODUCT_NAME: Estran
         INFOPLIST_FILE: Estran/Info.plist
         GENERATE_INFOPLIST_FILE: NO
@@ -81,6 +82,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.forgedigitalesolutions.estran.widgets
+        TARGETED_DEVICE_FAMILY: "1"
         PRODUCT_NAME: EstranWidgets
         INFOPLIST_FILE: EstranWidgets/Info.plist
         GENERATE_INFOPLIST_FILE: NO
@@ -129,6 +131,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.forgedigitalesolutions.estran.tests
+        TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES
         # App-hosted: the marine and weather adapters live in the app target, and
         # their decoders are the part M2 must test (`worksplit.md` §6).
@@ -149,6 +152,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.forgedigitalesolutions.estran.uitests
+        TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES
         TEST_TARGET_NAME: Estran
 
