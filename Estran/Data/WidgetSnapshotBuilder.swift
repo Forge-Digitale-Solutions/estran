@@ -139,7 +139,10 @@ enum WidgetSnapshotBuilder {
                 id: "swell",
                 symbol: "water.waves",
                 value: FrenchFormat.swellHeight(swell),
-                caption: FrenchFormat.swellTileLabel(swell)),
+                caption: FrenchFormat.swellTileLabel(swell),
+                // « période 11 s » wraps in a widget pill; the compact form is
+                // the same measurement, one line (`W-PILL`).
+                compactCaption: FrenchFormat.swellTileShortLabel(swell)),
             WidgetSnapshot.Metric(
                 id: "weather",
                 symbol: FrenchFormat.weatherSymbol(conditions.weather.condition),

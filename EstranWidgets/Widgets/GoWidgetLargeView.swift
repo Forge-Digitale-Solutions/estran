@@ -286,41 +286,10 @@ extension GoWidgetLargeView {
         .widgetGlassCard(minimumRadius: 12)
     }
 
+    /// The four conditions pills, at one shared height: see `WidgetMetricsRow`
+    /// for why the row is fixed rather than sized by its tallest caption.
     private var metricsRow: some View {
-        HStack(spacing: OceanSpacing.xxs) {
-            ForEach(entry.metrics) { metric in
-                VStack(alignment: .leading, spacing: 1) {
-                    HStack(spacing: 3) {
-                        Image(systemName: metric.symbol)
-                            .widgetAccentedRenderingMode(.accentedDesaturated)
-                            .font(OceanTypography.smallLabel)
-                            .foregroundStyle(OceanPalette.sand)
-                            .widgetAccentable()
-                            .accessibilityHidden(true)
-                        if !metric.title.isEmpty {
-                            Text(metric.title)
-                                .font(OceanTypography.smallLabel)
-                                .foregroundStyle(OceanPalette.sand)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                        }
-                    }
-                    Text(metric.value)
-                        .font(OceanTypography.tabLabel)
-                        .foregroundStyle(OceanPalette.white)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(metric.caption)
-                        .font(OceanTypography.smallLabel)
-                        .foregroundStyle(OceanPalette.white.opacity(0.75))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.horizontal, OceanSpacing.xs)
-                .padding(.vertical, 6)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .widgetGlassTile(cornerRadius: 10)
-                .accessibilityElement(children: .combine)
-            }
-        }
+        WidgetMetricsRow(metrics: entry.metrics)
     }
 
     // MARK: - AX5 Fallback Layouts

@@ -109,6 +109,10 @@ targets:
       - path: EstranWidgets/Widgets/WidgetTheme.swift
       - path: EstranWidgets/Widgets/GoWidgetAccessoryViews.swift
       - path: EstranWidgets/Widgets/GoWidgetLargeView.swift
+      # W-PILL: the render test measures the four metric pills (equal heights,
+      # one-line caption at 5 s and 11 s) through the same view the extension
+      # draws.
+      - path: EstranWidgets/Widgets/WidgetMetricPill.swift
       # W-ATTR: the widgets and the app share the weather-source record and the
       # credit line, so the render tests draw the same footer the extension does.
       - path: EstranWidgets/Widgets/WidgetWeatherCredit.swift

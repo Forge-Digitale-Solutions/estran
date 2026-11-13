@@ -211,6 +211,21 @@ enum FrenchFormat {
         return "période \(swellPeriod(swell))"
     }
 
+    /// The same caption for a widget pill, where four tiles share ~74 pt and
+    /// « période 11 s » wrapped onto two lines (owner capture of the large
+    /// widget, `W-PILL`).
+    ///
+    /// The word stays, abbreviated: bare « 11 s » is the value users could not
+    /// read back in build 5. A measured sea reads « pér. 11 s », an estimate
+    /// keeps « estimée » (already one line), and both fit a single line — the
+    /// widget picks whichever of the two forms its pill can hold.
+    static func swellTileShortLabel(_ swell: Swell) -> String {
+        if swell.isEstimated {
+            return "estimée"
+        }
+        return "pér. \(swellPeriod(swell))"
+    }
+
     static func percent(_ fraction: Double) -> String {
         "\(Int((fraction * 100).rounded())) %"
     }

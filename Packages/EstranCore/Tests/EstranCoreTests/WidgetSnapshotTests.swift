@@ -218,4 +218,29 @@ final class WidgetMetricTitleTests: XCTestCase {
             WidgetSnapshot.Metric.self, from: Data(json.utf8))
         XCTAssertEqual(metric.title, "Marée")
     }
+
+    /// The compact caption is optional: a snapshot written before it existed
+    /// decodes with `nil`, and the widget then draws the full caption.
+    func testMetricDecodesWithoutACompactCaption() throws {
+        let json = """
+        {"id":"swell","symbol":"water.waves","value":"1,2 m","caption":"période 11 s"}
+        """
+        let metric = try JSONDecoder().decode(
+            WidgetSnapshot.Metric.self, from: Data(json.utf8))
+        XCTAssertNil(metric.compactCaption)
+        XCTAssertEqual(metric.caption, "période 11 s")
+    }
+
+    func testMetricCompactCaptionRoundTrips() throws {
+        let metric = WidgetSnapshot.Metric(
+            id: "swell",
+            symbol: "water.waves",
+            value: "0,5 m",
+            caption: "période 5 s",
+            compactCaption: "pér. 5 s")
+        let data = try JSONEncoder().encode(metric)
+        let decoded = try JSONDecoder().decode(WidgetSnapshot.Metric.self, from: data)
+        XCTAssertEqual(decoded, metric)
+        XCTAssertEqual(decoded.compactCaption, "pér. 5 s")
+    }
 }

@@ -32,6 +32,26 @@ final class WidgetConfigTests: XCTestCase {
         XCTAssertEqual(FrenchFormat.swellHeight(tiny), "0,1 m")
     }
 
+    // MARK: - Swell caption of a widget pill (W-PILL)
+
+    func testSwellPillCaptionKeepsTheWordAndFitsOneLine() {
+        let measured = Swell(
+            waveHeight: 0.5, period: 5, directionDegrees: 250,
+            seaSurfaceTemperature: 11, source: .model)
+
+        XCTAssertEqual(FrenchFormat.swellTileLabel(measured), "période 5 s")
+        XCTAssertEqual(FrenchFormat.swellTileShortLabel(measured), "pér. 5 s")
+    }
+
+    func testEstimatedSwellKeepsTheOneLineEstimateCaptionInThePill() {
+        let estimate = Swell(
+            waveHeight: 0.3, period: 3, directionDegrees: 250,
+            seaSurfaceTemperature: nil, source: .windSeaEstimate)
+
+        XCTAssertEqual(FrenchFormat.swellTileLabel(estimate), "estimée")
+        XCTAssertEqual(FrenchFormat.swellTileShortLabel(estimate), "estimée")
+    }
+
     // MARK: - Widget tap routing
 
     @MainActor

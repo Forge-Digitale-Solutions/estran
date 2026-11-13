@@ -102,42 +102,11 @@ struct ConditionsWidgetView: View {
     }
 
     private func metricTile(_ metric: WidgetSnapshot.Metric) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 4) {
-                Image(systemName: metric.symbol)
-                    .widgetAccentedRenderingMode(.accentedDesaturated)
-                    .font(OceanTypography.smallLabel)
-                    .foregroundStyle(OceanPalette.sand)
-                    .widgetAccentable()
-                    .accessibilityHidden(true)
-
-                if !metric.title.isEmpty {
-                    Text(metric.title)
-                        .font(OceanTypography.smallLabel)
-                        .foregroundStyle(OceanPalette.sand)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                }
-            }
-
-            Text(metric.value)
-                .font(OceanTypography.bodyEmphasized)
-                .foregroundStyle(OceanPalette.white)
-                .widgetAccentable()
-                .fixedSize(horizontal: false, vertical: true)
-
-            if levelOfDetail != .simplified {
-                Text(metric.caption)
-                    .font(OceanTypography.smallLabel)
-                    .foregroundStyle(OceanPalette.white.opacity(0.78))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(.horizontal, OceanSpacing.xs)
-        .padding(.vertical, 6)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .widgetGlassTile(cornerRadius: 10)
-        .accessibilityElement(children: .combine)
+        WidgetMetricPill(
+            metric: metric,
+            valueFont: OceanTypography.bodyEmphasized,
+            showsCaption: levelOfDetail != .simplified,
+            accentedValue: true)
     }
 }
 

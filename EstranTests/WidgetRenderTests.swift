@@ -1,3 +1,4 @@
+@testable import Estran
 import EstranCore
 import SwiftUI
 import WidgetKit
@@ -66,6 +67,59 @@ final class WidgetRenderTests: XCTestCase {
         print("WCONF_RENDER_DIR=\(directory.path)")
     }
 
+    // MARK: - W-PILL: one height for the four metric pills
+
+    /// The owner's real-device capture showed the HOULE pill taller than its
+    /// three neighbours: « période 5 s » wrapped onto two lines in a ~74 pt
+    /// pill. Every pill must now fit on the same three lines, at 5 s and at
+    /// 11 s, and the fixed row must be tall enough to hold the tallest one.
+    @MainActor
+    func testLargeWidgetPillsShareOneHeightAtFiveAndElevenSeconds() throws {
+        let directory = renderDirectory
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+        // 338 pt of large widget, 16 pt of content margin on each side and 4 pt
+        // between the four pills: the width each pill really gets.
+        let pillWidth = (338 - 2 * 16 - 3 * OceanSpacing.xxs) / 4
+
+        for seconds in [5.0, 11.0] {
+            let metrics = Self.largeMetrics(period: seconds)
+            XCTAssertEqual(metrics.count, 4)
+
+            let heights = metrics.map { metric in
+                fittedHeight(of: WidgetMetricPill(metric: metric), width: pillWidth)
+            }
+
+            let tallest = try XCTUnwrap(heights.max())
+            let shortest = try XCTUnwrap(heights.min())
+            XCTAssertEqual(
+                tallest, shortest, accuracy: 0.5,
+                "the four pills must share one height at \(Int(seconds)) s: \(heights)")
+
+            let rowHeight = fittedHeight(of: WidgetMetricsRow(metrics: metrics), width: 338)
+            XCTAssertGreaterThanOrEqual(
+                rowHeight, tallest,
+                "the fixed row must hold its tallest pill, or the caption is clipped")
+
+            try render(
+                entry: Self.largeEntry(period: seconds),
+                to: directory.appendingPathComponent("wpill-large-\(Int(seconds))s.png"))
+        }
+    }
+
+    /// The laid-out height a view asks for at a given width, at `.large`.
+    @MainActor
+    private func fittedHeight(of view: some View, width: CGFloat) -> CGFloat {
+        let host = UIHostingController(
+            rootView: view
+                .environment(\.widgetRenderingMode, .fullColor)
+                .environment(\.dynamicTypeSize, .large)
+                .frame(width: width))
+        host.view.backgroundColor = .clear
+        return host.sizeThatFits(
+            in: CGSize(width: width, height: UIView.layoutFittingExpandedSize.height)).height
+    }
+
     // MARK: - Rendering
 
     @MainActor
@@ -114,6 +168,37 @@ final class WidgetRenderTests: XCTestCase {
     // MARK: - Fixtures
 
     private static let updatedAt = Date(timeIntervalSince1970: 1_793_000_000)
+
+    /// The four conditions pills exactly as the app writes them, for a spot
+    /// whose sea is measured: the swell caption is « période 5 s » (full) and
+    /// « pér. 5 s » (compact), which is what the pill has to choose between.
+    private static func largeMetrics(period: Double) -> [WidgetSnapshot.Metric] {
+        let spot = SpotCatalog.pointeDeGrave
+        let conditions = Conditions(
+            spot: spot,
+            at: updatedAt,
+            tide: TideState(current: nil, next: nil, coefficient: 80, curve: []),
+            weather: WeatherNow(
+                temperature: 10,
+                condition: .partlyCloudy,
+                precipitationChance: 0,
+                cloudCover: 0.3,
+                wind: Wind(speed: 26, gust: 34, directionDegrees: 45),
+                visibility: 20000),
+            swell: Swell(
+                waveHeight: 0.5,
+                period: period,
+                directionDegrees: 250,
+                seaSurfaceTemperature: 11))
+        return WidgetSnapshotBuilder.metrics(for: conditions)
+    }
+
+    /// A fresh large-widget entry carrying the pills above.
+    private static func largeEntry(period: Double) -> GoEntry {
+        var entry = GoEntry.sample
+        entry.metrics = largeMetrics(period: period)
+        return entry
+    }
 
     private static let eyracSnapshot = WidgetSnapshot(
         updatedAt: updatedAt,

@@ -55,12 +55,27 @@ public struct WidgetSnapshot: Codable, Hashable, Sendable {
         public let symbol: String
         public let value: String
         public let caption: String
+        /// The caption in the form a narrow pill can hold on one line
+        /// (« pér. 11 s » next to the full « période 11 s »).
+        ///
+        /// Optional, and absent from every snapshot written before it existed:
+        /// the widget then draws `caption`, exactly as before. It is never a
+        /// second, invented measurement — it only shortens the same one
+        /// (`W-PILL`, the owner's large-widget capture of 2026-11-13).
+        public let compactCaption: String?
 
-        public init(id: String, symbol: String, value: String, caption: String) {
+        public init(
+            id: String,
+            symbol: String,
+            value: String,
+            caption: String,
+            compactCaption: String? = nil)
+        {
             self.id = id
             self.symbol = symbol
             self.value = value
             self.caption = caption
+            self.compactCaption = compactCaption
         }
 
         /// The tile's name, so « 0,5 m / 6 s » is not left to be guessed.
