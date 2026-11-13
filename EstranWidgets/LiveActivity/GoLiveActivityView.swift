@@ -153,7 +153,11 @@ private struct ExpandedCaution: View {
 private struct CompactLeading: View {
     let context: ActivityViewContext<GoActivityAttributes>
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.isDynamicIslandLimitedInWidth) private var limitedInWidth
+    #if ESTRAN_SDK_BEFORE_27
+        private var limitedInWidth: Bool { false }
+    #else
+        @Environment(\.isDynamicIslandLimitedInWidth) private var limitedInWidth
+    #endif
 
     var body: some View {
         let verdict = context.liveVerdict
