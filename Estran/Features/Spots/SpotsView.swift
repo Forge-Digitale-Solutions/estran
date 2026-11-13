@@ -18,7 +18,11 @@ import SwiftUI
 struct SpotsView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    #if !ESTRAN_SDK_BEFORE_27
+    #if ESTRAN_SDK_BEFORE_27
+        private var prefersCrossFade: Bool {
+            false
+        }
+    #else
         @Environment(\.accessibilityPrefersCrossFadeTransitions) private var prefersCrossFade
     #endif
 
