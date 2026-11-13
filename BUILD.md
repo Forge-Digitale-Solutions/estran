@@ -167,7 +167,7 @@ These are missing today and are **hard submission blockers**:
 - [x] **WeatherKit capability on the App ID** (`com.forgedigitalesolutions.estran`) in the portal — registered 2026-11-12 (team D3UKXNVT3D) with App Groups, together with `com.forgedigitalesolutions.estran.widgets` and `group.com.forgedigitalesolutions.estran`. Still to do: sign with the team. Until then WeatherKit fails and the app falls back to Open-Meteo (logged), so it still answers; with neither source reachable it says « La météo n'est pas encore disponible pour ce spot » — the fail-closed path, not a crash.
 
   Note: the **WeatherKit REST API** is the server-side sibling (JWT signed with a private key). The app uses the native `WeatherKit` framework, which needs the capability and no key at all.
-- [ ] **Privacy policy URL** — required even though the app collects nothing. A static French page is enough (GitHub Pages, 0 €). It must say: no account, no analytics, no data collection; attribution REFMAR/Shom — Licence Ouverte 2.0; weather from Apple WeatherKit and Open-Meteo.
+- [x] **Privacy policy URL** — https://forgedigitalesolutions.com/estran/confidentialite/ (support: https://forgedigitalesolutions.com/estran/assistance/), online 2026-11-13. Required even though the app collects nothing. A static French page is enough (GitHub Pages, 0 €). It must say: no account, no analytics, no data collection; attribution REFMAR/Shom — Licence Ouverte 2.0; weather from Apple WeatherKit and Open-Meteo.
 - [ ] **App Privacy answers** in App Store Connect: *Data Not Collected*.
 - [ ] **Version and build number** bumped (`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in `project.yml`).
 

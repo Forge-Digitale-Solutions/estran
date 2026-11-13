@@ -183,3 +183,39 @@ final class WidgetSnapshotTests: XCTestCase {
         return url
     }
 }
+
+/// The tile names, derived from the metric identifier: the widget and the app
+/// must name « Marée », « Vent », « Houle », « Météo » the same way, and an
+/// unknown identifier must not invent a name.
+final class WidgetMetricTitleTests: XCTestCase {
+    func testKnownMetricsAreNamed() {
+        let expected = [
+            "tide": "Marée",
+            "wind": "Vent",
+            "swell": "Houle",
+            "weather": "Météo"
+        ]
+        for (id, title) in expected {
+            let metric = WidgetSnapshot.Metric(
+                id: id, symbol: "wind", value: "1", caption: "—")
+            XCTAssertEqual(metric.title, title)
+        }
+    }
+
+    func testUnknownMetricHasNoNameRatherThanAGuess() {
+        let metric = WidgetSnapshot.Metric(
+            id: "pressure", symbol: "gauge", value: "1013", caption: "hPa")
+        XCTAssertEqual(metric.title, "")
+    }
+
+    /// A snapshot written before the names existed still decodes: the title is
+    /// derived, never part of the payload.
+    func testMetricDecodesWithoutATitleField() throws {
+        let json = """
+        {"id":"tide","symbol":"water.waves","value":"3,8 m","caption":"descend"}
+        """
+        let metric = try JSONDecoder().decode(
+            WidgetSnapshot.Metric.self, from: Data(json.utf8))
+        XCTAssertEqual(metric.title, "Marée")
+    }
+}

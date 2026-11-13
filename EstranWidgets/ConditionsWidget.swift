@@ -77,7 +77,9 @@ struct ConditionsWidgetView: View {
                         .widgetAccentable()
                         .accessibilityHidden(true)
 
-                    Text("\(metric.value) · \(metric.caption)")
+                    Text(metric.title.isEmpty
+                        ? "\(metric.value) · \(metric.caption)"
+                        : "\(metric.title) : \(metric.value) · \(metric.caption)")
                         .font(OceanTypography.smallLabel)
                         .foregroundStyle(OceanPalette.white)
                         .fixedSize(horizontal: false, vertical: true)
@@ -97,12 +99,20 @@ struct ConditionsWidgetView: View {
                     .widgetAccentable()
                     .accessibilityHidden(true)
 
-                Text(metric.value)
-                    .font(OceanTypography.bodyEmphasized)
-                    .foregroundStyle(OceanPalette.white)
-                    .widgetAccentable()
-                    .fixedSize(horizontal: false, vertical: true)
+                if !metric.title.isEmpty {
+                    Text(metric.title)
+                        .font(OceanTypography.smallLabel)
+                        .foregroundStyle(OceanPalette.sand)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
             }
+
+            Text(metric.value)
+                .font(OceanTypography.bodyEmphasized)
+                .foregroundStyle(OceanPalette.white)
+                .widgetAccentable()
+                .fixedSize(horizontal: false, vertical: true)
 
             if levelOfDetail != .simplified {
                 Text(metric.caption)

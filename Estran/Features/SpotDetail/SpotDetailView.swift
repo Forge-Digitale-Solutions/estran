@@ -117,6 +117,7 @@ struct SpotDetailView: View {
                     events: conditions.tide.allEvents,
                     goodWindows: goodWindows,
                     nextEventLine: nextEventLine(conditions),
+                    rangeLine: app.tideRangeLine(for: conditions),
                     windowLine: windowLine(conditions),
                     timeZone: app.selectedSpot.timezone,
                     now: conditions.at,
@@ -139,12 +140,14 @@ struct SpotDetailView: View {
         HStack(alignment: .top, spacing: OceanSpacing.sm) {
             ConditionTile(
                 icon: "wind",
+                title: "Vent",
                 value: FrenchFormat.windSpeed(conditions.weather.wind),
                 label: "km/h \(FrenchFormat.windDirection(conditions.weather.wind))",
                 spoken: "Vent : \(FrenchFormat.wind(conditions.weather.wind)), "
                     + "direction \(FrenchFormat.windDirection(conditions.weather.wind))")
             ConditionTile(
                 icon: "water.waves",
+                title: "Houle",
                 value: FrenchFormat.swellHeight(conditions.swell),
                 label: FrenchFormat.swellTileLabel(conditions.swell),
                 spoken: "Houle\(conditions.swell.isEstimated ? " estimée à partir du vent" : "") : "
@@ -152,6 +155,7 @@ struct SpotDetailView: View {
                     + "période \(FrenchFormat.swellPeriod(conditions.swell))")
             ConditionTile(
                 icon: FrenchFormat.weatherSymbol(conditions.weather.condition),
+                title: "Météo",
                 value: FrenchFormat.temperature(conditions.weather.temperature),
                 label: FrenchFormat.weatherLabel(conditions.weather.condition),
                 spoken: "Météo : \(FrenchFormat.temperature(conditions.weather.temperature)), "
@@ -220,10 +224,19 @@ struct SpotDetailView: View {
         } else {
             parts.append("prochaine marée indisponible")
         }
+        if let rangeLine {
+            parts.append(rangeLine)
+        }
         if let line = windowLine(conditions) {
             parts.append(line)
         }
         return parts.joined(separator: ". ") + "."
+    }
+
+    /// The day's marnage, or `nil` when the model cannot give it.
+    private var rangeLine: String? {
+        guard let conditions = app.store.conditions else { return nil }
+        return app.tideRangeLine(for: conditions)
     }
 }
 

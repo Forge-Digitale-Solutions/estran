@@ -86,6 +86,16 @@ final class AppModel {
     /// the on-device model answers. The answer card keeps showing
     /// `decision.reason` while it is `nil`: no spinner, no placeholder.
     private(set) var refinedReason: String?
+    /// Per-spot terciles of the local daily range (« marnage »), filled in the
+    /// background once per spot (`AGENTS.md` invariant 6: the national
+    /// coefficient is never shown; this is the local model's own range).
+    ///
+    /// Written only by `AppModel+TideRange`; internal because a stored property
+    /// cannot live in an extension.
+    var tideRangeThresholds: [String: TideRangeThresholds] = [:]
+    /// Spots whose baseline is being computed, so two reloads cannot start the
+    /// same year of harmonics twice.
+    @ObservationIgnored var tideRangeWarmups: Set<String> = []
 
     let store = ForecastStore()
     let engine = DecisionEngine()
@@ -227,6 +237,7 @@ final class AppModel {
         overviews = []
         await store.load(spot: selectedSpot, provider: provider)
         refreshDecision()
+        warmTideRangeBaseline(for: selectedSpot)
     }
 
     /// Loads the on-device model session once, in the background, so the first

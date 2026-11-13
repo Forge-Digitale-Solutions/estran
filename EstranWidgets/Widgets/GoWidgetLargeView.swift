@@ -291,11 +291,18 @@ extension GoWidgetLargeView {
                             .foregroundStyle(OceanPalette.sand)
                             .widgetAccentable()
                             .accessibilityHidden(true)
-                        Text(metric.value)
-                            .font(OceanTypography.tabLabel)
-                            .foregroundStyle(OceanPalette.white)
-                            .fixedSize(horizontal: false, vertical: true)
+                        if !metric.title.isEmpty {
+                            Text(metric.title)
+                                .font(OceanTypography.smallLabel)
+                                .foregroundStyle(OceanPalette.sand)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
                     }
+                    Text(metric.value)
+                        .font(OceanTypography.tabLabel)
+                        .foregroundStyle(OceanPalette.white)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(metric.caption)
                         .font(OceanTypography.smallLabel)
                         .foregroundStyle(OceanPalette.white.opacity(0.75))

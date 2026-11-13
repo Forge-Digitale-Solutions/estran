@@ -41,15 +41,6 @@ struct GoWidgetView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.levelOfDetail) private var levelOfDetail
 
-    private var isAccessoryFamily: Bool {
-        switch family {
-        case .accessoryCircular, .accessoryRectangular, .accessoryInline:
-            true
-        default:
-            false
-        }
-    }
-
     var body: some View {
         Group {
             switch family {
@@ -71,9 +62,18 @@ struct GoWidgetView: View {
             }
         }
         .containerBackground(for: .widget) {
-            if isAccessoryFamily {
+            // The Lock Screen's vibrancy layer. `AccessoryWidgetBackground()`
+            // must come from here, not from inside the circular view: drawn as
+            // content it is composited into the vibrant luminance mask and
+            // hides the text it is supposed to sit behind (owner feedback on
+            // build 5). The rectangular and inline slots take no backdrop, so
+            // they stay transparent over the wallpaper.
+            switch family {
+            case .accessoryCircular:
+                AccessoryWidgetBackground()
+            case .accessoryInline, .accessoryRectangular:
                 Color.clear
-            } else {
+            default:
                 WidgetOceanBackground()
             }
         }
@@ -325,74 +325,32 @@ struct GoWidgetView: View {
 struct GoWidget: Widget {
     let kind = "GoWidget"
 
+    /// Every family the widget supports. A test reads this list: dropping an
+    /// accessory family here leaves the Lock Screen slot empty, which is exactly
+    /// the regression the owner hit on build 5.
+    static let families: [WidgetFamily] = [
+        .systemSmall,
+        .systemMedium,
+        .systemLarge,
+        .accessoryRectangular,
+        .accessoryCircular,
+        .accessoryInline
+    ]
+
+    /// The three Lock Screen slots, in reading order.
+    static let accessoryFamilies: [WidgetFamily] = [
+        .accessoryRectangular,
+        .accessoryCircular,
+        .accessoryInline
+    ]
+
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, provider: GoTimelineProvider()) { entry in
             GoWidgetView(entry: entry)
         }
         .configurationDisplayName("Estran")
         .description("Le verdict ou le niveau de risque, en un coup d'œil.")
-        .supportedFamilies([
-            .systemSmall,
-            .systemMedium,
-            .systemLarge,
-            .accessoryRectangular,
-            .accessoryCircular,
-            .accessoryInline
-        ])
+        .supportedFamilies(Self.families)
         .supportedMountingStyles([.elevated, .recessed])
     }
-}
-
-#Preview("Small", as: .systemSmall) {
-    GoWidget()
-} timeline: {
-    GoEntry.sample
-    GoEntry.sampleSwimming
-    GoEntry.sampleStale
-    GoEntry.placeholder
-}
-
-#Preview("Medium", as: .systemMedium) {
-    GoWidget()
-} timeline: {
-    GoEntry.sample
-    GoEntry.sampleSwimming
-    GoEntry.sampleStale
-    GoEntry.placeholder
-}
-
-#Preview("Large", as: .systemLarge) {
-    GoWidget()
-} timeline: {
-    GoEntry.sample
-    GoEntry.sampleSwimming
-    GoEntry.sampleStale
-    GoEntry.placeholder
-}
-
-#Preview("Rectangular", as: .accessoryRectangular) {
-    GoWidget()
-} timeline: {
-    GoEntry.sampleNoGo
-    GoEntry.sampleSwimming
-    GoEntry.sampleStale
-    GoEntry.placeholder
-}
-
-#Preview("Circular", as: .accessoryCircular) {
-    GoWidget()
-} timeline: {
-    GoEntry.sample
-    GoEntry.sampleSwimming
-    GoEntry.sampleStale
-    GoEntry.placeholder
-}
-
-#Preview("Inline", as: .accessoryInline) {
-    GoWidget()
-} timeline: {
-    GoEntry.sampleNoGo
-    GoEntry.sampleSwimming
-    GoEntry.sampleStale
-    GoEntry.placeholder
 }

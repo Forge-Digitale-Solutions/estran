@@ -5,10 +5,12 @@ import SwiftUI
 ///
 /// The row matches `DESIGN_REFERENCE.md` §3.1: four tiles side by side at normal
 /// sizes, two columns from `.xLarge` and **one column at accessibility sizes**,
-/// so a 17 pt value can grow to AX5 without truncation. The visible caption is
-/// the short unit detail the Figma frame shows (« basse », « NO », « 11 s »,
-/// « éclaircies »); the accessibility label keeps the full sentence. No fixed
-/// height anywhere.
+/// so a 17 pt value can grow to AX5 without truncation. Each tile names itself
+/// (« Marée », « Vent », « Houle », « Météo »): the icon and « 0,5 m » alone left
+/// users guessing what they were looking at (owner feedback on build 5). The
+/// visible caption is the short detail the design shows (« descend », « NO »,
+/// « période 11 s », « éclaircies »); the accessibility label keeps the full
+/// sentence. No fixed height anywhere.
 struct ConditionsGrid: View {
     let conditions: Conditions
 
@@ -26,37 +28,56 @@ struct ConditionsGrid: View {
     }
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: OceanSpacing.sm) {
-            ConditionTile(
-                icon: FrenchFormat.tideSymbol(conditions.tide),
-                value: tideHeight,
-                label: FrenchFormat.tideTrendShort(conditions.tide),
-                spoken: "Marée : \(tideHeight), \(FrenchFormat.tideTrend(conditions.tide))")
-            ConditionTile(
-                icon: "wind",
-                value: FrenchFormat.windSpeed(conditions.weather.wind),
-                label: "km/h \(FrenchFormat.windDirection(conditions.weather.wind))",
-                spoken: "Vent : \(FrenchFormat.wind(conditions.weather.wind)), "
-                    + "direction \(FrenchFormat.windDirection(conditions.weather.wind))")
-            ConditionTile(
-                icon: "water.waves",
-                value: FrenchFormat.swellHeight(conditions.swell),
-                label: FrenchFormat.swellTileLabel(conditions.swell),
-                spoken: "Houle\(conditions.swell.isEstimated ? " estimée à partir du vent" : "") : "
-                    + "\(FrenchFormat.swellHeight(conditions.swell)), "
-                    + "période \(FrenchFormat.swellPeriod(conditions.swell))")
-            ConditionTile(
-                icon: FrenchFormat.weatherSymbol(conditions.weather.condition),
-                value: FrenchFormat.temperature(conditions.weather.temperature),
-                label: FrenchFormat.weatherLabel(conditions.weather.condition),
-                spoken: "Météo : \(FrenchFormat.temperature(conditions.weather.temperature)), "
-                    + FrenchFormat.weatherLabel(conditions.weather.condition))
+        VStack(alignment: .leading, spacing: OceanSpacing.xs) {
+            LazyVGrid(columns: columns, spacing: OceanSpacing.sm) {
+                ConditionTile(
+                    icon: FrenchFormat.tideSymbol(conditions.tide),
+                    title: "Marée",
+                    value: tideHeight,
+                    label: FrenchFormat.tideTrendShort(conditions.tide),
+                    spoken: "Marée : \(tideHeight), \(FrenchFormat.tideTrend(conditions.tide))")
+                ConditionTile(
+                    icon: "wind",
+                    title: "Vent",
+                    value: FrenchFormat.windSpeed(conditions.weather.wind),
+                    label: "km/h \(FrenchFormat.windDirection(conditions.weather.wind))",
+                    spoken: "Vent : \(FrenchFormat.wind(conditions.weather.wind)), "
+                        + "direction \(FrenchFormat.windDirection(conditions.weather.wind))")
+                ConditionTile(
+                    icon: "water.waves",
+                    title: "Houle",
+                    value: FrenchFormat.swellHeight(conditions.swell),
+                    label: FrenchFormat.swellTileLabel(conditions.swell),
+                    spoken: "Houle\(conditions.swell.isEstimated ? " estimée à partir du vent" : "") : "
+                        + "\(FrenchFormat.swellHeight(conditions.swell)), "
+                        + "période \(FrenchFormat.swellPeriod(conditions.swell))")
+                ConditionTile(
+                    icon: FrenchFormat.weatherSymbol(conditions.weather.condition),
+                    title: "Météo",
+                    value: FrenchFormat.temperature(conditions.weather.temperature),
+                    label: FrenchFormat.weatherLabel(conditions.weather.condition),
+                    spoken: "Météo : \(FrenchFormat.temperature(conditions.weather.temperature)), "
+                        + FrenchFormat.weatherLabel(conditions.weather.condition))
+            }
+            // The day's marnage, from the local model: the one number that says
+            // whether the water will really uncover the bank. Absent when the
+            // model cannot give it — never a guessed category.
+            if let rangeLine {
+                Text(rangeLine)
+                    .font(OceanTypography.smallLabel)
+                    .foregroundStyle(OceanPalette.white.opacity(0.75))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .task {
             guard ProcessInfo.processInfo.arguments.contains("-estranBaignade") else { return }
             try? await Task.sleep(for: .milliseconds(300))
             app.select(activity: .swimming)
         }
+    }
+
+    private var rangeLine: String? {
+        app.tideRangeLine(for: conditions)
     }
 
     /// A missing tide event is not 0.0 m: zero is a real height (the chart
@@ -70,6 +91,8 @@ struct ConditionsGrid: View {
 
 struct ConditionTile: View {
     let icon: String
+    /// The tile's name, drawn as a small caption above the value.
+    let title: String
     let value: String
     let label: String
     /// Full sentence for VoiceOver: the visible caption is a unit detail, not a
@@ -77,20 +100,24 @@ struct ConditionTile: View {
     let spoken: String
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @ScaledMetric(relativeTo: .body) private var iconWellSize: CGFloat = 28
-
-    private var iconWellSide: CGFloat {
-        min(iconWellSize, 44)
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
-            Image(systemName: icon)
-                .font(OceanTypography.body)
-                .foregroundStyle(OceanPalette.sand)
-                .frame(width: iconWellSide, height: iconWellSide)
-                .oceanConcentricInset(minimumRadius: 8)
-                .accessibilityHidden(true)
+            // Icon and name on one row: the tile keeps three rows (name, value,
+            // detail) at four columns, which is the height the design shows.
+            HStack(spacing: OceanSpacing.xxs) {
+                Image(systemName: icon)
+                    .font(OceanTypography.caption)
+                    .accessibilityHidden(true)
+                Text(title)
+                    .font(OceanTypography.smallLabel.weight(.semibold))
+                    .textCase(.uppercase)
+                    .tracking(0.4)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(OceanPalette.sand)
+
             valueText
             Text(label)
                 .font(OceanTypography.smallLabel)

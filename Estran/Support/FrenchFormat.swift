@@ -194,11 +194,19 @@ enum FrenchFormat {
         "\(Int(swell.period.rounded())) s"
     }
 
-    /// Short caption for the swell tile: the period, or « estimée » when the
-    /// sea is a local wind-sea estimate and the period is itself an estimate,
-    /// not an observation. Keeps the tile the same visual weight as the others.
+    /// Short caption for the swell tile: how fast the waves come in, or
+    /// « estimée » when the sea is a local wind-sea estimate and the period is
+    /// itself an estimate, not an observation.
+    ///
+    /// The word « période » is spelled out: « 6 s » alone was the tile users
+    /// could not read (owner feedback on build 5).
     static func swellTileLabel(_ swell: Swell) -> String {
-        swell.isEstimated ? "estimée" : swellPeriod(swell)
+        if swell.isEstimated {
+            // A flat estimate already reads « Calme » as its value; the caption
+            // then says where that calm comes from instead of a fake period.
+            return swell.waveHeight < 0.1 ? "estimée" : "période estimée"
+        }
+        return "période \(swellPeriod(swell))"
     }
 
     static func percent(_ fraction: Double) -> String {
@@ -257,15 +265,29 @@ enum FrenchFormat {
         }
     }
 
-    /// One short word for the tile caption: « descendante » hyphenates in an
-    /// 80 pt tile at the default size, and a hyphenated tide is worse than a
-    /// shorter word. The spoken label keeps `tideTrend`.
+    /// One short word for the tile caption: « monte » / « descend ».
+    ///
+    /// « hausse » / « baisse » read as a price, not as water (owner feedback on
+    /// build 5: the tile's name and its trend were both unreadable). The spoken
+    /// label keeps the full `tideTrend` sentence.
     static func tideTrendShort(_ state: TideState) -> String {
         switch state.isRising {
-        case .some(true): "hausse"
-        case .some(false): "baisse"
+        case .some(true): "monte"
+        case .some(false): "descend"
         case .none: "—"
         }
+    }
+
+    // MARK: - Tidal range
+
+    /// « Marnage 3,8 m · grande marée ».
+    ///
+    /// The word is « marnage », not « coefficient »: the coefficient is computed
+    /// at Brest, unvalidated and never shown (`AGENTS.md` invariant 6). The
+    /// value is the local model's own high-minus-low for the day.
+    static func tideRangeLine(_ day: TideRangeDay?) -> String? {
+        guard let day else { return nil }
+        return "Marnage \(height(day.range)) m · \(day.category.label)"
     }
 
     static func tideEventKind(_ kind: TideEvent.Kind) -> String {

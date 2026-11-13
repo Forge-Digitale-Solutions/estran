@@ -186,7 +186,7 @@ extension GoEntry {
             id: "tide",
             symbol: "water.waves.and.arrow.trianglehead.down",
             value: "1,8 m",
-            caption: "baisse"),
+            caption: "descend"),
         WidgetSnapshot.Metric(
             id: "wind",
             symbol: "wind",
@@ -196,7 +196,7 @@ extension GoEntry {
             id: "swell",
             symbol: "water.waves",
             value: "1,2 m",
-            caption: "11 s"),
+            caption: "période 11 s"),
         WidgetSnapshot.Metric(
             id: "weather",
             symbol: "cloud.rain.fill",

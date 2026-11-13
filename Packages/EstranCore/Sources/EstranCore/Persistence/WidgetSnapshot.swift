@@ -62,6 +62,22 @@ public struct WidgetSnapshot: Codable, Hashable, Sendable {
             self.value = value
             self.caption = caption
         }
+
+        /// The tile's name, so « 0,5 m / 6 s » is not left to be guessed.
+        ///
+        /// Derived from the identifier rather than stored: the snapshot written
+        /// by a previous build must keep decoding, and a missing name is better
+        /// than a schema the widget cannot read. An unknown identifier gets an
+        /// empty name, and the views draw no empty caption for it.
+        public var title: String {
+            switch id {
+            case "tide": "Marée"
+            case "wind": "Vent"
+            case "swell": "Houle"
+            case "weather": "Météo"
+            default: ""
+            }
+        }
     }
 
     public let updatedAt: Date
