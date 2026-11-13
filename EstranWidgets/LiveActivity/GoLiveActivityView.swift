@@ -154,7 +154,9 @@ private struct CompactLeading: View {
     let context: ActivityViewContext<GoActivityAttributes>
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     #if ESTRAN_SDK_BEFORE_27
-        private var limitedInWidth: Bool { false }
+        private var limitedInWidth: Bool {
+            false
+        }
     #else
         @Environment(\.isDynamicIslandLimitedInWidth) private var limitedInWidth
     #endif

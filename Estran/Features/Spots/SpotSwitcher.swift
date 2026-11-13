@@ -17,7 +17,13 @@ struct SpotSwitcher: View {
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityPrefersCrossFadeTransitions) private var prefersCrossFade
+    #if ESTRAN_SDK_BEFORE_27
+        private var prefersCrossFade: Bool {
+            false
+        }
+    #else
+        @Environment(\.accessibilityPrefersCrossFadeTransitions) private var prefersCrossFade
+    #endif
     @Namespace private var glassNamespace
     @State private var announced = false
 
