@@ -46,24 +46,16 @@ extension AppModel {
         let otherActivity = activity
         let conditionsProvider = provider
         let isSampleData = usesSampleData
+        let publish = DetachedSnapshotPublish(
+            snapshot: snapshot,
+            windows: windows,
+            otherSpot: otherSpot,
+            activity: otherActivity,
+            provider: conditionsProvider,
+            isSampleData: isSampleData)
 
         Task.detached(priority: .utility) {
-            // The selected spot is written immediately; the other spot is
-            // refreshed in the same task, so a widget configured to it stays
-            // current without the app ever being open on it.
-            Self.writeSnapshots(merging: [snapshot])
-            WidgetCenter.shared.reloadAllTimelines()
-
-            await LocalNotificationScheduler.shared.reschedule(
-                for: snapshot, windows: windows, now: Date())
-
-            if let otherSpot {
-                await Self.refreshOtherSpotSnapshot(
-                    spot: otherSpot,
-                    activity: otherActivity,
-                    provider: conditionsProvider,
-                    isSampleData: isSampleData)
-            }
+            await publish.run()
         }
 
         // The Live Activity reads that same snapshot, so the lock screen and the
@@ -122,6 +114,34 @@ extension AppModel {
             WidgetCenter.shared.reloadAllTimelines()
         } catch {
             // The other spot keeps its previous snapshot.
+        }
+    }
+}
+
+private struct DetachedSnapshotPublish: Sendable {
+    let snapshot: WidgetSnapshot
+    let windows: [ActivitySlot]
+    let otherSpot: Spot?
+    let activity: Activity
+    let provider: any ConditionsProviding
+    let isSampleData: Bool
+
+    func run() async {
+        // The selected spot is written immediately; the other spot is
+        // refreshed in the same task, so a widget configured to it stays
+        // current without the app ever being open on it.
+        AppModel.writeSnapshots(merging: [snapshot])
+        WidgetCenter.shared.reloadAllTimelines()
+
+        await LocalNotificationScheduler.shared.reschedule(
+            for: snapshot, windows: windows, now: Date())
+
+        if let otherSpot {
+            await AppModel.refreshOtherSpotSnapshot(
+                spot: otherSpot,
+                activity: activity,
+                provider: provider,
+                isSampleData: isSampleData)
         }
     }
 }
