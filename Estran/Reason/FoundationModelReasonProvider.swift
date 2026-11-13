@@ -15,10 +15,13 @@ import Foundation
 /// Generation uses constrained decoding (`ReasonDraft` via
 /// `session.respond(to:generating:)`). A generated sentence is shown only when
 /// it passes `isAcceptable`, which rejects an invented number, a « Oui » where
-/// the product forbids it, a claim of officiality, or an emoji. Swimming never
-/// reaches the model: the template alone phrases the risk level (invariant 1).
-/// The template is the safety net, not a visible downgrade
-/// (`ARCHITECTURE_PLAN.md` §10.1).
+/// the product forbids it, a claim of officiality, an emoji, a sentence that
+/// argues the opposite of the verdict, or a spot name the catalog does not
+/// spell that way. Swimming never reaches the model: the template alone phrases
+/// the risk level (invariant 1). A favourable verdict never reaches it either:
+/// the engine's sentence is the answer, and a model can only contradict it
+/// (see `reason(for:conditions:)`). The template is the safety net, not a
+/// visible downgrade (`ARCHITECTURE_PLAN.md` §10.1).
 struct FoundationModelReasonProvider: ReasonTextProviding {
     /// Produces a candidate sentence from a prompt. `nil` means "no text".
     typealias Generator = @Sendable (_ prompt: String) async -> String?
@@ -64,6 +67,20 @@ struct FoundationModelReasonProvider: ReasonTextProviding {
     func reason(for decision: GoDecision, conditions: Conditions) async -> String {
         // Invariant 1: swimming is a risk level, never a model-phrased Oui/Non.
         if decision.activity == .swimming {
+            return await fallback.reason(for: decision, conditions: conditions)
+        }
+
+        // A favourable verdict keeps the engine's sentence, exactly as swimming
+        // does. The engine has already checked every input behind a `Oui`; the
+        // only thing a generated sentence can add to it is a contradiction.
+        // That is not hypothetical: on a real run the model turned a green
+        // « Oui » into « La marge est trop faible pour la balade à la pointe de
+        // Grave. » (`build/store/6.9/01-home-oui.png`) by copying an example
+        // from the instructions. The model now explains refusals only, where a
+        // sentence has something to say and the engine's one-word blocker line
+        // has room to grow. `isAcceptable` still guards the yes/no polarity, so
+        // a caller that asks anyway fails closed to the same template.
+        if decision.go {
             return await fallback.reason(for: decision, conditions: conditions)
         }
 
@@ -144,17 +161,27 @@ struct FoundationModelReasonProvider: ReasonTextProviding {
     donnée officielle, ni une mesure locale. Pour la baignade, n'écris jamais \
     « Oui ».
 
-    Exemples corrects :
-    - Ta marge est trop faible pour la pêche à pied ce soir.
-    - La marge est trop faible pour la pêche à pied ce soir.
-    - Le vent souffle trop fort pour marcher à Arcachon.
-    - Reste à terre, la houle monte trop.
+    Le verdict du contexte est définitif : la phrase l'explique, elle ne le \
+    contredit jamais. Un verdict favorable ne contient aucun point bloquant ; \
+    un verdict défavorable ne contient ni « bon moment », ni « idéal », ni \
+    « parfait », ni « favorable », ni « vas-y ». Recopie le nom du spot \
+    exactement comme le contexte l'écrit, majuscule comprise : \
+    « Pointe de Grave », « Arcachon-Eyrac ».
+
+    Exemples corrects (le premier pour un verdict favorable, les suivants pour \
+    un verdict défavorable) :
+    - C'est le bon moment pour la balade à Pointe de Grave. (favorable)
+    - Le vent est trop fort pour la pêche à pied à Arcachon-Eyrac. (défavorable)
+    - La marée n'est pas encore assez basse pour la pêche à pied. (défavorable)
+    - Reste à terre, la houle monte trop. (défavorable)
 
     Exemples incorrects (à ne jamais produire) :
     - Ta marge insuffisante pour la pêche à pied à Arcachon-Eyrac.
     - Données officielles SHOM : sors maintenant.
     - Vent 42 km/h, reste à terre.
     - Oui, tu peux te baigner.
+    - La marge est trop faible pour la balade à la pointe de Grave. \
+    (contredit un verdict favorable, et « pointe de Grave » n'est pas le nom)
     """
 
     // MARK: - Timeout
@@ -200,7 +227,7 @@ struct FoundationModelReasonProvider: ReasonTextProviding {
             "au bord du bassin d'Arcachon et du Médoc.",
             "",
             "Contexte",
-            "- Spot : \(conditions.spot.name)",
+            "- Spot : \(conditions.spot.name) (recopie ce nom tel quel, majuscule comprise)",
             "- Activité : \(decision.activity.displayNameWithArticle)",
             "- Verdict : \(verdict(for: decision))",
             "- Points bloquants : \(blockerLine(for: decision.blockers))"
@@ -231,15 +258,27 @@ struct FoundationModelReasonProvider: ReasonTextProviding {
             "Pas de salutation, pas de formule d'IA, pas d'emoji, pas d'exclamation.",
             "N'invente aucun chiffre ni aucune donnée absente du contexte.",
             "Ne dis jamais que la donnée est officielle ni mesurée sur place.",
-            "Jamais un fragment possessif sans verbe (« Ta marge insuffisante… »)."
+            "Jamais un fragment possessif sans verbe (« Ta marge insuffisante… »).",
+            "Le verdict est définitif : la phrase l'explique, elle ne le contredit jamais.",
+            "Recopie le nom du spot exactement comme le contexte l'écrit."
         ]
         if decision.activity == .swimming {
             rules.append(
                 "N'écris jamais « Oui » : la baignade s'exprime par un niveau de risque.")
             rules.append(
                 "Ne rassure pas : les baïnes et les courants restent dangereux toute l'année.")
-        } else if !decision.go {
+        } else if decision.go {
+            // The provider keeps the engine's sentence for a `Oui`; the prompt
+            // stays correct anyway, so a caller cannot reintroduce the
+            // contradiction by feeding the model a favourable verdict.
+            rules.append(
+                "Verdict favorable : ne cite aucun point bloquant et n'écris ni « trop », "
+                    + "ni « pas », ni « manque », ni « faible », ni « impossible ».")
+        } else {
             rules.append("N'écris jamais « Oui » ni « c'est bon » : le verdict est défavorable.")
+            rules.append(
+                "Verdict défavorable : n'écris ni « bon moment », ni « idéal », "
+                    + "ni « parfait », ni « favorable », ni « vas-y ».")
         }
         return rules
     }

@@ -168,6 +168,131 @@ final class FoundationModelReasonGuardrailTests: XCTestCase {
         FoundationModelReasonProvider.prewarm()
         _ = FoundationModelReasonProvider.isSystemModelAvailable()
     }
+
+    // MARK: - Polarity (6.9 store frame 01/08)
+
+    /// The sentence a real run generated under a green « Oui »
+    /// (`build/store/6.9/01-home-oui.png`). It must never be accepted for a
+    /// favourable verdict, whatever produced it.
+    static let contradictoryGoSentence =
+        "La marge est trop faible pour la balade à la pointe de Grave."
+
+    func testContradictorySentenceUnderAGoDecisionIsRejected() {
+        let decision = Fixtures.decision(activity: .walking, go: true, spot: SpotCatalog.pointeDeGrave)
+
+        XCTAssertFalse(
+            FoundationModelReasonProvider.isAcceptable(
+                Self.contradictoryGoSentence,
+                for: decision,
+                conditions: Fixtures.conditions(spot: SpotCatalog.pointeDeGrave)),
+            "a reason that argues the opposite of its own verdict must fail closed")
+    }
+
+    func testContradictorySentenceNeverReplacesAGoVerdict() async {
+        let callCount = CallCounter()
+        let provider = FoundationModelReasonProvider(
+            isModelAvailable: { true },
+            generator: { _ in
+                await callCount.increment()
+                return Self.contradictoryGoSentence
+            })
+        let decision = Fixtures.decision(activity: .walking, go: true, spot: SpotCatalog.pointeDeGrave)
+
+        let text = await provider.reason(
+            for: decision,
+            conditions: Fixtures.conditions(spot: SpotCatalog.pointeDeGrave))
+
+        XCTAssertEqual(text, decision.reason, "the engine's sentence is the answer for a Oui")
+        let calls = await callCount.value
+        XCTAssertEqual(calls, 0, "a favourable verdict never reaches the model")
+    }
+
+    func testPositiveSentenceUnderAGoVerdictIsAccepted() {
+        let decision = Fixtures.decision(activity: .walking, go: true, spot: SpotCatalog.pointeDeGrave)
+
+        XCTAssertTrue(
+            FoundationModelReasonProvider.isAcceptable(
+                "C'est le bon moment pour la balade à Pointe de Grave.",
+                for: decision,
+                conditions: Fixtures.conditions(spot: SpotCatalog.pointeDeGrave)),
+            "a sentence that agrees with the verdict must still pass")
+    }
+
+    func testPositiveSentenceUnderANoGoVerdictIsRejected() {
+        let decision = Fixtures.decision(
+            activity: .shoreFishing,
+            go: false,
+            blockers: [.wind],
+            spot: SpotCatalog.pointeDeGrave)
+
+        for sentence in [
+            "C'est le bon moment pour la pêche à pied à Pointe de Grave.",
+            "Le vent est idéal pour la pêche à pied.",
+            "La marée est parfaite pour la pêche à pied."
+        ] {
+            XCTAssertFalse(
+                FoundationModelReasonProvider.isAcceptable(
+                    sentence,
+                    for: decision,
+                    conditions: Fixtures.conditions(spot: SpotCatalog.pointeDeGrave)),
+                "« \(sentence) » accepts a verdict the engine refused")
+        }
+    }
+
+    // MARK: - Spot names
+
+    func testLowercasedSpotNameIsRejected() {
+        let decision = Fixtures.decision(
+            activity: .shoreFishing,
+            go: false,
+            blockers: [.insufficientMargin],
+            spot: SpotCatalog.pointeDeGrave)
+
+        XCTAssertFalse(
+            FoundationModelReasonProvider.isAcceptable(
+                "Ta marge est trop faible pour la pêche à pied à la pointe de Grave.",
+                for: decision,
+                conditions: Fixtures.conditions(spot: SpotCatalog.pointeDeGrave)),
+            "« pointe de Grave » is not the catalog's « Pointe de Grave »")
+        XCTAssertTrue(
+            FoundationModelReasonProvider.isAcceptable(
+                "Ta marge est trop faible pour la pêche à pied à Pointe de Grave.",
+                for: decision,
+                conditions: Fixtures.conditions(spot: SpotCatalog.pointeDeGrave)),
+            "the exact catalog name passes")
+    }
+
+    func testAnotherSpotsNameIsRejected() {
+        let decision = Fixtures.decision(
+            activity: .boating,
+            go: false,
+            blockers: [.wind],
+            spot: SpotCatalog.pointeDeGrave)
+
+        XCTAssertFalse(
+            FoundationModelReasonProvider.isAcceptable(
+                "Le vent est trop fort pour le bateau à Arcachon-Eyrac.",
+                for: decision,
+                conditions: Fixtures.conditions(spot: SpotCatalog.pointeDeGrave)),
+            "a sentence may not name the other spot")
+    }
+
+    func testSpotNameCasingFallsBackToTheTemplate() async {
+        let provider = FoundationModelReasonProvider(
+            isModelAvailable: { true },
+            generator: { _ in "Ta marge est trop faible pour la pêche à pied à la pointe de Grave." })
+        let decision = Fixtures.decision(
+            activity: .shoreFishing,
+            go: false,
+            blockers: [.insufficientMargin],
+            spot: SpotCatalog.pointeDeGrave)
+
+        let text = await provider.reason(
+            for: decision,
+            conditions: Fixtures.conditions(spot: SpotCatalog.pointeDeGrave))
+
+        XCTAssertEqual(text, decision.reason, "a rewritten proper name hands back to the template")
+    }
 }
 
 private actor CallCounter {
@@ -192,11 +317,12 @@ private enum Fixtures {
         activity: Activity,
         go: Bool = true,
         blockers: [ActivityBlocker] = [],
-        reason: String? = nil) -> GoDecision
+        reason: String? = nil,
+        spot: Spot = SpotCatalog.arcachonEyrac) -> GoDecision
     {
         GoDecision(
             activity: activity,
-            spot: SpotCatalog.arcachonEyrac,
+            spot: spot,
             go: go,
             score: go ? 0.82 : 0.18,
             reason: reason ?? DecisionReason.text(activity: activity, go: go, blockers: blockers),
@@ -206,9 +332,12 @@ private enum Fixtures {
             blockers: blockers)
     }
 
-    static func conditions(water: Double? = 17) -> Conditions {
+    static func conditions(
+        water: Double? = 17,
+        spot: Spot = SpotCatalog.arcachonEyrac) -> Conditions
+    {
         Conditions(
-            spot: SpotCatalog.arcachonEyrac,
+            spot: spot,
             at: at,
             tide: TideState(
                 current: TideEvent(

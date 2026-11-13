@@ -11,12 +11,16 @@ extension FoundationModelReasonProvider {
     /// text. Both checks below compare sets, never substrings: a number must be
     /// one the prompt carried (« 2 » cannot pass on « 1,2 m »), and a swimming
     /// sentence may not offer the water at all. A fragment without a conjugated
-    /// verb (« Ta marge insuffisante… ») also fails closed to the template.
+    /// verb (« Ta marge insuffisante… ») also fails closed to the template, and
+    /// so does a sentence that argues the opposite of the verdict or rewrites a
+    /// spot name.
     static func isAcceptable(_ text: String, for decision: GoDecision, conditions: Conditions) -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.count <= maximumCharacters,
               trimmed.split(whereSeparator: \.isWhitespace).count <= maximumWords, !containsEmoji(trimmed),
-              !claimsOfficiality(trimmed), hasConjugatedVerb(trimmed)
+              !claimsOfficiality(trimmed), hasConjugatedVerb(trimmed),
+              namesTheSpotCorrectly(trimmed, for: conditions),
+              matchesVerdictPolarity(trimmed, decision: decision)
         else {
             return false
         }
@@ -53,6 +57,61 @@ extension FoundationModelReasonProvider {
             let pattern = "\\b\(NSRegularExpression.escapedPattern(for: verb))\\b"
             return lowered.range(of: pattern, options: .regularExpression) != nil
         }
+    }
+
+    // MARK: - Polarity
+
+    /// Words that only belong to a refusal: a `Oui` followed by any of them
+    /// reads as its own contradiction.
+    ///
+    /// « La marge est trop faible pour la balade à la pointe de Grave. » under a
+    /// green `Oui` (`build/store/6.9/01-home-oui.png` and `08-paysage.png`) is
+    /// the exact failure this list exists for: the verdict was right, the
+    /// sentence was copied from the instructions' refusal examples, and no
+    /// guard looked at the polarity. A contradiction is worse than no sentence,
+    /// so any marker costs the generated text and keeps the engine's line
+    /// (AGENTS.md: never mislead).
+    private static let negativeMarkers = [
+        "\\btrop\\b", "\\bpas\\b", "\\bnon\\b", "\\bmanqu", "\\binsuffis",
+        "\\bfaibl", "\\bfort(?:e|es|s)?\\b", "\\bdéconseill", "\\bimpossib",
+        "\\bdangereu", "\\binterdi"
+    ]
+
+    /// Words that only belong to an acceptance, banned on a refusal.
+    private static let positiveMarkers = [
+        "\\bbon\\s+moment\\b", "\\bidéal", "\\bparfait", "\\bfavorab",
+        "\\bvas-y\\b", "\\bprofit"
+    ]
+
+    /// The sentence never argues the opposite of the verdict.
+    ///
+    /// Swimming is exempt: its sentence is a risk level, so « les courants sont
+    /// forts » and « reste prudent » both belong to the accepted form, and a
+    /// yes/no polarity would reject the honest one.
+    private static func matchesVerdictPolarity(_ text: String, decision: GoDecision) -> Bool {
+        guard decision.activity != .swimming else { return true }
+        let lowered = text.replacingOccurrences(of: "\u{2019}", with: "'").lowercased()
+        let markers = decision.go ? negativeMarkers : positiveMarkers
+        return !markers.contains { lowered.range(of: $0, options: .regularExpression) != nil }
+    }
+
+    // MARK: - Spot names
+
+    /// A named spot is spelled exactly as `SpotCatalog` spells it, and it is
+    /// the spot the decision is about.
+    ///
+    /// The model wrote « à la pointe de Grave » where the catalog says
+    /// « Pointe de Grave » (6.9 store frames 01/08): a proper name is not a
+    /// style choice. « Arcachon » alone is not a catalog name, so only the two
+    /// exact names are keys here.
+    private static func namesTheSpotCorrectly(_ text: String, for conditions: Conditions) -> Bool {
+        for spot in SpotCatalog.v1 {
+            guard text.range(of: spot.name, options: .caseInsensitive) != nil else { continue }
+            // Naming the other spot, or the right one with the wrong casing,
+            // fails closed to the engine's sentence.
+            guard spot.id == conditions.spot.id, text.contains(spot.name) else { return false }
+        }
+        return true
     }
 
     /// Invariant 1, wording: a swimming sentence never invites you into the

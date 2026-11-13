@@ -121,6 +121,17 @@ Liquid Glass bar the design reference specifies (`DESIGN_REFERENCE.md` §3.1,
 The bottom bar already adapts to the wider window by itself and keeps the four
 labels the UI tests query.
 
+The shell also pins `.tabViewStyle(.tabBarOnly)`. A landscape iPhone and the
+unfolded Duo both report a **regular** horizontal size class, and the system
+then resolves the adaptive floating bar instead of the bottom one — the bar the
+6.9 store frames caught away from the bottom, over the answer card
+(`build/store/REPORT-shots.md`, defect 1). `.tabBarOnly` is the same decision as
+rejecting `sidebarAdaptable`, one line instead of different chrome: the Liquid
+Glass bar, the four labels and `.tabBarMinimizeBehavior` stay, and the bar keeps
+the bottom edge in every window. Home's wide shape adds a bottom content margin
+on top of the system inset, because a 402 pt-tall landscape page is taller than
+the window and its last lines would otherwise sit under the glass.
+
 ## 6. Widgets and Live Activity
 
 No change. Widget families are chosen by the system per widget, not per display

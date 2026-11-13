@@ -36,6 +36,18 @@ struct RootView: View {
             }
         }
         .tabBarMinimizeBehavior(reduceMotion ? .never : .onScrollDown)
+        // Pin the tab-bar-only presentation. A landscape iPhone and the unfolded
+        // Duo report a regular horizontal size class, the class iOS 26 uses to
+        // resolve the *floating* bar (the one it draws on iPad) instead of the
+        // bottom one; the landscape run caught that bar away from the bottom
+        // edge, over the answer card, and the frames show the placement did not
+        // survive the rotation. `.tabBarOnly` keeps the Liquid Glass tab bar —
+        // the four labels the UI tests query included — and its bottom edge in
+        // every window, which is what `DESIGN_REFERENCE.md` §3.1 specifies (a
+        // sidebar was rejected for the same reason). Correctness of the chrome
+        // first: a floating flourish that lands mid-screen is a defect, not a
+        // feature.
+        .tabViewStyle(.tabBarOnly)
         .modifier(PrefersTabBarCompressionModifier())
         .environment(app)
         .tint(OceanPalette.turquoise)

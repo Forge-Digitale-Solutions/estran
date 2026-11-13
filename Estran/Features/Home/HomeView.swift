@@ -58,6 +58,15 @@ struct HomeView: View {
                 // system turns it into an opaque bar under Reduce Transparency
                 // by itself.
                 .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
+                // A wide window is short: 402 pt in landscape, 669 pt on the
+                // unfolded Duo. There the two-column page is taller than the
+                // window and the floating tab bar sits over its last lines, so
+                // the wide shape keeps an explicit bottom margin on top of the
+                // system inset. The phone shape is unchanged.
+                .contentMargins(
+                    .bottom,
+                    usesTwoColumns(width: proxy.size.width) ? OceanSpacing.xxl : 0,
+                    for: .scrollContent)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar(.hidden, for: .navigationBar)
             }

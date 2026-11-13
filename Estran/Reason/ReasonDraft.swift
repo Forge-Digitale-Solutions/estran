@@ -26,7 +26,9 @@ import Foundation
             (« La marge est trop faible… »). 12 mots maximum, 140 caractères \
             maximum. Pas de fragment possessif sans verbe, pas de salutation, \
             pas d'emoji, pas d'exclamation. N'invente aucun chiffre. Ne cite \
-            jamais SHOM ni une donnée officielle. Jamais « Oui » pour la baignade.
+            jamais SHOM ni une donnée officielle. Jamais « Oui » pour la baignade. \
+            La phrase explique le verdict du contexte et ne le contredit jamais ; \
+            recopie le nom du spot exactement, majuscule comprise.
             """)
         var sentence: String
     }
