@@ -136,6 +136,10 @@ targets:
     platform: iOS
     sources:
       - path: EstranUITests
+      # W-DUO: the orientation tour asserts against the same breakpoint the
+      # app uses, so the test target compiles the rule instead of copying the
+      # 700 pt number. Same pattern as the widget files in EstranTests.
+      - path: Estran/App/OceanLayout.swift
     dependencies:
       - target: Estran
     settings:

@@ -137,10 +137,17 @@ views reads a device width, so a wider phone screen changes nothing for them.
 |---|---|---|
 | `OceanLayoutTests` | the width/size-class/Dynamic Type matrix, the 700 pt boundary, the readable cap | anywhere (`swift test` style unit tests) |
 | `DuoLayoutRenderTests` | Home/Spots/SpotDetail at 951 × 669 and 466 × 678 with injected size classes, PNGs in `Documents/duo-renders` | **opt-in** (needs a simulator, see below) |
-| `DuoLayoutUITests` | portrait → landscape on a real window: four tab labels, the answer, and the next-window card moving beside the answer card | simulator, one device |
+| `DuoLayoutUITests` | portrait → landscape on a real window: four tab labels, the answer, and the next-window card moving beside the answer card | simulator, any device |
 
 Product tests remain untouched: `./scripts/check-linux.sh` (250 tests) and the
 hosted `EstranTests` / `EstranUITests` suites.
+
+The orientation tour is device-independent: it reads
+`OceanLayout.wideBreakpoint` from the app (the UI test target compiles the same
+`OceanLayout.swift`), so a landscape window at or above 700 pt must show two
+columns and anything narrower is the phone layout. No device width is written
+into the test — 874 pt on an iPhone 18 Pro and 951 pt on the unfolded Duo both
+qualify.
 
 Render tests are opt-in because a whole-screen `ImageRenderer` needs a live
 simulator process:

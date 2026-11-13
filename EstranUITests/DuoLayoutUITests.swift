@@ -1,15 +1,17 @@
 import XCTest
 
-/// W-DUO — the wide window, on the one simulator that can be booted.
+/// W-DUO — the wide window, on any simulator that can still be booted.
 ///
 /// The Duo simulator is gone: its runtime sent PosterBoard into a crash loop and
 /// froze the machine, so its display states cannot be driven here. The same
-/// window shape is reachable on an iPhone 18 Pro Max in landscape (~956 × 440 pt,
-/// regular width) and that is what this tour drives: it rotates the app, then
+/// window shape is reachable by rotating any iPhone whose landscape window is at
+/// least `OceanLayout.wideBreakpoint` wide — 874 pt on an iPhone 18 Pro, 956 pt
+/// on a Pro Max, 951 pt unfolded on the Duo. The tour rotates the app, then
 /// asserts **by geometry** that the layout really became two columns — the next
 /// window card sits to the right of the answer card instead of below it — and
 /// that the four tab labels and the answer survive the rotation.
 ///
+/// No device width is hard-coded: it reads the same breakpoint the app uses.
 /// Portrait is the folded-Duo shape: one column, ~440 pt wide.
 @MainActor
 final class DuoLayoutUITests: XCTestCase {
@@ -90,8 +92,15 @@ final class DuoLayoutUITests: XCTestCase {
             "single column: the next window card sits below the answer")
     }
 
-    /// The wide shape: a landscape window at least as wide as the unfolded Duo,
-    /// with the next window card **beside** the answer card.
+    /// The wide shape: any landscape window at or above
+    /// `OceanLayout.wideBreakpoint` must put the next window card **beside** the
+    /// answer card.
+    ///
+    /// The window decides, never the device model: an iPhone 18 Pro landscape
+    /// (874 pt) and the unfolded Duo (951 pt) both qualify. A landscape window
+    /// below the threshold — a small phone — is deliberately the phone layout,
+    /// which the portrait branch already covers, so there is nothing to assert
+    /// about a second column there.
     private func assertTwoColumns(
         answer: XCUIElement,
         windowCard: XCUIElement,
@@ -99,13 +108,11 @@ final class DuoLayoutUITests: XCTestCase {
     {
         let window = app.windows.firstMatch.frame
         XCTAssertGreaterThan(window.width, window.height, "landscape is the wide window")
-        XCTAssertGreaterThan(
-            window.width, 900,
-            "the Pro Max landscape window is the same order of width as the unfolded Duo")
+        guard window.width >= OceanLayout.wideBreakpoint else { return }
         XCTAssertGreaterThanOrEqual(
             windowCard.frame.minX,
             answer.frame.maxX - 1,
-            "two columns: the next window card sits beside the answer card")
+            "two columns: at \(window.width) pt the next window card sits beside the answer card")
     }
 
     // MARK: - Assertions
