@@ -18,30 +18,47 @@ import SwiftUI
 struct SpotsView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityPrefersCrossFadeTransitions) private var prefersCrossFade
+    #if ESTRAN_SDK_BEFORE_27
+        private var prefersCrossFade: Bool {
+            false
+        }
+    #else
+        @Environment(\.accessibilityPrefersCrossFadeTransitions) private var prefersCrossFade
+    #endif
 
     @Namespace private var detailTransitionNamespace
     @State private var camera: MapCameraPosition = .automatic
     @State private var showsDetail = false
 
-    private var usesCrossFadeTransition: Bool {
-        reduceMotion || prefersCrossFade
-    }
+    #if !ESTRAN_SDK_BEFORE_27
+        private var usesCrossFadeTransition: Bool {
+            reduceMotion || prefersCrossFade
+        }
+    #endif
 
     var body: some View {
         NavigationStack {
             map
                 .navigationBarTitleDisplayMode(.inline)
                 .navigationDestination(isPresented: $showsDetail) {
-                    SpotDetailView()
-                        .toolbar(.hidden, for: .tabBar)
-                        .navigationTransition(
-                            usesCrossFadeTransition
-                                ? AnyNavigationTransition(.crossFade)
-                                : AnyNavigationTransition(
-                                    .zoom(
-                                        sourceID: app.selectedSpot.id,
-                                        in: detailTransitionNamespace)))
+                    #if ESTRAN_SDK_BEFORE_27
+                        SpotDetailView()
+                            .toolbar(.hidden, for: .tabBar)
+                            .navigationTransition(
+                                .zoom(
+                                    sourceID: app.selectedSpot.id,
+                                    in: detailTransitionNamespace))
+                    #else
+                        SpotDetailView()
+                            .toolbar(.hidden, for: .tabBar)
+                            .navigationTransition(
+                                usesCrossFadeTransition
+                                    ? AnyNavigationTransition(.crossFade)
+                                    : AnyNavigationTransition(
+                                        .zoom(
+                                            sourceID: app.selectedSpot.id,
+                                            in: detailTransitionNamespace)))
+                    #endif
                 }
         }
     }

@@ -1,7 +1,9 @@
 import AppIntents
-import CoreSpotlight
 import EstranCore
 import Foundation
+#if !ESTRAN_SDK_BEFORE_27
+    import CoreSpotlight
+#endif
 
 /// One of the five activities, as an App Intent entity indexed in Spotlight.
 ///
@@ -83,7 +85,7 @@ struct ActivityEntity: AppEntity, IndexedEntity {
 }
 
 /// Resolves, suggests and reindexes the five activities for Siri and Spotlight.
-struct ActivityEntityQuery: EntityStringQuery, EnumerableEntityQuery, IndexedEntityQuery {
+struct ActivityEntityQuery: EntityStringQuery, EnumerableEntityQuery {
     func entities(for identifiers: [ActivityEntity.ID]) async throws -> [ActivityEntity] {
         identifiers.compactMap { id in
             guard Activity(rawValue: id) != nil else { return nil }
@@ -104,25 +106,29 @@ struct ActivityEntityQuery: EntityStringQuery, EnumerableEntityQuery, IndexedEnt
         }
     }
 
-    func reindexAllEntities(indexDescription: CSSearchableIndexDescription) async throws {
-        let index = Self.index(for: indexDescription)
-        try await index.indexAppEntities(ActivityEntity.all)
-    }
-
-    func reindexEntities(
-        for identifiers: [ActivityEntity.ID],
-        indexDescription: CSSearchableIndexDescription) async throws
-    {
-        let entities = try await entities(for: identifiers)
-        let index = Self.index(for: indexDescription)
-        try await index.indexAppEntities(entities)
-    }
-
-    private static func index(for description: CSSearchableIndexDescription) -> CSSearchableIndex {
-        CSSearchableIndex(name: "EstranActivities", protectionClass: description.protectionClass)
-    }
-
     private static func folded(_ value: String) -> String {
         value.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "fr_FR"))
     }
 }
+
+#if !ESTRAN_SDK_BEFORE_27
+    extension ActivityEntityQuery: IndexedEntityQuery {
+        func reindexAllEntities(indexDescription: CSSearchableIndexDescription) async throws {
+            let index = Self.index(for: indexDescription)
+            try await index.indexAppEntities(ActivityEntity.all)
+        }
+
+        func reindexEntities(
+            for identifiers: [ActivityEntity.ID],
+            indexDescription: CSSearchableIndexDescription) async throws
+        {
+            let entities = try await entities(for: identifiers)
+            let index = Self.index(for: indexDescription)
+            try await index.indexAppEntities(entities)
+        }
+
+        private static func index(for description: CSSearchableIndexDescription) -> CSSearchableIndex {
+            CSSearchableIndex(name: "EstranActivities", protectionClass: description.protectionClass)
+        }
+    }
+#endif

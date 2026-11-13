@@ -49,27 +49,17 @@ jobs:
       HOMEBREW_NO_INSTALL_CLEANUP: 1
     steps:
       - uses: actions/checkout@v4
-      # The app targets iOS 27. Use an Xcode 27+ if the image has one; otherwise
-      # skip the Xcode steps with a notice instead of failing on an older SDK.
-      # The local gate stays ./scripts/check-macos.sh (Xcode 27.2, 2026-11-12).
-      - name: Select Xcode 27 or skip
-        id: xcode
+      # Prefer Xcode 27 when the image has it. Hosted images still ship
+      # Xcode 26.6 (iOS SDK 26.5, verified 2026-11-12): the build runs there
+      # too, with ESTRAN_SDK_BEFORE_27 so iOS 27-only symbols are omitted.
+      - name: Select Xcode 27 when the image has it
         run: |
           candidate=$(ls -d /Applications/Xcode_27*.app /Applications/Xcode-27*.app 2>/dev/null | sort -V | tail -1 || true)
           if [ -n "$candidate" ]; then sudo xcode-select -s "$candidate/Contents/Developer"; fi
-          major=$(xcodebuild -version | awk 'NR==1{split($2,v,"."); print v[1]}')
-          echo "Xcode major: $major"
-          if [ "$major" -ge 27 ]; then
-            echo "ok=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Xcode 27 unavailable::This runner has Xcode $major; the iOS 27 build is skipped. Run ./scripts/check-macos.sh locally."
-          fi
+          xcodebuild -version
       - name: Install XcodeGen
-        if: steps.xcode.outputs.ok == 'true'
         run: brew install xcodegen
       - name: Generate project
-        if: steps.xcode.outputs.ok == 'true'
         run: xcodegen generate
       # Compile check only. GitHub-hosted macOS images still run Xcode 26.6
       # (verified 2026-11-02): they have no iOS simulator runtime, and
@@ -78,11 +68,18 @@ jobs:
       # Unit and UI tests are the local gate: ./scripts/check-macos.sh.
       # Restore the test step the day a runner image ships Xcode 27.
       - name: Build
-        if: steps.xcode.outputs.ok == 'true'
         run: |
           set -x
+          extra=()
+          sdk_version=$(xcodebuild -version -sdk iphoneos SDKVersion)
+          echo "iOS SDK: $sdk_version"
+          sdk_major=$(printf '%s' "$sdk_version" | cut -d. -f1)
+          if [ "$sdk_major" -lt 27 ]; then
+            extra+=(OTHER_SWIFT_FLAGS="-D ESTRAN_SDK_BEFORE_27")
+          fi
           xcodebuild -project Estran.xcodeproj -scheme Estran -configuration Debug \
-            -destination 'generic/platform=iOS Simulator' build
+            -destination 'generic/platform=iOS Simulator' build \
+            "${extra[@]}"
 
   macos-archive:
     name: Unsigned archive compile check
@@ -91,31 +88,28 @@ jobs:
       HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
       - uses: actions/checkout@v4
-      # The app targets iOS 27. Use an Xcode 27+ if the image has one; otherwise
-      # skip the Xcode steps with a notice instead of failing on an older SDK.
-      # The local gate stays ./scripts/check-macos.sh (Xcode 27.2, 2026-11-12).
-      - name: Select Xcode 27 or skip
-        id: xcode
+      # Prefer Xcode 27 when the image has it. Hosted images still ship
+      # Xcode 26.6 (iOS SDK 26.5, verified 2026-11-12): the archive runs there
+      # too, with ESTRAN_SDK_BEFORE_27 so iOS 27-only symbols are omitted.
+      - name: Select Xcode 27 when the image has it
         run: |
           candidate=$(ls -d /Applications/Xcode_27*.app /Applications/Xcode-27*.app 2>/dev/null | sort -V | tail -1 || true)
           if [ -n "$candidate" ]; then sudo xcode-select -s "$candidate/Contents/Developer"; fi
-          major=$(xcodebuild -version | awk 'NR==1{split($2,v,"."); print v[1]}')
-          echo "Xcode major: $major"
-          if [ "$major" -ge 27 ]; then
-            echo "ok=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Xcode 27 unavailable::This runner has Xcode $major; the iOS 27 build is skipped. Run ./scripts/check-macos.sh locally."
-          fi
+          xcodebuild -version
       - name: Install XcodeGen
-        if: steps.xcode.outputs.ok == 'true'
         run: brew install xcodegen
       - name: Generate project
-        if: steps.xcode.outputs.ok == 'true'
         run: xcodegen generate
       - name: Archive without signing
-        if: steps.xcode.outputs.ok == 'true'
         run: |
+          set -x
+          extra=()
+          sdk_version=$(xcodebuild -version -sdk iphoneos SDKVersion)
+          echo "iOS SDK: $sdk_version"
+          sdk_major=$(printf '%s' "$sdk_version" | cut -d. -f1)
+          if [ "$sdk_major" -lt 27 ]; then
+            extra+=(OTHER_SWIFT_FLAGS="-D ESTRAN_SDK_BEFORE_27")
+          fi
           xcodebuild \
             -project Estran.xcodeproj \
             -scheme Estran \
@@ -123,4 +117,5 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/Estran.xcarchive" \
             archive \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            "${extra[@]}"

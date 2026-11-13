@@ -122,11 +122,15 @@ struct RootView: View {
 /// is 27.0, so the call is gated; skip silently on 27.0 runtimes.
 private struct PrefersTabBarCompressionModifier: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(iOS 27.1, *) {
-            content.toolbarVerticalCompressionBehavior(.prefersTabBar)
-        } else {
+        #if ESTRAN_SDK_BEFORE_27
             content
-        }
+        #else
+            if #available(iOS 27.1, *) {
+                content.toolbarVerticalCompressionBehavior(.prefersTabBar)
+            } else {
+                content
+            }
+        #endif
     }
 }
 

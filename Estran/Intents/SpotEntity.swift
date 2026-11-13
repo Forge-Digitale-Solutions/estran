@@ -1,7 +1,9 @@
 import AppIntents
-import CoreSpotlight
 import EstranCore
 import Foundation
+#if !ESTRAN_SDK_BEFORE_27
+    import CoreSpotlight
+#endif
 
 /// One of the two gauged spots, as an App Intent entity indexed in Spotlight.
 ///
@@ -80,7 +82,7 @@ struct SpotEntity: AppEntity, IndexedEntity {
 }
 
 /// Resolves, suggests and reindexes the two spots for Siri and Spotlight.
-struct SpotEntityQuery: EntityStringQuery, EnumerableEntityQuery, IndexedEntityQuery {
+struct SpotEntityQuery: EntityStringQuery, EnumerableEntityQuery {
     func entities(for identifiers: [SpotEntity.ID]) async throws -> [SpotEntity] {
         identifiers.compactMap { id in
             guard SpotCatalog.spot(id: id) != nil else { return nil }
@@ -101,25 +103,29 @@ struct SpotEntityQuery: EntityStringQuery, EnumerableEntityQuery, IndexedEntityQ
         }
     }
 
-    func reindexAllEntities(indexDescription: CSSearchableIndexDescription) async throws {
-        let index = Self.index(for: indexDescription)
-        try await index.indexAppEntities(SpotEntity.all)
-    }
-
-    func reindexEntities(
-        for identifiers: [SpotEntity.ID],
-        indexDescription: CSSearchableIndexDescription) async throws
-    {
-        let entities = try await entities(for: identifiers)
-        let index = Self.index(for: indexDescription)
-        try await index.indexAppEntities(entities)
-    }
-
-    private static func index(for description: CSSearchableIndexDescription) -> CSSearchableIndex {
-        CSSearchableIndex(name: "EstranSpots", protectionClass: description.protectionClass)
-    }
-
     private static func folded(_ value: String) -> String {
         value.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "fr_FR"))
     }
 }
+
+#if !ESTRAN_SDK_BEFORE_27
+    extension SpotEntityQuery: IndexedEntityQuery {
+        func reindexAllEntities(indexDescription: CSSearchableIndexDescription) async throws {
+            let index = Self.index(for: indexDescription)
+            try await index.indexAppEntities(SpotEntity.all)
+        }
+
+        func reindexEntities(
+            for identifiers: [SpotEntity.ID],
+            indexDescription: CSSearchableIndexDescription) async throws
+        {
+            let entities = try await entities(for: identifiers)
+            let index = Self.index(for: indexDescription)
+            try await index.indexAppEntities(entities)
+        }
+
+        private static func index(for description: CSSearchableIndexDescription) -> CSSearchableIndex {
+            CSSearchableIndex(name: "EstranSpots", protectionClass: description.protectionClass)
+        }
+    }
+#endif
