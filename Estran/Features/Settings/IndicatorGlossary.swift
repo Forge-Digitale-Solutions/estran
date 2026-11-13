@@ -68,6 +68,12 @@ struct IndicatorGlossaryEntry: Identifiable {
 ///
 /// The heading trait is what lets VoiceOver's rotor jump from indicator to
 /// indicator at AX5, where a single entry can fill the screen.
+///
+/// The row is drawn inside the Réglages glass card (`SettingsView`), so its
+/// explanation uses the explicit `white` 85 % token the other cards use
+/// (`AnswerCard`, `ActivityOverviewList`) instead of the system `.secondary`
+/// grey, which was tuned for an opaque list background and shifts with the
+/// window behind the glass.
 struct IndicatorGlossaryRow: View {
     let entry: IndicatorGlossaryEntry
 
@@ -81,19 +87,29 @@ struct IndicatorGlossaryRow: View {
 
             Text(entry.detail)
                 .font(OceanTypography.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(OceanPalette.white.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.vertical, OceanSpacing.xxs)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, OceanSpacing.sm)
     }
 }
 
 #Preview {
-    List {
-        ForEach(IndicatorGlossaryEntry.all) { entry in
-            IndicatorGlossaryRow(entry: entry)
+    ScrollView {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(IndicatorGlossaryEntry.all.enumerated()), id: \.element.id) { index, entry in
+                if index > 0 {
+                    Rectangle()
+                        .fill(OceanPalette.white.opacity(0.12))
+                        .frame(height: 1)
+                }
+                IndicatorGlossaryRow(entry: entry)
+            }
         }
+        .padding(OceanSpacing.md)
+        .oceanGlassCard(cornerRadius: OceanGlass.cardCornerRadius)
+        .padding(OceanSpacing.md)
     }
-    .scrollContentBackground(.hidden)
     .background { OceanBackdrop() }
 }
