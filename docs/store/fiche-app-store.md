@@ -14,7 +14,7 @@ no location request, no data collected.
 
 | Field | Limit | Value | Length |
 |---|---|---|---|
-| Name | 30 | `Estran – Marée Arcachon` | 23 |
+| Name | 30 | `Estran – Marées Arcachon Médoc` | 30 |
 | Subtitle | 30 | `Pêche à pied, surf et bateau` | 28 |
 | Keywords | 100 | `horaire,météo,marine,houle,vent,baignade,baïnes,balade,marnage,bassin,médoc,verdon,grave,plage` | 94 |
 | Primary category | — | Météo | |
