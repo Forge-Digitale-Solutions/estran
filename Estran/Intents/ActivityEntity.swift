@@ -85,11 +85,7 @@ struct ActivityEntity: AppEntity, IndexedEntity {
 }
 
 /// Resolves, suggests and reindexes the five activities for Siri and Spotlight.
-#if ESTRAN_SDK_BEFORE_27
 struct ActivityEntityQuery: EntityStringQuery, EnumerableEntityQuery {
-#else
-struct ActivityEntityQuery: EntityStringQuery, EnumerableEntityQuery, IndexedEntityQuery {
-#endif
     func entities(for identifiers: [ActivityEntity.ID]) async throws -> [ActivityEntity] {
         identifiers.compactMap { id in
             guard Activity(rawValue: id) != nil else { return nil }
@@ -110,7 +106,13 @@ struct ActivityEntityQuery: EntityStringQuery, EnumerableEntityQuery, IndexedEnt
         }
     }
 
-    #if !ESTRAN_SDK_BEFORE_27
+    private static func folded(_ value: String) -> String {
+        value.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "fr_FR"))
+    }
+}
+
+#if !ESTRAN_SDK_BEFORE_27
+    extension ActivityEntityQuery: IndexedEntityQuery {
         func reindexAllEntities(indexDescription: CSSearchableIndexDescription) async throws {
             let index = Self.index(for: indexDescription)
             try await index.indexAppEntities(ActivityEntity.all)
@@ -128,9 +130,5 @@ struct ActivityEntityQuery: EntityStringQuery, EnumerableEntityQuery, IndexedEnt
         private static func index(for description: CSSearchableIndexDescription) -> CSSearchableIndex {
             CSSearchableIndex(name: "EstranActivities", protectionClass: description.protectionClass)
         }
-    #endif
-
-    private static func folded(_ value: String) -> String {
-        value.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "fr_FR"))
     }
-}
+#endif

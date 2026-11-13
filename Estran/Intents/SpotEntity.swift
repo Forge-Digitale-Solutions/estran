@@ -82,11 +82,7 @@ struct SpotEntity: AppEntity, IndexedEntity {
 }
 
 /// Resolves, suggests and reindexes the two spots for Siri and Spotlight.
-#if ESTRAN_SDK_BEFORE_27
 struct SpotEntityQuery: EntityStringQuery, EnumerableEntityQuery {
-#else
-struct SpotEntityQuery: EntityStringQuery, EnumerableEntityQuery, IndexedEntityQuery {
-#endif
     func entities(for identifiers: [SpotEntity.ID]) async throws -> [SpotEntity] {
         identifiers.compactMap { id in
             guard SpotCatalog.spot(id: id) != nil else { return nil }
@@ -107,7 +103,13 @@ struct SpotEntityQuery: EntityStringQuery, EnumerableEntityQuery, IndexedEntityQ
         }
     }
 
-    #if !ESTRAN_SDK_BEFORE_27
+    private static func folded(_ value: String) -> String {
+        value.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "fr_FR"))
+    }
+}
+
+#if !ESTRAN_SDK_BEFORE_27
+    extension SpotEntityQuery: IndexedEntityQuery {
         func reindexAllEntities(indexDescription: CSSearchableIndexDescription) async throws {
             let index = Self.index(for: indexDescription)
             try await index.indexAppEntities(SpotEntity.all)
@@ -125,9 +127,5 @@ struct SpotEntityQuery: EntityStringQuery, EnumerableEntityQuery, IndexedEntityQ
         private static func index(for description: CSSearchableIndexDescription) -> CSSearchableIndex {
             CSSearchableIndex(name: "EstranSpots", protectionClass: description.protectionClass)
         }
-    #endif
-
-    private static func folded(_ value: String) -> String {
-        value.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "fr_FR"))
     }
-}
+#endif
