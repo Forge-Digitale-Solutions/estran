@@ -10,6 +10,7 @@ struct HomeView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     /// Shared by the chips' droplet and the answer card, so the two morphs
     /// belong to the same glass rendering pass.
@@ -20,73 +21,139 @@ struct HomeView: View {
     /// so the surface materialises instead of popping.
     private static let answerGlassID = "answer-card"
 
+    private func usesTwoColumns(width: CGFloat) -> Bool {
+        OceanLayout.usesTwoColumns(
+            width: width,
+            sizeClass: horizontalSizeClass,
+            dynamicTypeSize: dynamicTypeSize)
+    }
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: OceanSpacing.lg) {
-                    headerRow
-                    titleBlock
-                    // The segmented control and the answer card are adjacent
-                    // glass shapes: the container lets them merge as the system
-                    // does (`ARCHITECTURE_PLAN.md` §12.3).
-                    GlassEffectContainer(spacing: OceanSpacing.sm) {
-                        VStack(alignment: .leading, spacing: OceanSpacing.sm) {
-                            ActivitySegmentedControl(
-                                selection: app.activity,
-                                unavailable: app.unavailableActivities,
-                                supported: app.selectedSpot.supportedActivities,
-                                onSelect: { app.select(activity: $0) })
-                            answerSection
-                                .glassEffectID(Self.answerGlassID, in: glassNamespace)
-                                .glassEffectTransition(answerTransition)
-                                // The morph is a glass transition, so the
-                                // selection itself has to be animated here:
-                                // nothing upstream wraps the change in
-                                // `withAnimation`. Reduce Motion passes `nil`.
-                                .animation(
-                                    OceanGlass.animation(
-                                        .spring(response: 0.45, dampingFraction: 0.86),
-                                        reduceMotion: reduceMotion),
-                                    value: app.activity)
+            // The reader supplies the window width to the layout; the scroll
+            // view inside it keeps its own scrolling. A width read with
+            // `onGeometryChange` would update state during layout, which
+            // `ImageRenderer` cannot do (the render tests crash without this).
+            GeometryReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: OceanSpacing.lg) {
+                        headerRow
+                        titleBlock
+                        if usesTwoColumns(width: proxy.size.width) {
+                            wideBody
+                        } else {
+                            phoneBody
                         }
+                        attribution
                     }
-                    // Swimming has no "good window": it is a risk level, not a verdict.
-                    // A not-offered activity has none either: it is not a verdict.
-                    if case .ready = app.store.phase, app.activity != .swimming,
-                       !app.isActivityNotOffered
-                    {
-                        NextWindowCard(
-                            current: app.currentSlot,
-                            upcoming: app.upcomingSlot,
-                            isUnavailable: app.unavailableActivities.contains(app.activity),
-                            noWindowReason: FrenchFormat.emptyWindowReason(app.emptyWindowBlocker),
-                            timeZone: app.selectedSpot.timezone,
-                            reference: referenceDate,
-                            caution: app.windowCaution)
-                    }
-                    if let conditions = app.store.conditions {
-                        ConditionsGrid(conditions: conditions)
-                        // The swimming advisory card already carries the full
-                        // warning; a second tip would duplicate it, and a
-                        // not-offered activity has no tip either.
-                        if app.activity != .swimming, !app.isActivityNotOffered {
-                            TipCard(activity: app.activity)
-                        }
-                    }
-                    attribution
+                    .padding(.horizontal, OceanSpacing.md)
+                    .padding(.top, OceanSpacing.sm)
+                    .padding(.bottom, OceanSpacing.xxl)
+                    .oceanReadableWidth()
                 }
-                .padding(.horizontal, OceanSpacing.md)
-                .padding(.top, OceanSpacing.sm)
-                .padding(.bottom, OceanSpacing.xxl)
+                .background { OceanBackdrop() }
+                // The bar is hidden, so cards pass under the status bar and
+                // above the floating tab bar: the soft pocket keeps both edges
+                // legible (`docs/design/ios27-opportunities.md`, item 6). The
+                // system turns it into an opaque bar under Reduce Transparency
+                // by itself.
+                .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar(.hidden, for: .navigationBar)
             }
-            .background { OceanBackdrop() }
-            // The bar is hidden, so cards pass under the status bar and above
-            // the floating tab bar: the soft pocket keeps both edges legible
-            // (`docs/design/ios27-opportunities.md`, item 6). The system turns
-            // it into an opaque bar under Reduce Transparency by itself.
-            .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar(.hidden, for: .navigationBar)
+        }
+    }
+
+    // MARK: - Shape
+
+    /// Phone (and Duo folded): one column, the Figma order, unchanged.
+    @ViewBuilder
+    private var phoneBody: some View {
+        answerColumn
+        nextWindowSection
+        conditionsSection(columns: nil)
+    }
+
+    /// Duo unfolded / width ≥ 700 pt: the answer keeps the leading column at a
+    /// comfortable measure and the secondary cards use the space beside it,
+    /// instead of being stretched across 951 pt or pushed below the fold.
+    /// Reading order stays answer → next window → conditions, which is also the
+    /// VoiceOver order (`HStack` children are read in order).
+    private var wideBody: some View {
+        HStack(alignment: .top, spacing: OceanLayout.columnSpacing) {
+            answerColumn
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: OceanSpacing.lg) {
+                nextWindowSection
+                // Four tiles need ~400 pt; the 340 pt side column gets two per
+                // row rather than four squeezed ones.
+                conditionsSection(columns: 2)
+            }
+            .frame(
+                minWidth: OceanLayout.sideColumnMinimumWidth,
+                idealWidth: OceanLayout.sideColumnIdealWidth,
+                maxWidth: OceanLayout.sideColumnMaximumWidth,
+                alignment: .leading)
+        }
+    }
+
+    // MARK: - Sections
+
+    /// The segmented control and the answer card are adjacent glass shapes: the
+    /// container lets them merge as the system does (`ARCHITECTURE_PLAN.md`
+    /// §12.3).
+    private var answerColumn: some View {
+        GlassEffectContainer(spacing: OceanSpacing.sm) {
+            VStack(alignment: .leading, spacing: OceanSpacing.sm) {
+                ActivitySegmentedControl(
+                    selection: app.activity,
+                    unavailable: app.unavailableActivities,
+                    supported: app.selectedSpot.supportedActivities,
+                    onSelect: { app.select(activity: $0) })
+                answerSection
+                    .glassEffectID(Self.answerGlassID, in: glassNamespace)
+                    .glassEffectTransition(answerTransition)
+                    // The morph is a glass transition, so the selection itself
+                    // has to be animated here: nothing upstream wraps the change
+                    // in `withAnimation`. Reduce Motion passes `nil`.
+                    .animation(
+                        OceanGlass.animation(
+                            .spring(response: 0.45, dampingFraction: 0.86),
+                            reduceMotion: reduceMotion),
+                        value: app.activity)
+            }
+        }
+    }
+
+    /// Swimming has no "good window": it is a risk level, not a verdict. A
+    /// not-offered activity has none either: it is not a verdict.
+    @ViewBuilder
+    private var nextWindowSection: some View {
+        if case .ready = app.store.phase, app.activity != .swimming,
+           !app.isActivityNotOffered
+        {
+            NextWindowCard(
+                current: app.currentSlot,
+                upcoming: app.upcomingSlot,
+                isUnavailable: app.unavailableActivities.contains(app.activity),
+                noWindowReason: FrenchFormat.emptyWindowReason(app.emptyWindowBlocker),
+                timeZone: app.selectedSpot.timezone,
+                reference: referenceDate,
+                caution: app.windowCaution)
+        }
+    }
+
+    @ViewBuilder
+    private func conditionsSection(columns: Int?) -> some View {
+        if let conditions = app.store.conditions {
+            ConditionsGrid(conditions: conditions, preferredColumns: columns)
+            // The swimming advisory card already carries the full warning; a
+            // second tip would duplicate it, and a not-offered activity has no
+            // tip either.
+            if app.activity != .swimming, !app.isActivityNotOffered {
+                TipCard(activity: app.activity)
+            }
         }
     }
 
@@ -213,115 +280,16 @@ struct HomeView: View {
     }
 }
 
-private struct LoadingCard: View {
-    var body: some View {
-        HStack(spacing: OceanSpacing.sm) {
-            ProgressView()
-            Text("Chargement des conditions…")
-                .font(OceanTypography.body)
-                .foregroundStyle(OceanPalette.white)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(OceanSpacing.lg)
-        .oceanGlassCard(cornerRadius: OceanGlass.answerCornerRadius)
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// An activity the spot does not offer (surf inside the Bassin). A distinct,
-/// neutral state: never a `Non`, never « Données indisponibles » — the data can
-/// answer, the spot simply does not offer the activity. The segmented control
-/// above still lets the user pick another activity; the button switches spot.
-private struct NotOfferedCard: View {
-    let activity: Activity
-    let spot: Spot
-    let onSwitchSpot: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: OceanSpacing.sm) {
-            HStack(alignment: .top, spacing: OceanSpacing.xs) {
-                Image(systemName: "figure.surfing")
-                    .font(OceanTypography.body)
-                    .foregroundStyle(OceanPalette.sand)
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: OceanSpacing.xxs) {
-                    Text(ActivityOffer.notOfferedTitle(activity: activity, spot: spot))
-                        .font(OceanTypography.bodyEmphasized)
-                        .foregroundStyle(OceanPalette.white)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if let detail = ActivityOffer.notOfferedDetail(activity: activity) {
-                        Text(detail)
-                            .font(OceanTypography.subtitle)
-                            .foregroundStyle(OceanPalette.white.opacity(0.85))
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-            }
-
-            Button(action: onSwitchSpot) {
-                HStack(spacing: OceanSpacing.xxs) {
-                    Text("Changer de spot")
-                        .font(OceanTypography.button)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Image(systemName: "chevron.right")
-                        .font(OceanTypography.smallLabel)
-                        .accessibilityHidden(true)
-                }
-                .foregroundStyle(OceanPalette.turquoiseOnGlass)
-                .padding(.horizontal, OceanSpacing.sm)
-                .padding(.vertical, OceanSpacing.xs)
-                .frame(maxWidth: .infinity, minHeight: OceanGlass.minimumTapHeight)
-                .oceanGlassCapsule(interactive: true)
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint("Ouvre la carte pour choisir un autre spot")
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(OceanSpacing.lg)
-        .oceanGlassCard(cornerRadius: OceanGlass.answerCornerRadius)
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// Visible unavailable state. It is not an error to hide: the card explains why
-/// the data cannot answer, and the rest of the screen keeps working.
-private struct UnavailableCard: View {
-    let message: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: OceanSpacing.sm) {
-            Text("BON MOMENT POUR SORTIR ?")
-                .font(OceanTypography.smallLabel)
-                .tracking(1.2)
-                .foregroundStyle(OceanPalette.white.opacity(0.7))
-
-            HStack(alignment: .center, spacing: OceanSpacing.sm) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(OceanTypography.metricValue)
-                    .foregroundStyle(OceanPalette.unavailable)
-                    .accessibilityHidden(true)
-                Text("Données indisponibles")
-                    .font(OceanTypography.metricValue)
-                    .foregroundStyle(OceanPalette.unavailable)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Text(message)
-                .font(OceanTypography.subtitle)
-                .foregroundStyle(OceanPalette.white.opacity(0.85))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(OceanSpacing.lg)
-        .oceanGlassCard(cornerRadius: OceanGlass.answerCornerRadius)
-        .accessibilityElement(children: .combine)
-    }
-}
-
 #Preview {
     HomePreview()
+}
+
+// The unfolded Duo: 951 × 669 pt, regular width. The static preview is the
+// only way to see the two-column shape on a Mac; the App Store PNGs are the
+// render tests' job (`DuoLayoutRenderTests`).
+#Preview("Duo déplié — 951 × 669 pt", traits: .fixedLayout(width: 951, height: 669)) {
+    HomePreview()
+        .environment(\.horizontalSizeClass, .regular)
 }
 
 /// Previews load the demo forecast: without a Mac, the preview is the only way

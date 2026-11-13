@@ -13,6 +13,10 @@ import SwiftUI
 /// sentence. No fixed height anywhere.
 struct ConditionsGrid: View {
     let conditions: Conditions
+    /// Column count imposed by the enclosing layout, when it knows it is narrow.
+    /// The Duo's side column (~340 pt) holds two readable tiles, not four
+    /// squeezed ones; `nil` keeps the Dynamic Type-driven count.
+    var preferredColumns: Int?
 
     @Environment(AppModel.self) private var app
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -21,10 +25,10 @@ struct ConditionsGrid: View {
         if dynamicTypeSize.isAccessibilitySize {
             return [GridItem(.flexible(), spacing: OceanSpacing.sm)]
         }
-        let count = dynamicTypeSize >= .xLarge ? 2 : 4
+        let count = preferredColumns ?? (dynamicTypeSize >= .xLarge ? 2 : 4)
         return Array(
             repeating: GridItem(.flexible(), spacing: OceanSpacing.sm),
-            count: count)
+            count: max(1, min(count, 4)))
     }
 
     var body: some View {

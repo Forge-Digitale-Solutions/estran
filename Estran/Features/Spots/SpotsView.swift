@@ -18,6 +18,8 @@ import SwiftUI
 struct SpotsView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     #if ESTRAN_SDK_BEFORE_27
         private var prefersCrossFade: Bool {
             false
@@ -38,33 +40,38 @@ struct SpotsView: View {
 
     var body: some View {
         NavigationStack {
-            map
-                .navigationBarTitleDisplayMode(.inline)
-                .navigationDestination(isPresented: $showsDetail) {
-                    #if ESTRAN_SDK_BEFORE_27
-                        SpotDetailView()
-                            .toolbar(.hidden, for: .tabBar)
-                            .navigationTransition(
-                                .zoom(
-                                    sourceID: app.selectedSpot.id,
-                                    in: detailTransitionNamespace))
-                    #else
-                        SpotDetailView()
-                            .toolbar(.hidden, for: .tabBar)
-                            .navigationTransition(
-                                usesCrossFadeTransition
-                                    ? AnyNavigationTransition(.crossFade)
-                                    : AnyNavigationTransition(
-                                        .zoom(
-                                            sourceID: app.selectedSpot.id,
-                                            in: detailTransitionNamespace)))
-                    #endif
-                }
+            // The reader supplies the window width to the layout; a state-based
+            // measurement would mutate during layout and `ImageRenderer` cannot
+            // run that (the render tests would crash).
+            GeometryReader { proxy in
+                map(width: proxy.size.width)
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(isPresented: $showsDetail) {
+                #if ESTRAN_SDK_BEFORE_27
+                    SpotDetailView()
+                        .toolbar(.hidden, for: .tabBar)
+                        .navigationTransition(
+                            .zoom(
+                                sourceID: app.selectedSpot.id,
+                                in: detailTransitionNamespace))
+                #else
+                    SpotDetailView()
+                        .toolbar(.hidden, for: .tabBar)
+                        .navigationTransition(
+                            usesCrossFadeTransition
+                                ? AnyNavigationTransition(.crossFade)
+                                : AnyNavigationTransition(
+                                    .zoom(
+                                        sourceID: app.selectedSpot.id,
+                                        in: detailTransitionNamespace)))
+                #endif
+            }
         }
     }
 
-    private var map: some View {
-        ZStack(alignment: .bottom) {
+    private func map(width: CGFloat) -> some View {
+        ZStack {
             Map(position: $camera, interactionModes: []) {
                 Marker(
                     app.selectedSpot.name,
@@ -78,18 +85,7 @@ struct SpotsView: View {
                     showsTraffic: false))
             .ignoresSafeArea()
 
-            GlassEffectContainer(spacing: OceanSpacing.sm) {
-                VStack(spacing: OceanSpacing.sm) {
-                    spotCard
-                    SpotSwitcher(spots: SpotCatalog.v1, selection: app.selectedSpot) { spot in
-                        Task { @MainActor in
-                            await app.select(spot: spot)
-                        }
-                    }
-                }
-            }
-            .padding(.horizontal, OceanSpacing.md)
-            .padding(.bottom, OceanSpacing.md)
+            controls(wide: usesTwoColumns(width: width))
         }
         .background { OceanBackdrop() }
         .onAppear {
@@ -105,6 +101,37 @@ struct SpotsView: View {
                     reduceMotion: reduceMotion || prefersCrossFade))
             {
                 camera = target
+            }
+        }
+    }
+
+    /// The card and the switcher, in the phone position (bottom, full width) or
+    /// in the unfolded side column (bottom-trailing, 340 pt).
+    @ViewBuilder
+    private func controls(wide: Bool) -> some View {
+        if wide {
+            controlStack
+                .frame(width: OceanLayout.sideColumnIdealWidth)
+                .padding(.trailing, OceanSpacing.md)
+                .padding(.bottom, OceanSpacing.md)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        } else {
+            controlStack
+                .padding(.horizontal, OceanSpacing.md)
+                .padding(.bottom, OceanSpacing.md)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        }
+    }
+
+    private var controlStack: some View {
+        GlassEffectContainer(spacing: OceanSpacing.sm) {
+            VStack(spacing: OceanSpacing.sm) {
+                spotCard
+                SpotSwitcher(spots: SpotCatalog.v1, selection: app.selectedSpot) { spot in
+                    Task { @MainActor in
+                        await app.select(spot: spot)
+                    }
+                }
             }
         }
     }
@@ -274,14 +301,33 @@ struct SpotsView: View {
             }
         }
     }
+}
 
-    private func coordinate(_ spot: Spot) -> CLLocationCoordinate2D {
+/// The wide-window decision, kept out of the view body.
+private extension SpotsView {
+    /// Unfolded Duo: the card and the switcher move to a side column over the
+    /// map instead of covering the bottom of it. The map still fills the window
+    /// edge to edge, and the card stays the only glass over the tiles.
+    func usesTwoColumns(width: CGFloat) -> Bool {
+        OceanLayout.usesTwoColumns(
+            width: width,
+            sizeClass: horizontalSizeClass,
+            dynamicTypeSize: dynamicTypeSize)
+    }
+}
+
+/// Map framing helpers, kept out of the view body: the two fixed framings are
+/// the whole "navigation" of the focus map (`DESIGN_REFERENCE.md` §3.5).
+private extension SpotsView {
+    func coordinate(_ spot: Spot) -> CLLocationCoordinate2D {
         CLLocationCoordinate2D(
             latitude: spot.coordinate.latitude,
             longitude: spot.coordinate.longitude)
     }
 
-    private func position(for spot: Spot) -> MapCameraPosition {
+    /// One fixed framing per spot. `interactionModes: []` means the camera never
+    /// moves by gesture, so this is the only thing that decides what is on screen.
+    func position(for spot: Spot) -> MapCameraPosition {
         .region(
             MKCoordinateRegion(
                 center: coordinate(spot),
@@ -316,6 +362,13 @@ private struct SpotCardSummary {
 
 #Preview {
     SpotsPreview()
+}
+
+// The unfolded Duo: the card and the switcher in the side column, the map
+// still edge to edge.
+#Preview("Duo déplié — 951 × 669 pt", traits: .fixedLayout(width: 951, height: 669)) {
+    SpotsPreview()
+        .environment(\.horizontalSizeClass, .regular)
 }
 
 private struct SpotsPreview: View {

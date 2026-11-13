@@ -31,6 +31,7 @@ struct AlertsView: View {
                 .padding(.horizontal, OceanSpacing.md)
                 .padding(.top, OceanSpacing.sm)
                 .padding(.bottom, OceanSpacing.xxl)
+                .oceanReadableWidth()
             }
             .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
             .background { OceanBackdrop() }

@@ -14,36 +14,82 @@ struct SpotDetailView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    /// Unfolded Duo: the chart takes the full readable width and the activity
+    /// list sits beside the metrics, so the screen is readable without a
+    /// 700 pt-tall scroll.
+    private func usesTwoColumns(width: CGFloat) -> Bool {
+        OceanLayout.usesTwoColumns(
+            width: width,
+            sizeClass: horizontalSizeClass,
+            dynamicTypeSize: dynamicTypeSize)
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: OceanSpacing.lg) {
-                    header
-                    content
-                    if case .ready = app.store.phase, app.store.conditions != nil {
-                        AlertOptInToggle()
-                            .padding(OceanSpacing.md)
-                            .oceanGlassCard(cornerRadius: OceanGlass.cardCornerRadius)
-                            .spotDetailScrollTransition(reduceMotion: reduceMotion)
+            // The reader supplies the window width to the layout; a state-based
+            // measurement would mutate during layout and `ImageRenderer` cannot
+            // run that (the render tests would crash).
+            GeometryReader { geometry in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: OceanSpacing.lg) {
+                        header
+                        if usesTwoColumns(width: geometry.size.width) {
+                            wideContent
+                        } else {
+                            content
+                            alertOptIn
+                        }
+                        attribution
+                            .id("spot.detail.bottom")
                     }
-                    attribution
-                        .id("spot.detail.bottom")
+                    .padding(.horizontal, OceanSpacing.md)
+                    .padding(.top, OceanSpacing.sm)
+                    .padding(.bottom, OceanSpacing.xxl)
+                    .oceanReadableWidth()
                 }
-                .padding(.horizontal, OceanSpacing.md)
-                .padding(.top, OceanSpacing.sm)
-                .padding(.bottom, OceanSpacing.xxl)
+                .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
+                .background { OceanBackdrop() }
+                .navigationBarTitleDisplayMode(.inline)
+                .accessibilityIdentifier("spot.detail")
+                .task {
+                    guard ProcessInfo.processInfo.arguments.contains("-estranScrollDetailBottom")
+                    else { return }
+                    try? await Task.sleep(for: .milliseconds(600))
+                    proxy.scrollTo("spot.detail.bottom", anchor: .bottom)
+                }
             }
-            .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
-            .background { OceanBackdrop() }
-            .navigationBarTitleDisplayMode(.inline)
-            .accessibilityIdentifier("spot.detail")
-            .task {
-                guard ProcessInfo.processInfo.arguments.contains("-estranScrollDetailBottom")
-                else { return }
-                try? await Task.sleep(for: .milliseconds(600))
-                proxy.scrollTo("spot.detail.bottom", anchor: .bottom)
+        }
+    }
+
+    // MARK: - Shape
+
+    /// Wide shape: the tide chart keeps the whole measure, then the metrics and
+    /// the alert opt-in form the leading column while the five activity rows
+    /// fill the trailing one. VoiceOver follows the same path.
+    @ViewBuilder
+    private var wideContent: some View {
+        if case .ready = app.store.phase, let conditions = app.store.conditions {
+            chartCard(conditions)
+            HStack(alignment: .top, spacing: OceanLayout.columnSpacing) {
+                VStack(alignment: .leading, spacing: OceanSpacing.lg) {
+                    metrics(conditions)
+                    alertOptIn
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                activityList
+                    .frame(
+                        minWidth: OceanLayout.sideColumnMinimumWidth,
+                        idealWidth: OceanLayout.sideColumnIdealWidth,
+                        maxWidth: OceanLayout.sideColumnMaximumWidth,
+                        alignment: .leading)
             }
+        } else {
+            // Loading, unavailable, or no conditions: the phone shape already
+            // draws the honest state and has nothing to put beside it.
+            content
         }
     }
 
@@ -112,27 +158,45 @@ struct SpotDetailView: View {
                 .spotDetailScrollTransition(reduceMotion: reduceMotion)
         case .ready:
             if let conditions = app.store.conditions {
-                TideChartCard(
-                    curve: conditions.tide.curve,
-                    events: conditions.tide.allEvents,
-                    goodWindows: goodWindows,
-                    nextEventLine: nextEventLine(conditions),
-                    rangeLine: app.tideRangeLine(for: conditions),
-                    windowLine: windowLine(conditions),
-                    timeZone: app.selectedSpot.timezone,
-                    now: conditions.at,
-                    accessibilitySentence: chartSentence(conditions))
-                    .spotDetailScrollTransition(reduceMotion: reduceMotion)
+                chartCard(conditions)
                 metrics(conditions)
                     .spotDetailScrollTransition(reduceMotion: reduceMotion)
-                ActivityOverviewList(
-                    overviews: app.overviews,
-                    timeZone: app.selectedSpot.timezone)
-                    .spotDetailScrollTransition(reduceMotion: reduceMotion)
+                activityList
             } else {
                 UnavailableDetailCard(message: "Les données sont indisponibles pour ce spot.")
                     .spotDetailScrollTransition(reduceMotion: reduceMotion)
             }
+        }
+    }
+
+    private func chartCard(_ conditions: Conditions) -> some View {
+        TideChartCard(
+            curve: conditions.tide.curve,
+            events: conditions.tide.allEvents,
+            goodWindows: goodWindows,
+            nextEventLine: nextEventLine(conditions),
+            rangeLine: app.tideRangeLine(for: conditions),
+            windowLine: windowLine(conditions),
+            timeZone: app.selectedSpot.timezone,
+            now: conditions.at,
+            accessibilitySentence: chartSentence(conditions))
+            .spotDetailScrollTransition(reduceMotion: reduceMotion)
+    }
+
+    private var activityList: some View {
+        ActivityOverviewList(
+            overviews: app.overviews,
+            timeZone: app.selectedSpot.timezone)
+            .spotDetailScrollTransition(reduceMotion: reduceMotion)
+    }
+
+    @ViewBuilder
+    private var alertOptIn: some View {
+        if case .ready = app.store.phase, app.store.conditions != nil {
+            AlertOptInToggle()
+                .padding(OceanSpacing.md)
+                .oceanGlassCard(cornerRadius: OceanGlass.cardCornerRadius)
+                .spotDetailScrollTransition(reduceMotion: reduceMotion)
         }
     }
 
@@ -316,6 +380,11 @@ private struct UnavailableDetailCard: View {
 
 #Preview {
     SpotDetailPreview()
+}
+
+#Preview("Duo déplié — 951 × 669 pt", traits: .fixedLayout(width: 951, height: 669)) {
+    SpotDetailPreview()
+        .environment(\.horizontalSizeClass, .regular)
 }
 
 private struct SpotDetailPreview: View {

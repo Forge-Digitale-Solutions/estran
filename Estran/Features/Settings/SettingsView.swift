@@ -55,6 +55,7 @@ struct SettingsView: View {
                 .padding(.horizontal, OceanSpacing.md)
                 .padding(.top, OceanSpacing.xs)
                 .padding(.bottom, OceanSpacing.xxl)
+                .oceanReadableWidth()
             }
             .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
             .background { OceanBackdrop() }

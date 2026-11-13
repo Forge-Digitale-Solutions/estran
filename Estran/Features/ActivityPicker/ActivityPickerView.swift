@@ -51,7 +51,7 @@ struct ActivityPickerView: View {
                 .padding(.horizontal, OceanSpacing.md)
                 .padding(.top, OceanSpacing.sm)
                 .padding(.bottom, OceanSpacing.md)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .oceanReadableWidth()
             }
         }
         .background { OceanBackdrop() }
