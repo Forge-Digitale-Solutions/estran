@@ -155,8 +155,9 @@ final class ReasonIntegrationTests: XCTestCase {
     private func makeApp(reasonProvider: any ReasonTextProviding) -> AppModel {
         AppModel(
             provider: FixedConditionsProvider(),
-            // No App Group in tests: the stored selection must not leak in.
+            // No App Group in tests: the stored selections must not leak in.
             selectionStorage: SpotSelectionStorage(defaults: nil),
+            activityStorage: ActivitySelectionStorage(defaults: nil),
             reasonProvider: reasonProvider)
     }
 

@@ -62,7 +62,7 @@ struct HomeView: View {
                             noWindowReason: FrenchFormat.emptyWindowReason(app.emptyWindowBlocker),
                             timeZone: app.selectedSpot.timezone,
                             reference: referenceDate,
-                            caution: app.decision.flatMap { ActivityCaution.combined($0) })
+                            caution: app.windowCaution)
                     }
                     if let conditions = app.store.conditions {
                         ConditionsGrid(conditions: conditions)
@@ -200,10 +200,16 @@ struct HomeView: View {
     }
 
     private var attribution: some View {
-        Text("Source : REFMAR / Shom — Licence Ouverte 2.0 — modèle local non officiel.")
-            .font(OceanTypography.smallLabel)
-            .foregroundStyle(OceanPalette.white.opacity(0.6))
-            .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: OceanSpacing.xs) {
+            Text("Source : REFMAR / Shom — Licence Ouverte 2.0 — modèle local non officiel.")
+                .font(OceanTypography.smallLabel)
+                .foregroundStyle(OceanPalette.white.opacity(0.6))
+                .fixedSize(horizontal: false, vertical: true)
+            // The weather credit sits with the tide one: WeatherKit's mark (or
+            // the Open-Meteo CC BY line) only when that source produced the
+            // values above, never for sample data.
+            WeatherAttributionFooter(spotID: app.selectedSpot.id)
+        }
     }
 }
 

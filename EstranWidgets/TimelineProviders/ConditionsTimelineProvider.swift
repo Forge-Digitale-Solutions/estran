@@ -27,6 +27,10 @@ struct ConditionsTimelineProvider: AppIntentTimelineProvider {
         let selectedID = SpotSelectionStorage().load()
         let spot = configuration.spot.resolvedSpot(selectedID: selectedID)
         let snapshot = WidgetSnapshot.load(forSpotID: spot.id)
-        return GoEntry.conditions(snapshot: snapshot, spot: spot)
+        var entry = GoEntry.conditions(snapshot: snapshot, spot: spot)
+        entry.weatherSource = snapshot == nil
+            ? nil
+            : WeatherSourceRecord.load(forSpotID: spot.id)
+        return entry
     }
 }

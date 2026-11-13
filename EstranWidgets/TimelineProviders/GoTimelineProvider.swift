@@ -41,7 +41,13 @@ struct GoTimelineProvider: AppIntentTimelineProvider {
         let activity = WidgetSelection.activity(
             configured: configuration.activity.activity,
             snapshot: snapshot)
-        return GoEntry.make(snapshot: snapshot, spot: spot, activity: activity)
+        var entry = GoEntry.make(snapshot: snapshot, spot: spot, activity: activity)
+        // The source is recorded by the app next to the snapshot, so the
+        // widget credits exactly the provider that produced these values.
+        entry.weatherSource = snapshot == nil
+            ? nil
+            : WeatherSourceRecord.load(forSpotID: spot.id)
+        return entry
     }
 }
 

@@ -66,12 +66,16 @@ enum RuleSignals {
     /// or boating; it lowers the score a little and adds a caution.
     static let nightScorePenalty = 0.85
 
-    /// `nightScorePenalty` when the uncertainty envelope is dark, `1` by day.
+    /// `nightScorePenalty` when the **instant** is dark, `1` by day.
+    ///
+    /// The plain instant, no uncertainty envelope (`W-NIGHTFIX`): `u_t` is the
+    /// uncertainty of the tide prediction, not of the clock, and the sun's
+    /// position at a given instant is certain. Reading the envelope here put
+    /// « De nuit » in broad daylight at 09:08 after an 08:20 sunrise.
     static func nightScoreMultiplier(_ conditions: Conditions) -> Double {
         let isNight = SolarDaylight.isNight(
             at: conditions.at,
-            coordinate: conditions.spot.coordinate,
-            uncertainty: conditions.spot.uncertainty.timeInterval)
+            coordinate: conditions.spot.coordinate)
         return isNight ? nightScorePenalty : 1
     }
 

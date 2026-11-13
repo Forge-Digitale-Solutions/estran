@@ -17,6 +17,11 @@ import Foundation
 /// **No caching here.** `LiveConditionsProvider` owns the TTL cache, so this
 /// stays a pure adapter.
 public actor WeatherKitService: WeatherSource {
+    /// A stored constant: an actor's `let` of a `Sendable` value is readable
+    /// from outside without hopping onto the actor, which is what the
+    /// attribution needs.
+    public let kind: WeatherSourceKind? = .appleWeather
+
     public init() {}
 
     public func weather(for spot: Spot, at date: Date) async throws -> WeatherNow {

@@ -78,27 +78,55 @@ public enum ActivityCaution {
         return rainJacket
     }
 
-    /// The night caution for `activity`, or `nil` when it is not night or the
-    /// activity is not one of the two night-tolerant ones.
+    /// The night caution for `activity` at the decision instant, or `nil` when
+    /// it is daylight or the activity is not one of the two night-tolerant
+    /// ones.
     ///
     /// Night never blocks pêche à pied or boating (owner decision 2026-11-12):
     /// it lowers the score a little and adds a caution. Balade, surf and
     /// baignade are untouched — swimming keeps its own `.night` blocker.
+    ///
+    /// The **plain instant** is read, never the tide's uncertainty envelope
+    /// (`W-NIGHTFIX`): `u_t` is the uncertainty of the tide prediction, not of
+    /// the clock, and the sun's position at a given instant is certain. Using
+    /// the envelope put « De nuit » in broad daylight at 09:08 after an 08:20
+    /// sunrise.
     public static func nightCaution(
         activity: Activity,
         at date: Date,
-        coordinate: Coordinate,
-        uncertainty: TimeInterval = 0) -> String?
+        coordinate: Coordinate) -> String?
     {
         guard activity == .shoreFishing || activity == .boating,
-              SolarDaylight.isNight(
-                  at: date,
-                  coordinate: coordinate,
-                  uncertainty: uncertainty)
+              SolarDaylight.isNight(at: date, coordinate: coordinate)
         else {
             return nil
         }
-        return activity == .shoreFishing ? nightFishing : nightBoating
+        return nightCautionText(activity: activity)
+    }
+
+    /// The night caution for a good **window**, or `nil` when the whole window
+    /// is in daylight.
+    ///
+    /// A caution attached to a window describes that window: a run from 16:00
+    /// to 19:00 in November ends after sunset and carries it, even if the app
+    /// is opened at noon.
+    public static func nightCaution(
+        activity: Activity,
+        window: DateInterval,
+        coordinate: Coordinate) -> String?
+    {
+        guard activity == .shoreFishing || activity == .boating,
+              SolarDaylight.isNight(in: window, coordinate: coordinate)
+        else {
+            return nil
+        }
+        return nightCautionText(activity: activity)
+    }
+
+    /// The one-string copy of the night caution for an activity that tolerates
+    /// the dark.
+    private static func nightCautionText(activity: Activity) -> String {
+        activity == .shoreFishing ? nightFishing : nightBoating
     }
 
     /// The conditional cautions of a decision: night first, then the light-rain
@@ -111,9 +139,32 @@ public enum ActivityCaution {
             nightCaution(
                 activity: activity,
                 at: conditions.at,
-                coordinate: conditions.spot.coordinate,
-                uncertainty: conditions.spot.uncertainty.timeInterval),
+                coordinate: conditions.spot.coordinate),
             rainCaution(activity: activity, weather: conditions.weather)
+        ])
+    }
+
+    /// The cautions of a **good window**: night when any part of the window is
+    /// dark, the light-rain reminder for the sample at the window's start, then
+    /// the permanent spot caution (the Bassin passes).
+    ///
+    /// `nil` when there is no window: a card that says « Pas de créneau » has
+    /// nothing to qualify, and must never repeat the current instant's caution
+    /// under it (`W-NIGHTFIX`).
+    public static func windowCaution(
+        activity: Activity,
+        window: DateInterval?,
+        spot: Spot,
+        weather: WeatherNow? = nil) -> String?
+    {
+        guard let window else { return nil }
+        return joined([
+            nightCaution(
+                activity: activity,
+                window: window,
+                coordinate: spot.coordinate),
+            weather.flatMap { rainCaution(activity: activity, weather: $0) },
+            caution(activity: activity, spot: spot)
         ])
     }
 

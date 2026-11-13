@@ -164,10 +164,15 @@ struct SpotDetailView: View {
     }
 
     private var attribution: some View {
-        Text("Source : REFMAR / Shom — Licence Ouverte 2.0 — modèle local non officiel.")
-            .font(OceanTypography.smallLabel)
-            .foregroundStyle(OceanPalette.white.opacity(0.6))
-            .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: OceanSpacing.xs) {
+            Text("Source : REFMAR / Shom — Licence Ouverte 2.0 — modèle local non officiel.")
+                .font(OceanTypography.smallLabel)
+                .foregroundStyle(OceanPalette.white.opacity(0.6))
+                .fixedSize(horizontal: false, vertical: true)
+            // Same rule as Home: the mark/link describes the source that really
+            // answered for this spot, and is absent for sample data.
+            WeatherAttributionFooter(spotID: app.selectedSpot.id)
+        }
     }
 
     // MARK: - Chart copy

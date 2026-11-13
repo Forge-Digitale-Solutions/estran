@@ -43,6 +43,26 @@ final class WidgetRenderTests: XCTestCase {
             entry: .sample,
             to: directory.appendingPathComponent("wlock-conditions-metrics.png"))
 
+        // W-ATTR: the weather credit under the conditions. A sample-data entry
+        // credits nobody by design, so these fixtures flip the flag and name a
+        // source, which is what the app writes for a live load.
+        var appleCredit = GoEntry.sample
+        appleCredit.isSampleData = false
+        appleCredit.weatherSource = .appleWeather
+        try render(
+            entry: appleCredit,
+            to: directory.appendingPathComponent("attr-widget-large-apple.png"))
+        try renderConditions(
+            entry: appleCredit,
+            to: directory.appendingPathComponent("attr-widget-conditions-apple.png"))
+
+        var openMeteoCredit = GoEntry.sample
+        openMeteoCredit.isSampleData = false
+        openMeteoCredit.weatherSource = .openMeteo
+        try renderConditions(
+            entry: openMeteoCredit,
+            to: directory.appendingPathComponent("attr-widget-conditions-openmeteo.png"))
+
         print("WCONF_RENDER_DIR=\(directory.path)")
     }
 

@@ -41,6 +41,7 @@ final class WidgetConfigTests: XCTestCase {
             provider: StubWidgetConditionsProvider(),
             selectionStorage: SpotSelectionStorage(defaults: defaults),
             intentSelection: IntentSelectionStorage(defaults: defaults),
+            activityStorage: ActivitySelectionStorage(defaults: defaults),
             reasonProvider: TemplateReasonProvider())
 
         await app.openWidget(spotID: "arcachon-eyrac", activity: .boating)
@@ -56,6 +57,7 @@ final class WidgetConfigTests: XCTestCase {
             provider: StubWidgetConditionsProvider(),
             selectionStorage: SpotSelectionStorage(defaults: defaults),
             intentSelection: IntentSelectionStorage(defaults: defaults),
+            activityStorage: ActivitySelectionStorage(defaults: defaults),
             reasonProvider: TemplateReasonProvider())
 
         // Default spot is Pointe de Grave; changing only the activity must still

@@ -40,6 +40,9 @@ extension GoWidgetLargeView {
                 }
                 if !entry.metrics.isEmpty, levelOfDetail != .simplified {
                     metricsRow
+                    WidgetWeatherCredit(
+                        source: entry.weatherSource,
+                        isSampleData: entry.isSampleData)
                 }
             }
 
@@ -67,6 +70,9 @@ extension GoWidgetLargeView {
                 }
                 if !entry.metrics.isEmpty, levelOfDetail != .simplified {
                     metricsRow
+                    WidgetWeatherCredit(
+                        source: entry.weatherSource,
+                        isSampleData: entry.isSampleData)
                 }
             }
 

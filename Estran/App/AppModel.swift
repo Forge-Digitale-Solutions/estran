@@ -71,7 +71,10 @@ final class ForecastStore {
 final class AppModel {
     private(set) var selectedTab: AppTab = .now
     private(set) var selectedSpot: Spot
-    private(set) var activity: Activity = .shoreFishing
+    /// The user's activity, restored from the App Group in `init` (W-PERSIST).
+    /// `internal(set)` so `AppModel+ActivitySelection.swift` can write it; the
+    /// only callers there are `select(activity:)` and the widget deep link.
+    internal(set) var activity: Activity = ActivitySelectionStorage.fallback
     private(set) var decision: GoDecision?
     private(set) var slots: [ActivitySlot] = []
     /// Every activity's answer for the selected spot, in `Activity.allCases`
@@ -105,6 +108,8 @@ final class AppModel {
     /// eligible device.
     let reasonProvider: any ReasonTextProviding
     private let selectionStorage: SpotSelectionStorage
+    /// The activity the user chose (W-PERSIST), next to the spot.
+    let activityStorage: ActivitySelectionStorage
     /// The activity an `OpenIntent` asked for, one-shot: the intent runs inside
     /// this process, but a warm `AppModel` does not see the App Group write.
     private let intentSelection: IntentSelectionStorage
@@ -118,13 +123,19 @@ final class AppModel {
         provider: any ConditionsProviding = AppModel.defaultProvider(),
         selectionStorage: SpotSelectionStorage = SpotSelectionStorage(),
         intentSelection: IntentSelectionStorage = IntentSelectionStorage(),
+        activityStorage: ActivitySelectionStorage = ActivitySelectionStorage(),
         reasonProvider: any ReasonTextProviding = FoundationModelReasonProvider())
     {
         self.provider = provider
         self.selectionStorage = selectionStorage
         self.intentSelection = intentSelection
+        self.activityStorage = activityStorage
         self.reasonProvider = reasonProvider
         selectedSpot = SpotCatalog.spot(id: selectionStorage.load())
+        // W-PERSIST: restored before the first `reload()` computes a decision.
+        // A pair the spot does not offer (surf at Arcachon-Eyrac) is kept as is:
+        // the not-offered card shows, never another activity's verdict.
+        activity = activityStorage.load()
     }
 
     /// `true` while the app runs on the DEBUG demo provider.
@@ -167,10 +178,12 @@ final class AppModel {
         await reload()
     }
 
+    /// The one place the activity changes: the picker, Home, Settings, a widget
+    /// deep link and an `OpenActivityIntent` all end up here (W-PERSIST).
     @MainActor
     func select(activity: Activity) {
         guard activity != self.activity else { return }
-        self.activity = activity
+        remember(activity: activity)
         refreshDecision()
     }
 
@@ -187,7 +200,7 @@ final class AppModel {
         let spotChanged = target.id != selectedSpot.id
 
         if activityChanged {
-            self.activity = activity
+            remember(activity: activity)
         }
 
         if spotChanged {

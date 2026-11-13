@@ -27,6 +27,18 @@ struct ConditionsWidgetView: View {
                     .font(OceanTypography.caption)
                     .foregroundStyle(OceanPalette.sand)
                     .fixedSize(horizontal: false, vertical: true)
+
+                Spacer(minLength: OceanSpacing.xxs)
+
+                // 158 pt of medium widget leave no room for a footer under the
+                // four tiles: the credit rides on the header's trailing edge,
+                // and only at text sizes where the two labels still share a
+                // line. The large widget draws it under the metrics.
+                if !dynamicTypeSize.isAccessibilitySize {
+                    WidgetWeatherCredit(
+                        source: entry.weatherSource,
+                        isSampleData: entry.isSampleData)
+                }
             }
 
             if entry.metrics.isEmpty || entry.isStale {

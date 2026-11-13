@@ -115,6 +115,7 @@ final class PerSpotActivityTests: XCTestCase {
             provider: StubConditionsProvider(),
             selectionStorage: SpotSelectionStorage(defaults: defaults),
             intentSelection: IntentSelectionStorage(defaults: defaults),
+            activityStorage: ActivitySelectionStorage(defaults: defaults),
             reasonProvider: TemplateReasonProvider())
         return Fixture(app: app)
     }

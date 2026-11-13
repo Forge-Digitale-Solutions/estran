@@ -13,6 +13,10 @@ import OSLog
 /// hourly sample covering the requested instant is used for it — the same
 /// approach as the WeatherKit adapter.
 struct OpenMeteoWeatherService: WeatherSource {
+    /// CC BY 4.0: the fallback's values are credited on every surface that
+    /// shows them (`WeatherAttributionStore`).
+    let kind: WeatherSourceKind? = .openMeteo
+
     private static let endpoint = "https://api.open-meteo.com/v1/forecast"
     private static let logger = Logger(subsystem: "com.forgedigitalesolutions.estran", category: "weather")
 

@@ -69,6 +69,9 @@ targets:
         excludes:
           - "Info.plist"
           - "EstranWidgets.entitlements"
+      # Written by the app next to the widget snapshot, read here so the widget
+      # credits the same weather source as the app (compiled into both targets).
+      - path: Estran/Data/WeatherSourceRecord.swift
       - path: Estran/Theme/OceanPalette.swift
       - path: Estran/Theme/OceanTypography.swift
       - path: Estran/Theme/OceanSpacing.swift
@@ -106,6 +109,10 @@ targets:
       - path: EstranWidgets/Widgets/WidgetTheme.swift
       - path: EstranWidgets/Widgets/GoWidgetAccessoryViews.swift
       - path: EstranWidgets/Widgets/GoWidgetLargeView.swift
+      # W-ATTR: the widgets and the app share the weather-source record and the
+      # credit line, so the render tests draw the same footer the extension does.
+      - path: EstranWidgets/Widgets/WidgetWeatherCredit.swift
+      - path: Estran/Data/WeatherSourceRecord.swift
       # W-LACAUTION: the Live Activity card is primitives-only (no
       # `ActivityViewContext`), so the test target can render the real layout at
       # 370 and 393 pt with ImageRenderer — the same harness as the widgets.

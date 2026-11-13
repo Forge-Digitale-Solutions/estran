@@ -11,8 +11,10 @@ d'abonnement. Interface en français.
 
 ## Ce que fait l'app
 
-Choisis une activité, obtiens un verdict pour le spot où tu es, avec le prochain
-bon créneau et les quatre conditions qui l'ont produit.
+Choisis une activité et l'un des deux spots — Arcachon-Eyrac ou la Pointe de
+Grave — et obtiens un verdict, avec le prochain bon créneau et les quatre
+conditions qui l'ont produit. L'app ne demande jamais ta position : les deux
+spots sont fixes.
 
 | | |
 |---|---|
@@ -47,10 +49,10 @@ permanent sur les baïnes et les courants — jamais un « Oui » vert. Détail 
 |---|---|
 | **M0 — Setup** | fait |
 | **M1 — Moteur + dataset de marée** | fait — schema 6, 3 stations × 25 constituants, 2 spots jaugés |
-| **M2 — Météo** | **pas commencé** — WeatherKit et Open-Meteo Marine |
-| **M3 — UI** | **compile et tourne sur macOS** — premier build le 2026-10-28 ; porte accessibilité/design ouverte |
-| **M4 — Intelligence** | pas commencé — Foundation Models, Siri, notifications |
-| **M5 — Widgets / Live Activity** | vues écrites et compilées, données non branchées |
+| **M2 — Météo** | **sources live opérationnelles** — WeatherKit et Open-Meteo Marine branchés ; la capability WeatherKit reste à activer dans le portail |
+| **M3 — UI** | **passe visuelle iOS 27 livrée** — OceanBackdrop, Liquid Glass, transition zoom, curseur de marée ; VoiceOver sur appareil encore ouvert |
+| **M4 — Intelligence** | **en cours** — Foundation Models (phrase générée avec garde-fous), Siri / Shortcuts, Spotlight, notifications locales |
+| **M5 — Widgets / Live Activity** | **fait** — small/medium/large + écran verrouillé, niveau de baignade réel branché |
 
 Points utiles pour une release :
 
@@ -65,8 +67,9 @@ Points utiles pour une release :
   archive `xcodebuild` passent, SwiftLint et SwiftFormat propres, app lancée
   sur un simulateur iPhone 18 Pro.
 
-La porte produit M3 reste ouverte : correspondance Figma, VoiceOver, contraste
-et tour complet en AX5. M2 n'a pas commencé.
+La porte produit M3 n'est plus ouverte que sur un point : le passage VoiceOver
+sur un appareil. M2 tourne sur les sources live ; la capability WeatherKit reste
+à activer, et le cas de la mer manquante dans le Bassin reste à trancher.
 
 ## Prérequis
 

@@ -43,10 +43,11 @@ public enum SolarDaylight {
     /// `true` when any part of the uncertainty envelope around `date` is below
     /// the horizon.
     ///
-    /// The conservative reading: a decision whose envelope could straddle
-    /// sunset/sunrise is treated as night. Swimming already reads daylight this
-    /// way; the pêche à pied and boating cautions use the same rule so a single
-    /// notion of « nuit » drives every surface.
+    /// The conservative reading for **swimming only**: a tide prediction whose
+    /// envelope could straddle sunset/sunrise is treated as night. The envelope
+    /// is the uncertainty of the *tide*, so it says nothing about the sun
+    /// (`W-NIGHTFIX`): the pêche à pied and boating cautions read the plain
+    /// instant, and a window reads the window's own span.
     public static func isNight(
         at date: Date,
         coordinate: Coordinate,
@@ -56,5 +57,29 @@ public enum SolarDaylight {
         let end = date.addingTimeInterval(uncertainty)
         return !(isDaylight(at: start, coordinate: coordinate)
             && isDaylight(at: end, coordinate: coordinate))
+    }
+
+    /// `true` when any part of `window` is below the horizon.
+    ///
+    /// A window is a span of clock time, not a single instant: 16:00–19:00 in
+    /// November starts in daylight and ends after sunset, and the reader needs
+    /// the night caution for it. The span is sampled every `step`, so a window
+    /// that straddles sunrise or sunset is caught whichever endpoint is dark.
+    public static func isNight(
+        in window: DateInterval,
+        coordinate: Coordinate,
+        step: TimeInterval = 5 * 60) -> Bool
+    {
+        guard window.duration > 0 else {
+            return !isDaylight(at: window.start, coordinate: coordinate)
+        }
+        let count = Int(window.duration / step)
+        for index in 0 ... count {
+            let date = window.start.addingTimeInterval(Double(index) * step)
+            if !isDaylight(at: date, coordinate: coordinate) {
+                return true
+            }
+        }
+        return !isDaylight(at: window.end, coordinate: coordinate)
     }
 }

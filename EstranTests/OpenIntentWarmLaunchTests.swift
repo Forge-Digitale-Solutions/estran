@@ -135,6 +135,7 @@ final class OpenIntentWarmLaunchTests: XCTestCase {
             provider: provider,
             selectionStorage: spotStorage,
             intentSelection: intentStorage,
+            activityStorage: ActivitySelectionStorage(defaults: defaults),
             // No model in tests: the template sentence is the display floor.
             reasonProvider: TemplateReasonProvider())
         return Fixture(

@@ -25,6 +25,10 @@ struct GoEntry: TimelineEntry {
     var isSampleData: Bool = false
     /// Stable catalog identifier for the spot, so a tap can open the right place.
     var spotID: String = ""
+    /// Which external provider produced the weather values (Apple WeatherKit or
+    /// Open-Meteo), so the widget credits the same source the app does. `nil`
+    /// for sample data or a snapshot written before this record existed.
+    var weatherSource: WeatherSourceKind?
     /// Optional explicit activity for previews; inferred from `lines`/`isSwimming` when nil.
     var selectedActivity: Activity?
 }

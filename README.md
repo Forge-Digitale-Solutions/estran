@@ -10,8 +10,9 @@ French interface, no account, no server, no ads, no subscription.
 
 ## What it does
 
-Pick an activity, get a verdict for the spot you are at, plus the next good
-window and the four conditions that produced it.
+Pick an activity and one of the two spots — Arcachon-Eyrac or Pointe de Grave —
+and get a verdict, plus the next good window and the four conditions that
+produced it. The app never asks for your location: the two spots are fixed.
 
 | | |
 |---|---|
@@ -45,10 +46,10 @@ a green « Oui ». Details in
 |---|---|
 | **M0 — Setup** | done |
 | **M1 — Domain core + tide dataset** | done — schema 6, 3 stations × 25 constituents, 2 gauged spots |
-| **M2 — Weather** | **not started** — WeatherKit and Open-Meteo Marine |
-| **M3 — UI** | **builds and runs on macOS** — first build 2026-10-28; accessibility/design gate open |
-| **M4 — Intelligence** | not started — Foundation Models, Siri, notifications |
-| **M5 — Widgets / Live Activity** | views written and compiling, data path not wired |
+| **M2 — Weather** | **live sources operational** — WeatherKit and Open-Meteo Marine wired; the WeatherKit capability still to enable in the portal |
+| **M3 — UI** | **iOS 27 visual pass shipped** — OceanBackdrop, Liquid Glass, zoom transition, tide scrub; device VoiceOver still open |
+| **M4 — Intelligence** | **in progress** — Foundation Models (guarded generated sentence), Siri / Shortcuts, Spotlight, local notifications |
+| **M5 — Widgets / Live Activity** | **built** — small/medium/large + Lock Screen families, real swimming level fed |
 
 Release-relevant facts:
 
@@ -63,8 +64,9 @@ Release-relevant facts:
   test and archive pass, SwiftLint and SwiftFormat clean, app launched on an
   iPhone 18 Pro simulator.
 
-The M3 product gate is still open: Figma match, VoiceOver, contrast and a full
-AX5 tour. M2 has not started.
+The M3 product gate is open on one point only: the device VoiceOver pass. M2
+runs on the live sources; the WeatherKit capability still has to be enabled, and
+the missing-sea case inside the Bassin is still to decide.
 
 ## Requirements
 

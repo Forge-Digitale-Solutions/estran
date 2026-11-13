@@ -55,11 +55,13 @@ struct OpenActivityIntent: OpenIntent, TargetContentProvidingIntent {
 /// The one-shot App Group channel an `OpenIntent` uses to tell the running app
 /// which activity it opened.
 ///
-/// The spot has a durable home (`SpotSelectionStorage`, shared with the widget
-/// and Siri). The activity does not: a Spotlight hit is an instruction for this
-/// launch, not a new default, so the value is written here and **consumed and
-/// cleared** by `AppModel.applyIntentSelectionIfNeeded()`. Coming back to the
-/// foreground later therefore never re-applies an old hit over the user's chip.
+/// The spot has its own durable home (`SpotSelectionStorage`, shared with the
+/// widget and Siri). The activity hit is an instruction for this launch, so the
+/// value is written here and **consumed and cleared** by
+/// `AppModel.applyIntentSelectionIfNeeded()`, which then applies it through
+/// `select(activity:)` like any other choice: the hit becomes the remembered
+/// activity (W-PERSIST), and coming back to the foreground later never
+/// re-applies an old hit over the user's chip.
 struct IntentSelectionStorage {
     /// Key inside the App Group defaults.
     static let activityKey = "pendingIntentActivityID"
