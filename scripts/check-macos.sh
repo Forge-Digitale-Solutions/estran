@@ -82,7 +82,7 @@ else
 fi
 
 if command -v swiftformat >/dev/null 2>&1; then
-    swiftformat --lint --exclude Packages/EstranCore/.build .
+    swiftformat --lint --exclude Packages/EstranCore/.build,build .
 else
     echo "warning: swiftformat is not installed; format check skipped." >&2
 fi
