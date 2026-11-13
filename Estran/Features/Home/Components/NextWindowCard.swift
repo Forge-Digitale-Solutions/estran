@@ -11,6 +11,13 @@ import SwiftUI
 /// cannot be answered because data is missing, the card says « Créneaux
 /// indisponibles », never « Aucun créneau ». The sea is not the reason.
 struct NextWindowCard: View {
+    /// Stable handle for the UI tests. The card's copy is data-dependent — it
+    /// can read « Créneau en cours », « Prochain bon créneau », « Créneaux » or
+    /// « Créneaux indisponibles » — so a query on the label made the Duo layout
+    /// tour depend on the sky (`W-FIX8`). The identifier is the same in every
+    /// state; it is not spoken, VoiceOver keeps the combined sentence.
+    static let accessibilityIdentifier = "home.nextWindow"
+
     let current: ActivitySlot?
     let upcoming: ActivitySlot?
     let isUnavailable: Bool
@@ -90,6 +97,10 @@ struct NextWindowCard: View {
         .padding(OceanSpacing.md)
         .oceanGlassCard(cornerRadius: OceanGlass.cardCornerRadius)
         .accessibilityElement(children: .combine)
+        // After the combine so it lands on the card's one element, and on one
+        // line so every state (in progress, upcoming, none, unavailable) carries
+        // it without touching the composed VoiceOver label.
+        .accessibilityIdentifier(Self.accessibilityIdentifier)
     }
 
     /// A window is a pair of clock times: the digits roll when the window moves,

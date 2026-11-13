@@ -46,8 +46,8 @@ public enum SolarDaylight {
     /// The conservative reading for **swimming only**: a tide prediction whose
     /// envelope could straddle sunset/sunrise is treated as night. The envelope
     /// is the uncertainty of the *tide*, so it says nothing about the sun
-    /// (`W-NIGHTFIX`): the pêche à pied and boating cautions read the plain
-    /// instant, and a window reads the window's own span.
+    /// (`W-NIGHTFIX`): the pêche à pied, boating and balade cautions read the
+    /// plain instant, and a window reads the window's own span.
     public static func isNight(
         at date: Date,
         coordinate: Coordinate,

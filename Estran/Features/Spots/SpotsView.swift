@@ -14,7 +14,9 @@ import SwiftUI
 /// The map is drawn edge to edge with its own colours: no
 /// `backgroundExtensionEffect()` (it mirrors and blurs the raster into the safe
 /// areas, which washed the whole top of the screen with the land's green), and
-/// the card is the only glass over the tiles.
+/// the card is the only glass over the tiles. The **bottom** safe area is the
+/// exception: it is reserved for the floating tab bar, so MapKit's legal
+/// attribution stays above it (`W-FIX8`).
 struct SpotsView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -83,7 +85,14 @@ struct SpotsView: View {
                     elevation: .flat,
                     pointsOfInterest: .excludingAll,
                     showsTraffic: false))
-            .ignoresSafeArea()
+            // Top and sides stay edge to edge, but the **bottom** safe area is
+            // kept: it is exactly where the floating Liquid Glass tab bar
+            // starts, and MapKit draws the Apple « Plans » attribution (and
+            // « Mentions légales ») in the bottom-leading corner of its own safe
+            // area. Ignoring every edge put the legal credit under the bar,
+            // half hidden and untappable (`W-FIX8`). The band the bar floats on
+            // is `OceanBackdrop`, so the bar still sits on the app's gradient.
+            .ignoresSafeArea(edges: [.top, .horizontal])
 
             controls(wide: usesTwoColumns(width: width))
         }

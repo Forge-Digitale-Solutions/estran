@@ -61,9 +61,10 @@ enum RuleSignals {
             coastOrientation: orientation)
     }
 
-    /// Score multiplier applied at night by the two activities that remain open
-    /// after dark (owner decision 2026-11-12). Night never blocks pêche à pied
-    /// or boating; it lowers the score a little and adds a caution.
+    /// Score multiplier applied at night by the three activities that remain
+    /// open after dark (owner decisions 2026-11-12 for pêche à pied and boating,
+    /// 2026-11-13 for balade). Night never blocks them; it lowers the score a
+    /// little and adds a caution.
     static let nightScorePenalty = 0.85
 
     /// `nightScorePenalty` when the **instant** is dark, `1` by day.

@@ -59,6 +59,10 @@ public enum ActivityCaution {
     /// Boating at night is a legal activity with its own lights.
     public static let nightBoating = "De nuit : feux de navigation obligatoires."
 
+    /// A walk after dark needs a light, nothing more (owner decision
+    /// 2026-11-13, same treatment as pêche à pied and bateau).
+    public static let nightWalking = "De nuit : lampe frontale."
+
     /// The caution for `activity` at `spot`, or `nil` when none applies.
     public static func caution(activity: Activity, spot: Spot) -> String? {
         if activity == .boating, spot.region == .bassin {
@@ -79,12 +83,13 @@ public enum ActivityCaution {
     }
 
     /// The night caution for `activity` at the decision instant, or `nil` when
-    /// it is daylight or the activity is not one of the two night-tolerant
+    /// it is daylight or the activity is not one of the three night-tolerant
     /// ones.
     ///
-    /// Night never blocks pêche à pied or boating (owner decision 2026-11-12):
-    /// it lowers the score a little and adds a caution. Balade, surf and
-    /// baignade are untouched — swimming keeps its own `.night` blocker.
+    /// Night never blocks pêche à pied, boating or balade (owner decisions
+    /// 2026-11-12 and 2026-11-13): it lowers the score a little and adds a
+    /// caution. Surf and baignade are untouched — swimming keeps its own
+    /// `.night` blocker.
     ///
     /// The **plain instant** is read, never the tide's uncertainty envelope
     /// (`W-NIGHTFIX`): `u_t` is the uncertainty of the tide prediction, not of
@@ -96,7 +101,7 @@ public enum ActivityCaution {
         at date: Date,
         coordinate: Coordinate) -> String?
     {
-        guard activity == .shoreFishing || activity == .boating,
+        guard toleratesNight(activity),
               SolarDaylight.isNight(at: date, coordinate: coordinate)
         else {
             return nil
@@ -115,7 +120,7 @@ public enum ActivityCaution {
         window: DateInterval,
         coordinate: Coordinate) -> String?
     {
-        guard activity == .shoreFishing || activity == .boating,
+        guard toleratesNight(activity),
               SolarDaylight.isNight(in: window, coordinate: coordinate)
         else {
             return nil
@@ -123,10 +128,23 @@ public enum ActivityCaution {
         return nightCautionText(activity: activity)
     }
 
+    /// Activities that stay open after dark: pêche à pied, bateau and balade.
+    private static func toleratesNight(_ activity: Activity) -> Bool {
+        activity == .shoreFishing || activity == .boating || activity == .walking
+    }
+
     /// The one-string copy of the night caution for an activity that tolerates
     /// the dark.
     private static func nightCautionText(activity: Activity) -> String {
-        activity == .shoreFishing ? nightFishing : nightBoating
+        switch activity {
+        case .shoreFishing: nightFishing
+        case .walking: nightWalking
+        case .boating: nightBoating
+        // Unreachable: `toleratesNight` admits only the three cases above. Surf
+        // and baignade never get here, so they borrow the neutral boating copy
+        // rather than invent a night rule they do not have.
+        case .surfing, .swimming: nightBoating
+        }
     }
 
     /// The conditional cautions of a decision: night first, then the light-rain

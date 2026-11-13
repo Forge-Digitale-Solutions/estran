@@ -6,6 +6,11 @@ import Foundation
 /// temperature outside 8...30 °C or franc rain force a `Non`. Light rain or
 /// drizzle is a small score penalty, never a blocker (owner decision
 /// 2026-11-12).
+///
+/// **Night never blocks** (owner decision 2026-11-13, same treatment as pêche à
+/// pied and bateau, option 2). The score is multiplied by
+/// `RuleSignals.nightScorePenalty` after dark and the verdict carries the
+/// « lampe frontale » caution; baignade keeps its own `.night` blocker.
 public struct WalkingRule: ActivityRule {
     public let activity = Activity.walking
     public let threshold = 0.6
@@ -46,6 +51,6 @@ public struct WalkingRule: ActivityRule {
             (rain, 0.40),
             (wind, 0.30),
             (temperature, 0.30)
-        ])
+        ]) * RuleSignals.nightScoreMultiplier(conditions)
     }
 }

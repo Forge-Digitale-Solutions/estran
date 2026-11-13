@@ -141,9 +141,14 @@ final class DuoLayoutUITests: XCTestCase {
             .firstMatch
     }
 
+    /// Found by identifier, never by label: the card's copy depends on the data
+    /// (« Créneau en cours », « Prochain bon créneau », « Créneaux », « Créneaux
+    /// indisponibles »), and a label query made this layout tour fail on a day
+    /// with no window left — balade now scores lower after dark, so the card
+    /// legitimately reads « Créneaux · Pas de créneau… » (`W-FIX8`).
     private func nextWindowCard(in app: XCUIApplication) -> XCUIElement {
         app.descendants(matching: .any)
-            .matching(NSPredicate(format: "label BEGINSWITH %@", "Prochain bon créneau"))
+            .matching(identifier: "home.nextWindow")
             .firstMatch
     }
 

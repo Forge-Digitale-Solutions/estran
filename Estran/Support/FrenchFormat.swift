@@ -198,13 +198,15 @@ enum FrenchFormat {
     /// « estimée » when the sea is a local wind-sea estimate and the period is
     /// itself an estimate, not an observation.
     ///
-    /// The word « période » is spelled out: « 6 s » alone was the tile users
-    /// could not read (owner feedback on build 5).
+    /// The word « période » is spelled out for a measured sea: « 6 s » alone was
+    /// the tile users could not read (owner feedback on build 5). An estimate
+    /// says « estimée » alone and **one line** (`W-FIX8`): « période estimée »
+    /// wrapped in the four-column row and made the HOULE tile taller than the
+    /// other three. The value already carries « ≈ », and VoiceOver keeps the
+    /// full sentence (« houle estimée … période »).
     static func swellTileLabel(_ swell: Swell) -> String {
         if swell.isEstimated {
-            // A flat estimate already reads « Calme » as its value; the caption
-            // then says where that calm comes from instead of a fake period.
-            return swell.waveHeight < 0.1 ? "estimée" : "période estimée"
+            return "estimée"
         }
         return "période \(swellPeriod(swell))"
     }

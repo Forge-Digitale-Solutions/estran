@@ -46,6 +46,12 @@ struct ActivitySegmentedControl: View {
     /// of water moving along the bar rather than five pills blinking.
     private static let selectionGlassID = "activity-selection"
 
+    /// Blend radius of the bar's `GlassEffectContainer`, in points. It must stay
+    /// **below** the `OceanSpacing.xxs` chip gap: two effects closer than this
+    /// radius are unioned into one shape, which clipped the chip next to the
+    /// selected pill (`W-FIX8`).
+    private static let glassMergeSpacing: CGFloat = 2
+
     private var activities: [Activity] {
         Activity.allCases.filter { supported.contains($0) }
     }
@@ -62,7 +68,14 @@ struct ActivitySegmentedControl: View {
 
     private var chips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            GlassEffectContainer(spacing: OceanSpacing.xxs) {
+            // `spacing` is the radius at which two glass effects blend into one
+            // shape. At the 4 pt chip gap and a 4 pt radius, the selected pill
+            // and its neighbour unioned even at rest: on the store frame with
+            // « Bain » selected the white pill and the « Balade » chip rendered
+            // as one blob, cutting the chip's trailing edge (`W-FIX8`). The
+            // radius is now below the gap, so idle chips are always whole; the
+            // droplet still blends while it travels between two chips.
+            GlassEffectContainer(spacing: Self.glassMergeSpacing) {
                 HStack(spacing: OceanSpacing.xxs) {
                     ForEach(activities) { activity in
                         chip(for: activity)

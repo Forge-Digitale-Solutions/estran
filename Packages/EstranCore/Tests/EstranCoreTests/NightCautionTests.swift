@@ -1,9 +1,9 @@
 @testable import EstranCore
 import XCTest
 
-/// Night for pêche à pied and boating (owner decision 2026-11-12): it is not
-/// forbidden and never a blocker. It lowers the score a little and adds a
-/// caution; Balade, Surf and Baignade keep their previous behaviour.
+/// Night for pêche à pied, boating and balade (owner decisions 2026-11-12 and
+/// 2026-11-13): it is not forbidden and never a blocker. It lowers the score a
+/// little and adds a caution; Surf and Baignade keep their previous behaviour.
 final class NightCautionTests: XCTestCase {
     /// 03:00 in Arcachon on the longest day: unambiguously night.
     private let night = DecisionFixtures.date("2026-06-21T01:00:00Z")
@@ -91,13 +91,14 @@ final class NightCautionTests: XCTestCase {
 
     // MARK: - Untouched activities
 
-    func testWalkingKeepsItsNightBehaviour() {
-        let day = decision(.walking, conditions(at: noon))
-        let dark = decision(.walking, conditions(at: night))
+    /// Balade joined the night-tolerant group on 2026-11-13 (`W-FIX8`): its
+    /// full coverage lives in `WalkingNightCautionTests`; this pins the shift
+    /// so nobody restores the old "no night caution" assumption here.
+    func testWalkingIsNightTolerantSince20261113() {
+        let result = decision(.walking, conditions(at: night))
 
-        XCTAssertEqual(dark.score, day.score, accuracy: 1e-12)
-        XCTAssertEqual(dark.go, day.go)
-        XCTAssertNil(dark.caution, "balade carries no night caution")
+        XCTAssertFalse(result.blockers.contains(.night), "night never blocks balade")
+        XCTAssertEqual(result.caution, ActivityCaution.nightWalking)
     }
 
     func testSwimmingKeepsItsNightGate() {
