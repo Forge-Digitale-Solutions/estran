@@ -27,6 +27,11 @@ final class DuoLayoutUITests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
         dismissActivityPickerIfPresent(in: app)
+        // The persisted pair is whatever the previous tour left (the AX tour
+        // ends on Surf at Arcachon-Eyrac, which has no verdict card at all).
+        // A known spot and activity make the answer card deterministic.
+        selectSpot(named: "Pointe de Grave", in: app)
+        selectActivity(named: "Balade", in: app)
 
         XCTAssertTrue(
             app.staticTexts["app.title"].waitForExistence(timeout: 15),
@@ -41,17 +46,7 @@ final class DuoLayoutUITests: XCTestCase {
         // below the answer, on the same leading edge.
         let windowCard = nextWindowCard(in: app)
         XCTAssertTrue(windowCard.waitForExistence(timeout: 10))
-        let portraitWindow = app.windows.firstMatch.frame
-        XCTAssertGreaterThan(
-            portraitWindow.height, portraitWindow.width, "portrait is the tall window")
-        XCTAssertLessThan(
-            windowCard.frame.minX,
-            portraitWindow.midX,
-            "single column: the next window card starts on the leading edge")
-        XCTAssertGreaterThan(
-            windowCard.frame.minY,
-            answer.frame.minY,
-            "single column: the next window card sits below the answer")
+        assertSingleColumn(answer: answer, windowCard: windowCard, in: app)
 
         rotate(to: .landscapeLeft, in: app)
         XCTAssertTrue(
@@ -61,21 +56,10 @@ final class DuoLayoutUITests: XCTestCase {
         assertTabLabels(in: app)
         XCTAssertTrue(answer.waitForExistence(timeout: 10), "the answer card left the screen")
         XCTAssertTrue(windowCard.waitForExistence(timeout: 10))
-
-        let landscapeWindow = app.windows.firstMatch.frame
-        XCTAssertGreaterThan(
-            landscapeWindow.width, landscapeWindow.height, "landscape is the wide window")
-        XCTAssertGreaterThan(
-            landscapeWindow.width, 900,
-            "the Pro Max landscape window is the same order of width as the unfolded Duo")
-        XCTAssertGreaterThanOrEqual(
-            windowCard.frame.minX,
-            answer.frame.maxX - 1,
-            "two columns: the next window card sits beside the answer card")
+        assertTwoColumns(answer: answer, windowCard: windowCard, in: app)
         attachScreenshot(named: "duo-landscape-home", in: app)
 
-        // The wide spot detail is reachable from the same wide window; the map
-        // card moved into its side column.
+        // The wide spot detail is reachable from the same wide window.
         openSpotDetail(in: app)
         XCTAssertTrue(
             app.descendants(matching: .any)
@@ -83,6 +67,45 @@ final class DuoLayoutUITests: XCTestCase {
                 .firstMatch.waitForExistence(timeout: 10),
             "the tide chart card must render in the wide window")
         attachScreenshot(named: "duo-landscape-spot-detail", in: app)
+    }
+
+    // MARK: - Geometry
+
+    /// The phone shape: a tall window, one column, the next window card on the
+    /// leading edge and below the answer.
+    private func assertSingleColumn(
+        answer: XCUIElement,
+        windowCard: XCUIElement,
+        in app: XCUIApplication)
+    {
+        let window = app.windows.firstMatch.frame
+        XCTAssertGreaterThan(window.height, window.width, "portrait is the tall window")
+        XCTAssertLessThan(
+            windowCard.frame.minX,
+            window.midX,
+            "single column: the next window card starts on the leading edge")
+        XCTAssertGreaterThan(
+            windowCard.frame.minY,
+            answer.frame.minY,
+            "single column: the next window card sits below the answer")
+    }
+
+    /// The wide shape: a landscape window at least as wide as the unfolded Duo,
+    /// with the next window card **beside** the answer card.
+    private func assertTwoColumns(
+        answer: XCUIElement,
+        windowCard: XCUIElement,
+        in app: XCUIApplication)
+    {
+        let window = app.windows.firstMatch.frame
+        XCTAssertGreaterThan(window.width, window.height, "landscape is the wide window")
+        XCTAssertGreaterThan(
+            window.width, 900,
+            "the Pro Max landscape window is the same order of width as the unfolded Duo")
+        XCTAssertGreaterThanOrEqual(
+            windowCard.frame.minX,
+            answer.frame.maxX - 1,
+            "two columns: the next window card sits beside the answer card")
     }
 
     // MARK: - Assertions
@@ -99,12 +122,15 @@ final class DuoLayoutUITests: XCTestCase {
         }
     }
 
-    /// The answer card is one accessibility element whose label starts with the
-    /// verdict (« Oui, pêche à pied. … » / « Non, balade. … »).
+    /// The answer area is one accessibility element. Its label starts with the
+    /// verdict (« Oui, balade. … » / « Non, balade. … »), or with « Données
+    /// indisponibles pour » when the demo conditions cannot answer — both are
+    /// the answer area, and a missing one is a layout failure either way.
     private func answerCard(in app: XCUIApplication) -> XCUIElement {
         app.descendants(matching: .any)
             .matching(NSPredicate(
-                format: "label BEGINSWITH %@ OR label BEGINSWITH %@", "Oui, ", "Non, "))
+                format: "label BEGINSWITH %@ OR label BEGINSWITH %@ OR label BEGINSWITH %@",
+                "Oui, ", "Non, ", "Données indisponibles pour"))
             .firstMatch
     }
 
@@ -121,6 +147,29 @@ final class DuoLayoutUITests: XCTestCase {
         guard title.waitForExistence(timeout: 8) else { return }
         app.buttons["Terminer"].firstMatch.tap()
         waitForLayout()
+    }
+
+    /// Picks a spot on the map tab, then comes back to Home. At the default text
+    /// size the switcher is two chips; the AX `Menu` branch is not exercised by
+    /// this tour (the accessibility tour covers it).
+    private func selectSpot(named name: String, in app: XCUIApplication) {
+        app.buttons["Spots"].firstMatch.tap()
+        waitForLayout()
+        let chip = app.buttons[name].firstMatch
+        if chip.waitForExistence(timeout: 5), !chip.isSelected {
+            chip.tap()
+            waitForLayout()
+        }
+        app.buttons["Maintenant"].firstMatch.tap()
+        waitForLayout()
+    }
+
+    private func selectActivity(named name: String, in app: XCUIApplication) {
+        let chip = app.buttons[name].firstMatch
+        if chip.waitForExistence(timeout: 5), !chip.isSelected {
+            chip.tap()
+            waitForLayout()
+        }
     }
 
     private func rotate(to orientation: UIDeviceOrientation, in app: XCUIApplication) {
