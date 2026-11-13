@@ -66,6 +66,15 @@ python3 scripts/tides/refresh   # regenerate the tide dataset (free, cached)
 
 iOS 27 SDK opportunities and what is already used: `docs/design/ios27-opportunities.md`.
 
+**iPhone Duo (2026-11-13).** `UIRequiresFullScreen` is gone and all four
+orientations are declared, so the app fills the unfolded display instead of the
+letterboxed phone column. Home, Spots and the spot detail switch to two columns
+from 700 pt of window width (`Estran/App/OceanLayout.swift`); the folded Duo and
+every classic iPhone in portrait keep the phone layout, and accessibility sizes
+always keep one column. Rationale, SDK citations and the verification gap are in
+`docs/design/iphone-duo-2026-11-13.md` — the wide layouts still need a real Duo
+pass, since the iOS 27.2 runtime crashes PosterBoard on this Mac.
+
 **Next action: close M3, then M2.** `check-macos.sh` is green (build, tests,
 lint, archive), the app runs in the simulator, and the three mockup screens that
 exist are matched (`docs/design/figma-match-2026-10-28.md`). What still blocks
